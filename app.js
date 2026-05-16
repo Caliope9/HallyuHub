@@ -4,10 +4,17 @@ const state = {
   selectedAvatar: "berry",
   ambience: "hallyu",
   selectedGroup: "skz",
+  authMode: "login",
+  isAuthenticated: false,
+  user: null,
 };
 
 const titleByView = {
   home: "Tu universo K-pop latino",
+  search: "Buscar",
+  publish: "Crear publicacion",
+  notifications: "Notificaciones",
+  settings: "Ajustes",
   events: "Eventos fandom",
   market: "Marketplace oficial",
   news: "Noticias actuales",
@@ -16,6 +23,55 @@ const titleByView = {
   rookie: "Me quiero meter al K-pop",
   messages: "Mensajes privados",
   profile: "Perfil",
+};
+
+const storage = {
+  get(key, fallback) {
+    try {
+      const value = localStorage.getItem(key);
+      return value ? JSON.parse(value) : fallback;
+    } catch {
+      return fallback;
+    }
+  },
+  set(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+      // En la version futura este punto se reemplaza por Firebase/Supabase.
+    }
+  },
+  remove(key) {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // Sin persistencia disponible.
+    }
+  },
+};
+
+const defaultUser = {
+  email: "luna@hallyuhub.app",
+  password: "demo123",
+  name: "Luna Hallyu",
+  username: "lunahallyu",
+  bio: "STAY, ARMY y coleccionista de photocards. Santiago, Chile.",
+  avatar: "berry",
+  ambience: "hallyu",
+  accent: "#fbbcdb",
+  mode: "dark",
+  notifications: true,
+  privateProfile: false,
+  followers: "8.7K",
+  following: "412",
+  posts: "48",
+  photocards: "286",
+};
+
+const futureBackend = {
+  provider: "localStorage",
+  next: "Firebase o Supabase",
+  collections: ["users", "posts", "groups", "followers", "messages", "notifications"],
 };
 
 const art = [
@@ -543,12 +599,20 @@ const profilePhotos = [
 ];
 
 function setView(nextView) {
+  if (!state.isAuthenticated && nextView !== "auth") {
+    state.view = "auth";
+    render();
+    return;
+  }
   state.view = nextView;
   document.querySelectorAll(".nav-item").forEach((button) => {
     button.classList.toggle("active", button.dataset.view === nextView);
   });
   const appScreen = document.querySelector(".app-screen");
   appScreen.classList.toggle("profile-mode", nextView === "profile");
+  appScreen.classList.toggle("auth-mode", nextView === "auth");
+  appScreen.classList.toggle("light-mode", state.user?.mode === "light");
+  appScreen.style.setProperty("--user-accent", state.user?.accent || "#fbbcdb");
   appScreen.dataset.ambience = state.ambience;
   document.getElementById("screen-title").textContent = titleByView[nextView];
   render();
@@ -556,9 +620,24 @@ function setView(nextView) {
 
 function render() {
   const view = document.getElementById("view");
-  document.querySelector(".app-screen").dataset.ambience = state.ambience;
+  const appScreen = document.querySelector(".app-screen");
+  appScreen.dataset.ambience = state.ambience;
+  appScreen.classList.toggle("auth-mode", state.view === "auth");
+  appScreen.classList.toggle("light-mode", state.user?.mode === "light");
+  appScreen.style.setProperty("--user-accent", state.user?.accent || "#fbbcdb");
+  document.querySelector(".bottom-nav").classList.toggle("hidden", !state.isAuthenticated);
+  document.querySelector(".topbar").classList.toggle("hidden", !state.isAuthenticated || state.view === "profile");
+  if (!state.isAuthenticated) {
+    view.innerHTML = renderAuth();
+    bindDynamicActions();
+    return;
+  }
   const templates = {
     home: renderHome,
+    search: renderSearch,
+    publish: renderPublish,
+    notifications: renderNotifications,
+    settings: renderSettings,
     events: renderEvents,
     market: renderMarket,
     news: renderNews,
@@ -573,6 +652,33 @@ function render() {
 }
 
 function bindDynamicActions() {
+  document.querySelectorAll("[data-auth-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.authMode = button.dataset.authMode;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-auth-submit]").forEach((button) => {
+    button.addEventListener("click", () => submitAuth(button.dataset.authSubmit));
+  });
+
+  document.querySelectorAll("[data-auth-avatar]").forEach((button) => {
+    button.addEventListener("click", () => {
+      document.querySelectorAll("[data-auth-avatar]").forEach((option) => option.classList.remove("active"));
+      button.classList.add("active");
+      state.selectedAvatar = button.dataset.authAvatar;
+    });
+  });
+
+  document.querySelectorAll("[data-save-settings]").forEach((button) => {
+    button.addEventListener("click", saveSettings);
+  });
+
+  document.querySelectorAll("[data-logout]").forEach((button) => {
+    button.addEventListener("click", logout);
+  });
+
   document.querySelectorAll("[data-community-tab]").forEach((button) => {
     button.addEventListener("click", () => {
       state.communityTab = button.dataset.communityTab;
@@ -582,15 +688,18 @@ function bindDynamicActions() {
 
   document.querySelectorAll("[data-avatar]").forEach((button) => {
     button.addEventListener("click", () => {
+      document.querySelectorAll("[data-avatar]").forEach((option) => option.classList.remove("active"));
+      button.classList.add("active");
       state.selectedAvatar = button.dataset.avatar;
-      render();
     });
   });
 
   document.querySelectorAll("[data-ambience]").forEach((button) => {
     button.addEventListener("click", () => {
+      document.querySelectorAll("[data-ambience]").forEach((option) => option.classList.remove("active"));
+      button.classList.add("active");
       state.ambience = button.dataset.ambience;
-      render();
+      document.querySelector(".app-screen").dataset.ambience = state.ambience;
     });
   });
 
@@ -604,6 +713,112 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-go-view]").forEach((button) => {
     button.addEventListener("click", () => setView(button.dataset.goView));
   });
+}
+
+function initApp() {
+  const savedUser = storage.get("hallyuHubUser", null);
+  const savedSession = storage.get("hallyuHubSession", false);
+  state.user = savedUser || defaultUser;
+  state.isAuthenticated = Boolean(savedSession);
+  state.selectedAvatar = state.user.avatar || "berry";
+  state.ambience = state.user.ambience || "hallyu";
+  state.view = state.isAuthenticated ? "home" : "auth";
+  render();
+}
+
+function submitAuth(mode) {
+  const email = document.getElementById("auth-email")?.value.trim() || defaultUser.email;
+  const password = document.getElementById("auth-password")?.value || defaultUser.password;
+  const name = document.getElementById("auth-name")?.value.trim() || defaultUser.name;
+  const username = document.getElementById("auth-username")?.value.trim() || defaultUser.username;
+  const avatar = document.querySelector("[data-auth-avatar].active")?.dataset.authAvatar || state.selectedAvatar;
+  state.user = {
+    ...defaultUser,
+    ...state.user,
+    email,
+    password,
+    name: mode === "register" ? name : state.user?.name || name,
+    username: mode === "register" ? username : state.user?.username || username,
+    avatar,
+  };
+  state.selectedAvatar = avatar;
+  state.ambience = state.user.ambience;
+  state.isAuthenticated = true;
+  storage.set("hallyuHubUser", state.user);
+  storage.set("hallyuHubSession", true);
+  setView("home");
+}
+
+function saveSettings() {
+  const selectedAvatar = document.querySelector("[data-avatar].active")?.dataset.avatar || state.selectedAvatar;
+  const selectedAmbience = document.querySelector("[data-ambience].active")?.dataset.ambience || state.ambience;
+  state.user = {
+    ...state.user,
+    name: document.getElementById("settings-name")?.value.trim() || state.user.name,
+    username: document.getElementById("settings-username")?.value.trim() || state.user.username,
+    bio: document.getElementById("settings-bio")?.value.trim() || state.user.bio,
+    avatar: selectedAvatar,
+    ambience: selectedAmbience,
+    accent: document.getElementById("settings-accent")?.value || state.user.accent,
+    mode: document.getElementById("settings-mode")?.checked ? "light" : "dark",
+    notifications: Boolean(document.getElementById("settings-notifications")?.checked),
+    privateProfile: Boolean(document.getElementById("settings-privacy")?.checked),
+  };
+  state.selectedAvatar = state.user.avatar;
+  state.ambience = state.user.ambience;
+  storage.set("hallyuHubUser", state.user);
+  render();
+}
+
+function logout() {
+  storage.remove("hallyuHubSession");
+  state.isAuthenticated = false;
+  state.view = "auth";
+  render();
+}
+
+function renderAuth() {
+  const isRegister = state.authMode === "register";
+  const activeAvatar = avatars.find((avatar) => avatar.id === state.selectedAvatar) || avatars[0];
+  return `
+    <section class="auth-screen">
+      <div class="auth-brand">
+        <div class="plush-avatar hero" style="--avatar:${activeAvatar.gradient}"><span></span></div>
+        <p class="eyebrow">HallyuHub</p>
+        <h1>${isRegister ? "Crear cuenta fan" : "Entrar a tu mundo K-pop"}</h1>
+        <p class="muted">Prototipo con datos guardados en este dispositivo. Preparado para migrar a ${futureBackend.next}.</p>
+      </div>
+      <div class="auth-tabs">
+        <button class="${!isRegister ? "active" : ""}" data-auth-mode="login">Entrar</button>
+        <button class="${isRegister ? "active" : ""}" data-auth-mode="register">Crear cuenta</button>
+      </div>
+      <div class="form-stack">
+        <label>Email<input id="auth-email" type="email" value="${state.user?.email || ""}" placeholder="fan@hallyuhub.app" /></label>
+        <label>Contraseña<input id="auth-password" type="password" value="${state.user?.password || ""}" placeholder="********" /></label>
+        ${
+          isRegister
+            ? `<label>Nombre<input id="auth-name" value="${state.user?.name || ""}" placeholder="Luna Hallyu" /></label>
+               <label>Usuario<input id="auth-username" value="${state.user?.username || ""}" placeholder="lunahallyu" /></label>`
+            : ""
+        }
+      </div>
+      <div class="section-heading small"><h2>Avatar</h2><span>${activeAvatar.name}</span></div>
+      <div class="avatar-picker">
+        ${avatars
+          .map(
+            (avatar) => `
+            <button class="avatar-choice ${state.selectedAvatar === avatar.id ? "active" : ""}" data-auth-avatar="${avatar.id}">
+              <div class="plush-avatar pick" style="--avatar:${avatar.gradient}"><span></span></div>
+              <strong>${avatar.name}</strong>
+            </button>`,
+          )
+          .join("")}
+      </div>
+      <button class="primary-button auth-submit" data-auth-submit="${isRegister ? "register" : "login"}">
+        ${isRegister ? "Crear cuenta" : "Entrar"}
+      </button>
+    </section>
+  `;
 }
 
 function renderHome() {
@@ -667,6 +882,86 @@ function renderNews() {
         .join("")}
     </div>
   `;
+}
+
+function renderSearch() {
+  return `
+    <div class="search-box">
+      <span class="nav-icon search-icon"></span>
+      <input placeholder="Buscar grupos, artistas, fandoms o fotocards" />
+    </div>
+    <div class="quick-link-grid">
+      <button data-go-view="groups"><span class="nav-icon music-icon"></span><strong>Grupos</strong><small>Biografias e idols</small></button>
+      <button data-go-view="news"><span class="nav-icon heart-icon"></span><strong>Noticias</strong><small>Actualidad K-pop</small></button>
+      <button data-go-view="market"><span class="nav-icon bag-icon"></span><strong>Shop</strong><small>Merch y fotocards</small></button>
+      <button data-go-view="community"><span class="nav-icon chat-icon"></span><strong>Comunidad</strong><small>Chats por zona</small></button>
+      <button data-go-view="rookie"><span class="nav-icon spark-icon"></span><strong>K-pop 101</strong><small>Para fans nuevos</small></button>
+      <button data-go-view="messages"><span class="nav-icon dm-icon"></span><strong>DM</strong><small>Privados seguros</small></button>
+    </div>
+    <div class="section-heading"><h2>Tendencias</h2><span>Explorar</span></div>
+    <div class="group-story-row">
+      ${kpopGroups
+        .map(
+          (group) => `
+          <button class="group-story" data-group="${group.id}" data-go-view="groups">
+            <span class="group-story-photo" style="--art:${group.colors}"></span>
+            <strong>${group.name}</strong>
+          </button>`,
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderPublish() {
+  return `
+    <section class="publish-card">
+      <div class="post-head">
+        <div class="plush-avatar mini" style="--avatar:${getAvatarGradient(state.user.avatar)}"><span></span></div>
+        <div><h3>${state.user.name}</h3><p class="muted">@${state.user.username}</p></div>
+      </div>
+      <label>Texto de la publicacion<textarea placeholder="Comparte una foto, trade, noticia o momento fandom..."></textarea></label>
+      <div class="upload-zone">
+        <span class="nav-icon plus-icon"></span>
+        <strong>Agregar foto o video</strong>
+        <small>En esta version es visual; luego puede conectarse a Storage.</small>
+      </div>
+      <div class="filter-row">
+        <button class="filter-chip active">Post</button>
+        <button class="filter-chip">Historia</button>
+        <button class="filter-chip">Trade</button>
+        <button class="filter-chip">Noticia</button>
+      </div>
+      <button class="primary-button">Publicar</button>
+    </section>
+  `;
+}
+
+function renderNotifications() {
+  const items = [
+    ["Cami.STAY", "empezo a seguirte", "Ahora"],
+    ["ARMY Chile", "publico un evento cerca de ti", "12 min"],
+    ["Mika mentor", "respondio tu pregunta de K-pop 101", "1 h"],
+    ["Seoul Corner", "subio nuevas photocards verificadas", "Ayer"],
+  ];
+  return `
+    <div class="notification-list">
+      ${items
+        .map(
+          ([name, action, time], index) => `
+          <article class="notification-card">
+            <div class="plush-avatar mini" style="--avatar:${avatars[index % avatars.length].gradient}"><span></span></div>
+            <div><h3>${name}</h3><p class="muted">${action}</p></div>
+            <span>${time}</span>
+          </article>`,
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function getAvatarGradient(avatarId) {
+  return (avatars.find((avatar) => avatar.id === avatarId) || avatars[0]).gradient;
 }
 
 function renderEvents() {
@@ -916,6 +1211,65 @@ function renderMessages() {
   `;
 }
 
+function renderSettings() {
+  const activeAvatar = avatars.find((avatar) => avatar.id === state.user.avatar) || avatars[0];
+  const activeAmbience = ambiences.find((ambience) => ambience.id === state.user.ambience) || ambiences[0];
+  return `
+    <button class="ghost-button back-button" data-go-view="profile">Volver al perfil</button>
+    <section class="settings-header">
+      <div class="plush-avatar hero" style="--avatar:${activeAvatar.gradient}"><span></span></div>
+      <div>
+        <p class="eyebrow">Ajustes</p>
+        <h2>Personaliza HallyuHub</h2>
+        <p class="muted">Guardado local por ahora. Luego estos datos vivirian en ${futureBackend.next}.</p>
+      </div>
+    </section>
+    <section class="profile-panel">
+      <div class="section-heading"><h2>Cuenta</h2><span>Perfil</span></div>
+      <div class="form-stack">
+        <label>Nombre<input id="settings-name" value="${state.user.name}" /></label>
+        <label>Usuario<input id="settings-username" value="${state.user.username}" /></label>
+        <label>Biografia<textarea id="settings-bio">${state.user.bio}</textarea></label>
+      </div>
+      <div class="section-heading small"><h2>Foto de perfil</h2><span>${activeAvatar.name}</span></div>
+      <div class="avatar-picker">
+        ${avatars
+          .map(
+            (avatar) => `
+            <button class="avatar-choice ${state.user.avatar === avatar.id ? "active" : ""}" data-avatar="${avatar.id}">
+              <div class="plush-avatar pick" style="--avatar:${avatar.gradient}"><span></span></div>
+              <strong>${avatar.name}</strong>
+            </button>`,
+          )
+          .join("")}
+      </div>
+    </section>
+    <section class="profile-panel">
+      <div class="section-heading"><h2>Ambiente</h2><span>${activeAmbience.group}</span></div>
+      <div class="ambience-grid">
+        ${ambiences
+          .map(
+            (ambience) => `
+            <button class="ambience-choice ${state.user.ambience === ambience.id ? "active" : ""}" data-ambience="${ambience.id}">
+              <span class="ambience-preview ${ambience.id}"></span>
+              <strong>${ambience.name}</strong>
+              <small>${ambience.group}</small>
+            </button>`,
+          )
+          .join("")}
+      </div>
+      <div class="form-stack settings-form">
+        <label>Color principal<input id="settings-accent" type="color" value="${state.user.accent}" /></label>
+        <label class="switch-row">Modo claro<input id="settings-mode" type="checkbox" ${state.user.mode === "light" ? "checked" : ""} /></label>
+        <label class="switch-row">Notificaciones<input id="settings-notifications" type="checkbox" ${state.user.notifications ? "checked" : ""} /></label>
+        <label class="switch-row">Perfil privado<input id="settings-privacy" type="checkbox" ${state.user.privateProfile ? "checked" : ""} /></label>
+      </div>
+      <button class="primary-button" data-save-settings>Guardar cambios</button>
+      <button class="ghost-button danger-button" data-logout>Cerrar sesion</button>
+    </section>
+  `;
+}
+
 function renderRookie() {
   return `
     <article class="rookie-hero">
@@ -960,8 +1314,7 @@ function renderRookie() {
 }
 
 function renderProfile() {
-  const activeAvatar = avatars.find((avatar) => avatar.id === state.selectedAvatar) || avatars[0];
-  const activeAmbience = ambiences.find((ambience) => ambience.id === state.ambience) || ambiences[0];
+  const activeAvatar = avatars.find((avatar) => avatar.id === state.user.avatar) || avatars[0];
   return `
     <section class="profile-cover">
       <div class="plush-avatar hero" style="--avatar:${activeAvatar.gradient}">
@@ -969,52 +1322,21 @@ function renderProfile() {
       </div>
       <div>
         <p class="eyebrow">Perfil de fan</p>
-        <h1>Luna Hallyu</h1>
-        <p class="muted">STAY · ARMY · Santiago, Chile</p>
+        <h1>${state.user.name}</h1>
+        <p class="muted">@${state.user.username}</p>
       </div>
+      <button class="settings-button" data-go-view="settings" aria-label="Abrir ajustes"><span class="gear-icon"></span></button>
     </section>
+    <p class="profile-bio">${state.user.bio}</p>
     <div class="stats-row">
-      <div class="stat"><strong>286</strong><span>photocards</span></div>
-      <div class="stat"><strong>8.7K</strong><span>seguidores</span></div>
-      <div class="stat"><strong>12K</strong><span>puntos fan</span></div>
+      <div class="stat"><strong>${state.user.posts}</strong><span>publicaciones</span></div>
+      <div class="stat"><strong>${state.user.followers}</strong><span>seguidores</span></div>
+      <div class="stat"><strong>${state.user.following}</strong><span>seguidos</span></div>
     </div>
     <div class="profile-actions">
       <button class="primary-button">Seguir</button>
-      <button class="ghost-button">Siguiendo</button>
+      <button class="ghost-button" data-go-view="settings">Editar perfil</button>
     </div>
-    <section class="profile-panel">
-      <div class="section-heading"><h2>Ajustes de perfil</h2><span>Desbloqueos</span></div>
-      <div class="unlock-note">Mientras mas seguidores tenga el usuario, mas avatares y ambientes especiales puede desbloquear.</div>
-      <div class="section-heading small"><h2>Ambiente de app</h2><span>${activeAmbience.group}</span></div>
-      <p class="muted">${activeAmbience.detail}</p>
-      <div class="ambience-grid">
-        ${ambiences
-          .map(
-            (ambience) => `
-            <button class="ambience-choice ${state.ambience === ambience.id ? "active" : ""}" data-ambience="${ambience.id}">
-              <span class="ambience-preview ${ambience.id}"></span>
-              <strong>${ambience.name}</strong>
-              <small>${ambience.group}</small>
-            </button>`,
-          )
-          .join("")}
-      </div>
-      <div class="section-heading small"><h2>Mi avatar</h2><span>${activeAvatar.name}</span></div>
-      <p class="muted">${activeAvatar.mood}</p>
-      <div class="avatar-picker">
-        ${avatars
-          .map(
-            (avatar) => `
-            <button class="avatar-choice ${state.selectedAvatar === avatar.id ? "active" : ""}" data-avatar="${avatar.id}" aria-label="Elegir ${avatar.name}">
-              <div class="plush-avatar pick" style="--avatar:${avatar.gradient}">
-                <span></span>
-              </div>
-              <strong>${avatar.name}</strong>
-            </button>`,
-          )
-          .join("")}
-      </div>
-    </section>
     <section class="profile-panel">
       <div class="section-heading"><h2>Mis carpetas</h2><span>Privacidad</span></div>
       <div class="folder-grid">
@@ -1056,4 +1378,8 @@ document.querySelectorAll(".nav-item").forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.view));
 });
 
-render();
+document.querySelectorAll("[data-go-view]").forEach((button) => {
+  button.addEventListener("click", () => setView(button.dataset.goView));
+});
+
+initApp();
