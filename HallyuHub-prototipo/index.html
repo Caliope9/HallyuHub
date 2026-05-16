@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HallyuHub</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="phone-shell" aria-label="Aplicacion HallyuHub">
+      <section class="app-screen">
+        <header class="topbar" id="topbar">
+          <div>
+            <p class="eyebrow">HallyuHub</p>
+            <h1 id="screen-title">Tu universo K-pop latino</h1>
+          </div>
+          <button class="icon-button" aria-label="Notificaciones">
+            <span class="bell"></span>
+            <span class="notification-dot"></span>
+          </button>
+        </header>
+
+        <section id="view" class="view" aria-live="polite"></section>
+
+        <nav class="bottom-nav" aria-label="Navegacion principal">
+          <button class="nav-item active" data-view="home" aria-label="Inicio">
+            <span class="nav-icon home-icon"></span>
+            <span>Inicio</span>
+          </button>
+          <button class="nav-item" data-view="market" aria-label="Marketplace">
+            <span class="nav-icon bag-icon"></span>
+            <span>Shop</span>
+          </button>
+          <button class="nav-item" data-view="groups" aria-label="Grupos">
+            <span class="nav-icon music-icon"></span>
+            <span>Grupos</span>
+          </button>
+          <button class="nav-item" data-view="community" aria-label="Comunidad">
+            <span class="nav-icon chat-icon"></span>
+            <span>Comu</span>
+          </button>
+          <button class="nav-item" data-view="rookie" aria-label="K-pop 101">
+            <span class="nav-icon spark-icon"></span>
+            <span>101</span>
+          </button>
+          <button class="nav-item" data-view="messages" aria-label="Mensajes privados">
+            <span class="nav-icon dm-icon"></span>
+            <span>DM</span>
+          </button>
+          <button class="nav-item" data-view="profile" aria-label="Perfil">
+            <span class="nav-icon user-icon"></span>
+            <span>Perfil</span>
+          </button>
+        </nav>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
