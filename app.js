@@ -8,6 +8,9 @@ const state = {
   activeStory: null,
   likedStories: {},
   storyDirection: 1,
+  storyComposerOpen: false,
+  ownStory: null,
+  storyInbox: [],
   authMode: "login",
   isAuthenticated: false,
   user: null,
@@ -207,14 +210,25 @@ const homeBanners = [
 ];
 
 const storyReactions = [
-  "💜 Army",
-  "🫰 Heart",
-  "✨ Idol",
-  "🎤 Stage",
-  "📸 Fancam",
-  "🎀 Cute",
-  "🔥 Viral",
-  "🪩 Dance",
+  "Saranghae 💜",
+  "Bias moment ✨",
+  "Legend stage 🎤",
+  "Cute comeback 🎀",
+  "Fancam approved 📸",
+  "Main dancer 🔥",
+  "Visual king 👑",
+  "Stan forever 💿",
+];
+
+const storyDecorations = [
+  "Corazones coreanos",
+  "Neon pastel",
+  "Stars glow",
+  "Kawaii stickers",
+  "Lightsticks",
+  "Idol stage",
+  "Glitter",
+  "Fancam FX",
 ];
 
 const trendVideos = [
@@ -690,6 +704,7 @@ const profilePhotos = [
 function setView(nextView) {
   if (nextView !== "home") {
     state.activeStory = null;
+    state.storyComposerOpen = false;
     clearStoryAutoplay();
   }
   if (!state.isAuthenticated && nextView !== "auth") {
@@ -759,9 +774,11 @@ function scheduleStoryAutoplay() {
   clearStoryAutoplay();
   if (state.view !== "home" || state.activeStory === null) return;
   storyAutoTimer = setTimeout(() => {
-    const total = followingStories.length;
+    const total = followingStories.length + (state.ownStory ? 1 : 0);
+    const current = state.ownStory ? state.activeStory + 1 : state.activeStory;
+    const next = (current + 1) % total;
     state.storyDirection = 1;
-    state.activeStory = (state.activeStory + 1) % total;
+    state.activeStory = state.ownStory ? next - 1 : next;
     render();
   }, 5600);
 }
@@ -798,6 +815,27 @@ function bindDynamicActions() {
     button.addEventListener("click", () => {
       state.activeStory = Number(button.dataset.storyIndex);
       state.storyDirection = 1;
+      state.storyComposerOpen = false;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-own-story]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (state.ownStory) {
+        state.activeStory = -1;
+        state.storyDirection = 1;
+      } else {
+        createOwnStory();
+      }
+      state.storyComposerOpen = false;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-create-own-story]").forEach((button) => {
+    button.addEventListener("click", () => {
+      createOwnStory(button.dataset.createOwnStory);
       render();
     });
   });
@@ -805,6 +843,7 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-story-close]").forEach((button) => {
     button.addEventListener("click", () => {
       state.activeStory = null;
+      state.storyComposerOpen = false;
       clearStoryAutoplay();
       render();
     });
@@ -813,9 +852,12 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-story-nav]").forEach((button) => {
     button.addEventListener("click", () => {
       const direction = Number(button.dataset.storyNav);
-      const total = followingStories.length;
+      const total = followingStories.length + (state.ownStory ? 1 : 0);
+      const current = state.ownStory ? state.activeStory + 1 : state.activeStory;
+      const next = (current + direction + total) % total;
       state.storyDirection = direction;
-      state.activeStory = (state.activeStory + direction + total) % total;
+      state.activeStory = state.ownStory ? next - 1 : next;
+      state.storyComposerOpen = false;
       render();
     });
   });
@@ -827,6 +869,31 @@ function bindDynamicActions() {
       button.classList.toggle("active", state.likedStories[index]);
       button.classList.add("popped");
       setTimeout(() => button.classList.remove("popped"), 260);
+    });
+  });
+
+  document.querySelectorAll("[data-story-message-open]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.storyComposerOpen = true;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-message-close]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.storyComposerOpen = false;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-phrase]").forEach((button) => {
+    button.addEventListener("click", () => sendStoryMessage(button.dataset.storyPhrase));
+  });
+
+  document.querySelectorAll("[data-story-send]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const input = document.getElementById("story-message-input");
+      sendStoryMessage(input?.value.trim() || "Saranghae 💜");
     });
   });
 
@@ -950,6 +1017,8 @@ async function initApp() {
   const savedUser = storage.get("hallyuHubUser", null);
   const savedSession = storage.get("hallyuHubSession", false);
   state.user = savedUser || defaultUser;
+  state.ownStory = storage.get("hallyuHubOwnStory", null);
+  state.storyInbox = storage.get("hallyuHubStoryInbox", []);
   state.isAuthenticated = Boolean(savedSession);
   state.selectedAvatar = state.user.avatar || "berry";
   state.ambience = state.user.ambience || "hallyu";
@@ -1265,6 +1334,42 @@ function renderAuth() {
   `;
 }
 
+function createOwnStory(style = "Neon pastel") {
+  state.ownStory = {
+    user: state.user?.name || "Mi historia",
+    avatar: state.user?.avatar || "berry",
+    label: "mi historia",
+    time: "Ahora",
+    music: "HallyuHub · fan upload",
+    title: "Mi momento K-pop",
+    detail: `Historia decorada con ${style}, stickers, brillo idol y detalles asiaticos.`,
+    stars: 0,
+    views: 37,
+    colors: "linear-gradient(160deg, #fbbcdb, #65e4ff 50%, #a855f7)",
+    style,
+  };
+  storage.set("hallyuHubOwnStory", state.ownStory);
+}
+
+function sendStoryMessage(message) {
+  if (!message) return;
+  const story = getActiveStory();
+  const item = {
+    to: story?.user || "Historia",
+    message,
+    time: "Ahora",
+  };
+  state.storyInbox = [item, ...state.storyInbox].slice(0, 12);
+  storage.set("hallyuHubStoryInbox", state.storyInbox);
+  state.storyComposerOpen = false;
+  render();
+}
+
+function getActiveStory() {
+  if (state.activeStory === -1) return state.ownStory;
+  return followingStories[state.activeStory];
+}
+
 function renderHome() {
   const feedPosts =
     state.backendMode === "supabase" && state.livePosts.length
@@ -1282,6 +1387,13 @@ function renderHome() {
       : userPosts;
   return `
     <div class="stories-row" aria-label="Historias de personas que sigo">
+      <button class="story-item own-story-item" data-own-story>
+        <span class="story-ring own-ring ${state.ownStory ? "has-story" : "empty-story"}">
+          ${state.ownStory ? `<span class="plush-avatar story-avatar" style="--avatar:${getAvatarGradient(state.user?.avatar || "berry")}"><span></span></span>` : `<span class="story-plus">+</span>`}
+        </span>
+        <strong>${state.ownStory ? "Tu historia" : "Crear"}</strong>
+        <small>${state.ownStory ? `${state.ownStory.stars}★ · ${state.ownStory.views} vistas` : "Subir"}</small>
+      </button>
       ${followingStories
         .map(
           (story, index) => `
@@ -1353,11 +1465,13 @@ function renderHome() {
 
 function renderStoryViewer() {
   if (state.activeStory === null) return "";
-  const story = followingStories[state.activeStory];
+  const story = getActiveStory();
   const liked = state.likedStories[state.activeStory];
+  const progressTotal = followingStories.length + (state.ownStory ? 1 : 0);
+  const progressIndex = state.ownStory ? state.activeStory + 1 : state.activeStory;
   return `
     <section class="story-viewer story-slide-${state.storyDirection > 0 ? "next" : "prev"}" aria-label="Historia abierta">
-      <div class="story-progress">${followingStories.map((_, index) => `<span class="${index <= state.activeStory ? "seen" : ""} ${index === state.activeStory ? "active" : ""}"></span>`).join("")}</div>
+      <div class="story-progress">${Array.from({ length: progressTotal }, (_, index) => `<span class="${index < progressIndex ? "seen" : ""} ${index === progressIndex ? "active" : ""}"></span>`).join("")}</div>
       <button class="story-close" data-story-close aria-label="Cerrar historia">X</button>
       <button class="story-tap-zone left" data-story-nav="-1" aria-label="Historia anterior"></button>
       <button class="story-tap-zone right" data-story-nav="1" aria-label="Historia siguiente"></button>
@@ -1374,22 +1488,44 @@ function renderStoryViewer() {
         <div class="story-interactions">
           <div class="story-like-line">
             <button class="story-star ${liked ? "active" : ""}" data-story-star="${state.activeStory}" aria-label="Me gusto esta historia">★</button>
-            <strong>${story.stars + (liked ? 1 : 0)} estrellas</strong>
+            <strong>${story.stars + (liked ? 1 : 0)} estrellas${story.views ? ` · ${story.views} vistas` : ""}</strong>
           </div>
-          <div class="quick-reactions" aria-label="Reacciones K-pop rapidas">
-            ${storyReactions.map((reaction) => `<button type="button">${reaction}</button>`).join("")}
-          </div>
-          <div class="story-comment-box">
-            <input placeholder="Comentar historia..." />
-            <button>Enviar</button>
-          </div>
-          <div class="story-comments">
-            <p><strong>Vale:</strong> Esto se ve hermoso.</p>
-            <p><strong>Nico:</strong> Lo guardo para mi proximo evento.</p>
-          </div>
+          <button class="story-reply-trigger" data-story-message-open>Escribir mensaje...</button>
         </div>
+        ${state.storyComposerOpen ? renderStoryComposer(story) : ""}
       </article>
     </section>
+  `;
+}
+
+function renderStoryComposer(story) {
+  return `
+    <div class="story-composer-sheet">
+      <div class="sheet-handle"></div>
+      <div class="composer-head">
+        <strong>Responder a ${story.user}</strong>
+        <button data-story-message-close aria-label="Cerrar mensaje">X</button>
+      </div>
+      <div class="composer-tools">
+        <span>💜</span><span>✨</span><span>🫰</span><span>🎀</span><span>📸</span><span>🔥</span>
+      </div>
+      <div class="quick-reactions story-phrases" aria-label="Frases K-pop rapidas">
+        ${storyReactions.map((reaction) => `<button type="button" data-story-phrase="${reaction}">${reaction}</button>`).join("")}
+      </div>
+      <div class="story-decorations">
+        ${storyDecorations.map((item) => `<button type="button" data-create-own-story="${item}">${item}</button>`).join("")}
+      </div>
+      <div class="story-comment-box expanded">
+        <input id="story-message-input" placeholder="Escribir texto K-pop..." />
+        <button data-story-send>Enviar</button>
+      </div>
+      ${
+        state.storyInbox.length
+          ? `<div class="story-inbox-preview"><strong>Inbox simulado</strong><span>${state.storyInbox[0].to}: ${state.storyInbox[0].message}</span></div>`
+          : ""
+      }
+      <p class="composer-note">Se envia al inbox como conversacion simulada.</p>
+    </div>
   `;
 }
 
