@@ -8,6 +8,11 @@ const state = {
   authMode: "login",
   isAuthenticated: false,
   user: null,
+  session: null,
+  supabase: null,
+  backendMode: "local",
+  livePosts: [],
+  liveProfiles: [],
 };
 
 const titleByView = {
@@ -71,9 +76,15 @@ const defaultUser = {
 };
 
 const futureBackend = {
-  provider: "localStorage",
+  provider: "Supabase Auth + Postgres + Storage",
   next: "Firebase o Supabase",
   collections: ["users", "posts", "groups", "followers", "messages", "notifications"],
+};
+
+const supabaseBuckets = {
+  avatars: "avatars",
+  posts: "post-media",
+  trends: "trend-media",
 };
 
 const art = [
@@ -146,6 +157,7 @@ const news = [
 
 const userPosts = [
   {
+    id: "demo-post-1",
     user: "Luna Hallyu",
     group: "STAY Chile",
     caption: "Mi setup para ver el comeback con amigas. Ya tengo snacks, light stick y playlist lista.",
@@ -153,6 +165,7 @@ const userPosts = [
     comments: "188",
   },
   {
+    id: "demo-post-2",
     user: "Cami.STAY",
     group: "Buenos Aires",
     caption: "Intercambio de photocards en Palermo. Solo trades con referencias y entrega segura.",
@@ -160,6 +173,7 @@ const userPosts = [
     comments: "64",
   },
   {
+    id: "demo-post-3",
     user: "Vale Multi",
     group: "K-pop 101",
     caption: "Mini guia para elegir tu primer grupo: empieza por 3 canciones, 1 live stage y 1 entrevista.",
@@ -725,6 +739,32 @@ function bindDynamicActions() {
     button.addEventListener("click", saveSettings);
   });
 
+  document.querySelectorAll("[data-create-post]").forEach((button) => {
+    button.addEventListener("click", createPost);
+  });
+
+  document.querySelectorAll("[data-like-post]").forEach((button) => {
+    button.addEventListener("click", () => toggleLike(button.dataset.likePost));
+  });
+
+  document.querySelectorAll("[data-comment-post]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const body = prompt("Escribe un comentario");
+      if (body) addComment(button.dataset.commentPost, body);
+    });
+  });
+
+  document.querySelectorAll("[data-follow-user]").forEach((button) => {
+    button.addEventListener("click", () => followUser(button.dataset.followUser));
+  });
+
+  document.querySelectorAll("[data-send-message]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const body = prompt("Escribe un mensaje privado");
+      if (body) startPrivateMessage(button.dataset.sendMessage, body);
+    });
+  });
+
   document.querySelectorAll("[data-logout]").forEach((button) => {
     button.addEventListener("click", logout);
   });
@@ -772,7 +812,54 @@ function bindDynamicActions() {
   });
 }
 
-function initApp() {
+async function initSupabase() {
+  const config = window.HALLYUHUB_SUPABASE_CONFIG || {};
+  if (!config.url || !config.anonKey || config.url.includes("YOUR_")) {
+    state.backendMode = "local";
+    return;
+  }
+
+  try {
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    state.supabase = createClient(config.url, config.anonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    });
+    state.backendMode = "supabase";
+    state.supabase.auth.onAuthStateChange(async (_event, session) => {
+      state.session = session;
+      if (session?.user) {
+        state.isAuthenticated = true;
+        await loadProfile(session.user);
+        await loadPosts();
+        await loadProfiles();
+        render();
+      }
+    });
+  } catch (error) {
+    console.warn("Supabase no disponible, usando modo local.", error);
+    state.backendMode = "local";
+  }
+}
+
+async function initApp() {
+  await initSupabase();
+  if (state.backendMode === "supabase") {
+    const { data } = await state.supabase.auth.getSession();
+    state.session = data.session;
+    if (data.session?.user) {
+      state.isAuthenticated = true;
+      await loadProfile(data.session.user);
+      await loadPosts();
+      await loadProfiles();
+      state.view = "home";
+      render();
+      return;
+    }
+  }
   const savedUser = storage.get("hallyuHubUser", null);
   const savedSession = storage.get("hallyuHubSession", false);
   state.user = savedUser || defaultUser;
@@ -783,12 +870,46 @@ function initApp() {
   render();
 }
 
-function submitAuth(mode) {
+async function submitAuth(mode) {
   const email = document.getElementById("auth-email")?.value.trim() || defaultUser.email;
   const password = document.getElementById("auth-password")?.value || defaultUser.password;
   const name = document.getElementById("auth-name")?.value.trim() || defaultUser.name;
   const username = document.getElementById("auth-username")?.value.trim() || defaultUser.username;
   const avatar = document.querySelector("[data-auth-avatar].active")?.dataset.authAvatar || state.selectedAvatar;
+
+  if (state.backendMode === "supabase") {
+    const authCall =
+      mode === "register"
+        ? state.supabase.auth.signUp({
+            email,
+            password,
+            options: { data: { name, username, avatar } },
+          })
+        : state.supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await authCall;
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    state.session = data.session;
+    state.isAuthenticated = true;
+    if (data.user) {
+      state.user = {
+        ...defaultUser,
+        email,
+        name,
+        username,
+        avatar,
+      };
+      await upsertProfile(data.user, state.user);
+      await loadProfile(data.user);
+      await loadPosts();
+      await loadProfiles();
+    }
+    setView("home");
+    return;
+  }
+
   state.user = {
     ...defaultUser,
     ...state.user,
@@ -806,15 +927,19 @@ function submitAuth(mode) {
   setView("home");
 }
 
-function saveSettings() {
+async function saveSettings() {
   const selectedAvatar = document.querySelector("[data-avatar].active")?.dataset.avatar || state.selectedAvatar;
   const selectedAmbience = document.querySelector("[data-ambience].active")?.dataset.ambience || state.ambience;
+  const avatarFile = document.getElementById("settings-avatar-file")?.files?.[0];
+  const uploadedAvatarUrl =
+    state.backendMode === "supabase" && avatarFile ? await uploadMedia(avatarFile, supabaseBuckets.avatars) : state.user.avatarUrl;
   state.user = {
     ...state.user,
     name: document.getElementById("settings-name")?.value.trim() || state.user.name,
     username: document.getElementById("settings-username")?.value.trim() || state.user.username,
     bio: document.getElementById("settings-bio")?.value.trim() || state.user.bio,
     avatar: selectedAvatar,
+    avatarUrl: uploadedAvatarUrl,
     ambience: selectedAmbience,
     accent: document.getElementById("settings-accent")?.value || state.user.accent,
     mode: document.getElementById("settings-mode")?.checked ? "light" : "dark",
@@ -823,15 +948,190 @@ function saveSettings() {
   };
   state.selectedAvatar = state.user.avatar;
   state.ambience = state.user.ambience;
+  if (state.backendMode === "supabase" && state.session?.user) {
+    await upsertProfile(state.session.user, state.user);
+  }
   storage.set("hallyuHubUser", state.user);
   render();
 }
 
-function logout() {
+async function logout() {
+  if (state.backendMode === "supabase") {
+    await state.supabase.auth.signOut();
+  }
   storage.remove("hallyuHubSession");
   state.isAuthenticated = false;
   state.view = "auth";
   render();
+}
+
+async function loadProfile(authUser) {
+  const { data, error } = await state.supabase.from("profiles").select("*").eq("id", authUser.id).maybeSingle();
+  if (error) console.warn(error);
+  if (!data) {
+    const newProfile = {
+      ...defaultUser,
+      email: authUser.email,
+      name: authUser.user_metadata?.name || defaultUser.name,
+      username: authUser.user_metadata?.username || `fan_${authUser.id.slice(0, 6)}`,
+      avatar: authUser.user_metadata?.avatar || defaultUser.avatar,
+    };
+    await upsertProfile(authUser, newProfile);
+    state.user = newProfile;
+  } else {
+    state.user = {
+      ...defaultUser,
+      email: data.email || authUser.email,
+      name: data.name,
+      username: data.username,
+      bio: data.bio || "",
+      avatar: data.avatar || "berry",
+      avatarUrl: data.avatar_url,
+      ambience: data.ambience || "hallyu",
+      accent: data.accent || "#fbbcdb",
+      mode: data.mode || "dark",
+      notifications: data.notifications,
+      privateProfile: data.private_profile,
+    };
+  }
+  state.selectedAvatar = state.user.avatar;
+  state.ambience = state.user.ambience;
+}
+
+async function upsertProfile(authUser, user) {
+  const payload = {
+    id: authUser.id,
+    email: authUser.email || user.email,
+    name: user.name,
+    username: user.username,
+    bio: user.bio,
+    avatar: user.avatar,
+    avatar_url: user.avatarUrl || null,
+    ambience: user.ambience,
+    accent: user.accent,
+    mode: user.mode,
+    notifications: user.notifications,
+    private_profile: user.privateProfile,
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = await state.supabase.from("profiles").upsert(payload);
+  if (error) alert(error.message);
+}
+
+async function uploadMedia(file, bucket) {
+  if (!file || state.backendMode !== "supabase" || !state.session?.user) return null;
+  const ext = file.name.split(".").pop();
+  const path = `${state.session.user.id}/${crypto.randomUUID()}.${ext}`;
+  const { error } = await state.supabase.storage.from(bucket).upload(path, file, { upsert: false });
+  if (error) {
+    alert(error.message);
+    return null;
+  }
+  const { data } = state.supabase.storage.from(bucket).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+async function loadPosts() {
+  if (state.backendMode !== "supabase") return;
+  const { data, error } = await state.supabase
+    .from("posts")
+    .select("id, caption, media_url, media_type, category, created_at, profiles(name, username, avatar)")
+    .order("created_at", { ascending: false })
+    .limit(20);
+  if (error) {
+    console.warn(error);
+    return;
+  }
+  state.livePosts = data || [];
+}
+
+async function loadProfiles() {
+  if (state.backendMode !== "supabase") return;
+  const { data, error } = await state.supabase
+    .from("profiles")
+    .select("id, name, username, avatar, avatar_url")
+    .neq("id", state.session?.user?.id || "00000000-0000-0000-0000-000000000000")
+    .limit(20);
+  if (error) {
+    console.warn(error);
+    return;
+  }
+  state.liveProfiles = data || [];
+}
+
+async function createPost() {
+  const caption = document.getElementById("post-caption")?.value.trim() || "";
+  const file = document.getElementById("post-media")?.files?.[0];
+  if (state.backendMode !== "supabase") {
+    userPosts.unshift({
+      user: state.user.name,
+      group: "Nuevo post local",
+      caption: caption || "Publicacion nueva en modo demo.",
+      likes: "0",
+      comments: "0",
+    });
+    setView("home");
+    return;
+  }
+  const mediaUrl = await uploadMedia(file, supabaseBuckets.posts);
+  const mediaType = file?.type?.startsWith("video") ? "video" : file ? "image" : null;
+  const { error } = await state.supabase.from("posts").insert({
+    user_id: state.session.user.id,
+    caption,
+    media_url: mediaUrl,
+    media_type: mediaType,
+    category: "post",
+  });
+  if (error) {
+    alert(error.message);
+    return;
+  }
+  await loadPosts();
+  setView("home");
+}
+
+async function toggleLike(postId) {
+  if (state.backendMode !== "supabase" || !state.session?.user) return;
+  await state.supabase.from("likes").upsert({ post_id: postId, user_id: state.session.user.id });
+}
+
+async function addComment(postId, body) {
+  if (state.backendMode !== "supabase" || !state.session?.user) return;
+  await state.supabase.from("comments").insert({ post_id: postId, user_id: state.session.user.id, body });
+}
+
+async function followUser(userId) {
+  if (state.backendMode !== "supabase" || !state.session?.user) return;
+  await state.supabase.from("follows").upsert({ follower_id: state.session.user.id, following_id: userId });
+}
+
+async function sendPrivateMessage(threadId, body) {
+  if (state.backendMode !== "supabase" || !state.session?.user) return;
+  await state.supabase.from("private_messages").insert({ thread_id: threadId, sender_id: state.session.user.id, body });
+}
+
+async function startPrivateMessage(recipientId, body) {
+  if (state.backendMode !== "supabase" || !state.session?.user || !recipientId) return;
+  const { data, error } = await state.supabase
+    .from("private_threads")
+    .insert({ created_by: state.session.user.id, recipient_id: recipientId, accepted: false })
+    .select("id")
+    .single();
+  if (error) {
+    alert(error.message);
+    return;
+  }
+  alert("Solicitud enviada. El chat se activa cuando la otra persona acepta.");
+  if (body) {
+    console.info("Mensaje pendiente hasta aceptacion:", data.id, body);
+  }
+}
+
+function renderAvatarElement(className, avatarId, imageUrl) {
+  if (imageUrl) {
+    return `<span class="avatar-photo ${className}" style="background-image:url('${imageUrl}')"></span>`;
+  }
+  return `<span class="plush-avatar ${className}" style="--avatar:${getAvatarGradient(avatarId)}"><span></span></span>`;
 }
 
 function renderAuth() {
@@ -879,6 +1179,20 @@ function renderAuth() {
 }
 
 function renderHome() {
+  const feedPosts =
+    state.backendMode === "supabase" && state.livePosts.length
+      ? state.livePosts.map((post) => ({
+          id: post.id,
+          userId: post.user_id,
+          user: post.profiles?.name || "Hallyu fan",
+          group: post.category || "Post",
+          caption: post.caption,
+          likes: "0",
+          comments: "0",
+          mediaUrl: post.media_url,
+          mediaType: post.media_type,
+        }))
+      : userPosts;
   return `
     <div class="stories-row" aria-label="Historias de personas que sigo">
       ${followingStories
@@ -909,7 +1223,7 @@ function renderHome() {
     </button>
     <div class="section-heading"><h2>Publicaciones</h2><span>Siguiendo</span></div>
     <div class="social-feed">
-      ${userPosts
+      ${feedPosts
         .map(
           (post, index) => `
           <article class="post-card">
@@ -917,9 +1231,19 @@ function renderHome() {
               <div class="plush-avatar mini" style="--avatar:${avatars[index % avatars.length].gradient}"><span></span></div>
               <div><h3>${post.user}</h3><p class="muted">${post.group}</p></div>
             </div>
-            <div class="post-media" style="--art:${art[index % art.length]}"></div>
+            ${
+              post.mediaUrl
+                ? post.mediaType === "video"
+                  ? `<video class="post-media real-media" src="${post.mediaUrl}" controls playsinline></video>`
+                  : `<img class="post-media real-media" src="${post.mediaUrl}" alt="Publicacion de ${post.user}" />`
+                : `<div class="post-media" style="--art:${art[index % art.length]}"></div>`
+            }
             <p>${post.caption}</p>
-            <div class="post-actions"><span>Me gusta ${post.likes}</span><span>${post.comments} comentarios</span><span>Compartir</span></div>
+            <div class="post-actions">
+              <button ${post.id ? `data-like-post="${post.id}"` : ""}>Me gusta ${post.likes}</button>
+              <button ${post.id ? `data-comment-post="${post.id}"` : ""}>${post.comments} comentarios</button>
+              <button>Compartir</button>
+            </div>
           </article>`,
         )
         .join("")}
@@ -955,6 +1279,7 @@ function renderNews() {
 }
 
 function renderSearch() {
+  const users = state.backendMode === "supabase" && state.liveProfiles.length ? state.liveProfiles : [];
   return `
     <div class="search-box">
       <span class="nav-icon search-icon"></span>
@@ -980,6 +1305,24 @@ function renderSearch() {
         )
         .join("")}
     </div>
+    ${
+      users.length
+        ? `<div class="section-heading"><h2>Usuarios</h2><span>Supabase</span></div>
+          <div class="user-result-list">
+            ${users
+              .map(
+                (profile) => `
+                <article class="user-result-card">
+                  ${renderAvatarElement("mini", profile.avatar, profile.avatar_url)}
+                  <div><h3>${profile.name}</h3><p class="muted">@${profile.username}</p></div>
+                  <button class="ghost-button" data-follow-user="${profile.id}">Seguir</button>
+                  <button class="ghost-button" data-send-message="${profile.id}">Mensaje</button>
+                </article>`,
+              )
+              .join("")}
+          </div>`
+        : ""
+    }
   `;
 }
 
@@ -1020,11 +1363,12 @@ function renderPublish() {
         <div class="plush-avatar mini" style="--avatar:${getAvatarGradient(state.user.avatar)}"><span></span></div>
         <div><h3>${state.user.name}</h3><p class="muted">@${state.user.username}</p></div>
       </div>
-      <label>Texto de la publicacion<textarea placeholder="Comparte una foto, trade, noticia o momento fandom..."></textarea></label>
+      <label>Texto de la publicacion<textarea id="post-caption" placeholder="Comparte una foto, trade, noticia o momento fandom..."></textarea></label>
       <div class="upload-zone">
         <span class="nav-icon plus-icon"></span>
         <strong>Agregar foto o video</strong>
-        <small>En esta version es visual; luego puede conectarse a Storage.</small>
+        <input id="post-media" type="file" accept="image/*,video/*" />
+        <small>${state.backendMode === "supabase" ? "Se sube a Supabase Storage." : "Modo demo local hasta configurar Supabase."}</small>
       </div>
       <div class="filter-row">
         <button class="filter-chip active">Post</button>
@@ -1032,7 +1376,7 @@ function renderPublish() {
         <button class="filter-chip">Trade</button>
         <button class="filter-chip">Noticia</button>
       </div>
-      <button class="primary-button">Publicar</button>
+      <button class="primary-button" data-create-post>Publicar</button>
     </section>
   `;
 }
@@ -1332,6 +1676,10 @@ function renderSettings() {
         <p class="muted">Guardado local por ahora. Luego estos datos vivirian en ${futureBackend.next}.</p>
       </div>
     </section>
+    <section class="backend-card">
+      <strong>${state.backendMode === "supabase" ? "Supabase conectado" : "Modo demo local"}</strong>
+      <p>${state.backendMode === "supabase" ? "Login, perfiles, posts y media usan Supabase." : "Agrega URL y anon key en supabase-config.js para activar usuarios reales."}</p>
+    </section>
     <section class="profile-panel">
       <div class="section-heading"><h2>Cuenta</h2><span>Perfil</span></div>
       <div class="form-stack">
@@ -1340,6 +1688,9 @@ function renderSettings() {
         <label>Biografia<textarea id="settings-bio">${state.user.bio}</textarea></label>
       </div>
       <div class="section-heading small"><h2>Foto de perfil</h2><span>${activeAvatar.name}</span></div>
+      <div class="form-stack">
+        <label>Subir foto real<input id="settings-avatar-file" type="file" accept="image/*" /></label>
+      </div>
       <div class="avatar-picker">
         ${avatars
           .map(
@@ -1427,7 +1778,7 @@ function renderProfile() {
     <section class="profile-modern">
       <button class="settings-button modern-settings" data-go-view="settings" aria-label="Abrir ajustes"><span class="gear-icon"></span></button>
       <div class="profile-main-row">
-        <div class="plush-avatar profile-avatar" style="--avatar:${activeAvatar.gradient}"><span></span></div>
+        ${renderAvatarElement("profile-avatar", state.user.avatar, state.user.avatarUrl)}
         <div class="profile-stat-line">
           <div><strong>${state.user.posts}</strong><span>publicaciones</span></div>
           <div><strong>${state.user.followers}</strong><span>seguidores</span></div>
