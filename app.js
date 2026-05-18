@@ -5,10 +5,12 @@ const state = {
   ambience: "hallyu",
   selectedGroup: "skz",
   activityTab: "activity",
+  profileTab: "posts",
   activeStory: null,
   likedStories: {},
   storyDirection: 1,
   storyComposerOpen: false,
+  ownStoryStatsOpen: false,
   ownStory: null,
   storyInbox: [],
   authMode: "login",
@@ -81,6 +83,18 @@ const defaultUser = {
   following: "412",
   posts: "48",
   photocards: "286",
+  country: "Chile 🇨🇱",
+  fandom: "ARMY 💜",
+  bias: "Jungkook",
+  favoriteGroup: "BTS",
+  phrase: "Brillando en cada comeback.",
+  fandomLevel: "Level 18 Fandom",
+  starsReceived: "32.8K",
+  trendsCreated: "21",
+  premium: false,
+  phone: "",
+  language: "Español",
+  themePremium: false,
 };
 
 const futureBackend = {
@@ -168,6 +182,10 @@ const userPosts = [
     id: "demo-post-1",
     user: "Luna Hallyu",
     group: "STAY Chile",
+    time: "hace 2 min",
+    badge: "Stay ⭐",
+    online: true,
+    hashtags: ["#comeback", "#STAYLatam"],
     caption: "Mi setup para ver el comeback con amigas. Ya tengo snacks, light stick y playlist lista.",
     likes: "2.4K",
     comments: "188",
@@ -176,6 +194,10 @@ const userPosts = [
     id: "demo-post-2",
     user: "Cami.STAY",
     group: "Buenos Aires",
+    time: "hace 8 min",
+    badge: "Blink 🖤💖",
+    online: true,
+    hashtags: ["#photocard", "#tradeSeguro"],
     caption: "Intercambio de photocards en Palermo. Solo trades con referencias y entrega segura.",
     likes: "918",
     comments: "64",
@@ -184,10 +206,21 @@ const userPosts = [
     id: "demo-post-3",
     user: "Vale Multi",
     group: "K-pop 101",
+    time: "hace 15 min",
+    badge: "Army 💜",
+    online: false,
+    hashtags: ["#Kpop101", "#bias"],
     caption: "Mini guia para elegir tu primer grupo: empieza por 3 canciones, 1 live stage y 1 entrevista.",
     likes: "4.8K",
     comments: "301",
   },
+];
+
+const storyViewers = [
+  { name: "Cami.STAY", badge: "Stay ⭐", action: "vio tu historia" },
+  { name: "Mika", badge: "Army 💜", action: "dio estrella" },
+  { name: "Vale Multi", badge: "Tokki 🐰", action: "vio tu historia" },
+  { name: "Nico K", badge: "Once 🍭", action: "dio estrella" },
 ];
 
 const followingStories = [
@@ -701,6 +734,26 @@ const profilePhotos = [
   "Fan art",
 ];
 
+const profileHighlights = ["Conciertos", "Fancams", "Bias", "Photocards", "Dance covers", "Eventos", "Outfits", "Comeback"];
+
+const profileTabs = [
+  ["posts", "Publicaciones"],
+  ["trends", "Trends"],
+  ["photocards", "Photocards"],
+  ["saved", "Guardados"],
+  ["favorites", "Favoritos"],
+];
+
+const fandomBadges = ["Army 💜", "Blink 🖤💖", "Once 🍭", "Stay ⭐", "Tokki 🐰"];
+
+const profileAchievements = [
+  ["Lightstick virtual", "BTS · Purple glow"],
+  ["Ranking fandom", "Top 4% LATAM"],
+  ["Photocards", "286 en coleccion"],
+  ["Comeback tracker", "7 activos"],
+  ["Achievements", "Mentora K-pop 101"],
+];
+
 function setView(nextView) {
   if (nextView !== "home") {
     state.activeStory = null;
@@ -816,6 +869,7 @@ function bindDynamicActions() {
       state.activeStory = Number(button.dataset.storyIndex);
       state.storyDirection = 1;
       state.storyComposerOpen = false;
+      state.ownStoryStatsOpen = false;
       render();
     });
   });
@@ -829,6 +883,7 @@ function bindDynamicActions() {
         createOwnStory();
       }
       state.storyComposerOpen = false;
+      state.ownStoryStatsOpen = false;
       render();
     });
   });
@@ -844,6 +899,7 @@ function bindDynamicActions() {
     button.addEventListener("click", () => {
       state.activeStory = null;
       state.storyComposerOpen = false;
+      state.ownStoryStatsOpen = false;
       clearStoryAutoplay();
       render();
     });
@@ -858,6 +914,14 @@ function bindDynamicActions() {
       state.storyDirection = direction;
       state.activeStory = state.ownStory ? next - 1 : next;
       state.storyComposerOpen = false;
+      state.ownStoryStatsOpen = false;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-own-story-stats]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.ownStoryStatsOpen = !state.ownStoryStatsOpen;
       render();
     });
   });
@@ -933,6 +997,25 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-activity-tab]").forEach((button) => {
     button.addEventListener("click", () => {
       state.activityTab = button.dataset.activityTab;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-profile-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.profileTab = button.dataset.profileTab;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-toggle-premium]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.user = {
+        ...state.user,
+        premium: !state.user.premium,
+        themePremium: !state.user.premium,
+      };
+      storage.set("hallyuHubUser", state.user);
       render();
     });
   });
@@ -1094,6 +1177,13 @@ async function saveSettings() {
     name: document.getElementById("settings-name")?.value.trim() || state.user.name,
     username: document.getElementById("settings-username")?.value.trim() || state.user.username,
     bio: document.getElementById("settings-bio")?.value.trim() || state.user.bio,
+    country: document.getElementById("settings-country")?.value.trim() || state.user.country,
+    fandom: document.getElementById("settings-fandom")?.value.trim() || state.user.fandom,
+    bias: document.getElementById("settings-bias")?.value.trim() || state.user.bias,
+    favoriteGroup: document.getElementById("settings-group")?.value.trim() || state.user.favoriteGroup,
+    phrase: document.getElementById("settings-phrase")?.value.trim() || state.user.phrase,
+    phone: document.getElementById("settings-phone")?.value.trim() || state.user.phone,
+    language: document.getElementById("settings-language")?.value.trim() || state.user.language,
     avatar: selectedAvatar,
     avatarUrl: uploadedAvatarUrl,
     ambience: selectedAmbience,
@@ -1378,6 +1468,10 @@ function renderHome() {
           userId: post.user_id,
           user: post.profiles?.name || "Hallyu fan",
           group: post.category || "Post",
+          time: "hace un momento",
+          badge: "Tokki 🐰",
+          online: true,
+          hashtags: ["#HallyuHub", "#KpopLatam"],
           caption: post.caption,
           likes: "0",
           comments: "0",
@@ -1432,14 +1526,20 @@ function renderHome() {
       <div class="metric-pill"><span class="metric-dot drops"></span><strong>24h</strong><small>drops</small></div>
     </div>
     <div class="section-heading"><h2>Publicaciones</h2><span>Siguiendo</span></div>
-    <div class="home-skeleton" aria-hidden="true"><span></span><span></span><span></span></div>
     <div class="social-feed">
       ${feedPosts
         .map(
           (post, index) => `
           <article class="post-card">
             <div class="post-head centered-post-head">
-              <div><h3>${post.user}</h3><p class="muted">${post.group}</p></div>
+              <div>
+                <div class="post-user-line">
+                  <span class="online-dot ${post.online ? "active" : ""}"></span>
+                  <h3>${post.user}</h3>
+                  <span class="fandom-badge">${post.badge || "Army 💜"}</span>
+                </div>
+                <p class="muted">${post.group} · ${post.time || "hace 2 min"}</p>
+              </div>
             </div>
             ${
               post.mediaUrl
@@ -1449,6 +1549,9 @@ function renderHome() {
                 : `<div class="post-media" style="--art:${art[index % art.length]}"></div>`
             }
             <p>${post.caption}</p>
+            <div class="post-hashtags">
+              ${(post.hashtags || ["#KpopLatam", "#HallyuHub"]).map((tag) => `<button type="button">${tag}</button>`).join("")}
+            </div>
             <div class="post-actions premium-actions">
               <button class="post-action-star" ${post.id ? `data-like-post="${post.id}"` : ""}><span>★</span><strong>${post.likes}</strong></button>
               <button class="post-action-comment" ${post.id ? `data-comment-post="${post.id}"` : ""}><span></span><strong>${post.comments}</strong></button>
@@ -1466,11 +1569,13 @@ function renderHome() {
 function renderStoryViewer() {
   if (state.activeStory === null) return "";
   const story = getActiveStory();
+  if (!story) return "";
+  const isOwnStory = state.activeStory === -1;
   const liked = state.likedStories[state.activeStory];
   const progressTotal = followingStories.length + (state.ownStory ? 1 : 0);
   const progressIndex = state.ownStory ? state.activeStory + 1 : state.activeStory;
   return `
-    <section class="story-viewer story-slide-${state.storyDirection > 0 ? "next" : "prev"}" aria-label="Historia abierta">
+    <section class="story-viewer story-slide-${state.storyDirection > 0 ? "next" : "prev"} ${isOwnStory ? "own-story-viewer" : ""}" style="--story-art:${story.colors}" aria-label="Historia abierta">
       <div class="story-progress">${Array.from({ length: progressTotal }, (_, index) => `<span class="${index < progressIndex ? "seen" : ""} ${index === progressIndex ? "active" : ""}"></span>`).join("")}</div>
       <button class="story-close" data-story-close aria-label="Cerrar historia">X</button>
       <button class="story-tap-zone left" data-story-nav="-1" aria-label="Historia anterior"></button>
@@ -1481,20 +1586,53 @@ function renderStoryViewer() {
           <div><h3>${story.user}</h3><p>${story.label} · ${story.time}</p></div>
         </div>
         <div class="story-music-pill"><span>♪</span>${story.music}</div>
+        <div class="live-fandom-pill"><span></span>Live fandom activo</div>
         <div class="story-full-copy">
           <h2>${story.title}</h2>
           <p>${story.detail}</p>
         </div>
-        <div class="story-interactions">
-          <div class="story-like-line">
-            <button class="story-star ${liked ? "active" : ""}" data-story-star="${state.activeStory}" aria-label="Me gusto esta historia">★</button>
-            <strong>${story.stars + (liked ? 1 : 0)} estrellas${story.views ? ` · ${story.views} vistas` : ""}</strong>
-          </div>
-          <button class="story-reply-trigger" data-story-message-open>Escribir mensaje...</button>
-        </div>
-        ${state.storyComposerOpen ? renderStoryComposer(story) : ""}
+        ${
+          isOwnStory
+            ? `<div class="story-interactions own-story-actions">
+                <button class="story-star own-info-star ${state.ownStoryStatsOpen ? "active" : ""}" data-own-story-stats aria-label="Ver actividad de mi historia">★</button>
+                <strong>${story.views || 0} vistas · tocar estrella para ver actividad</strong>
+              </div>
+              ${state.ownStoryStatsOpen ? renderOwnStoryStats(story) : ""}`
+            : `<div class="story-interactions">
+                <div class="story-like-line">
+                  <button class="story-star ${liked ? "active" : ""}" data-story-star="${state.activeStory}" aria-label="Me gusto esta historia">★</button>
+                  <strong>${story.stars + (liked ? 1 : 0)} estrellas</strong>
+                </div>
+                <button class="story-reply-trigger" data-story-message-open>Escribir mensaje...</button>
+              </div>
+              ${state.storyComposerOpen ? renderStoryComposer(story) : ""}`
+        }
       </article>
     </section>
+  `;
+}
+
+function renderOwnStoryStats(story) {
+  return `
+    <div class="own-story-stats">
+      <div class="own-stat-grid">
+        <div><strong>${story.views || 0}</strong><span>vistas</span></div>
+        <div><strong>${story.stars || 0}</strong><span>estrellas</span></div>
+        <div><strong>${storyViewers.length}</strong><span>fans</span></div>
+      </div>
+      <div class="viewer-list">
+        ${storyViewers
+          .map(
+            (viewer) => `
+            <div class="viewer-row">
+              <span class="viewer-avatar"></span>
+              <div><strong>${viewer.name}</strong><small>${viewer.action}</small></div>
+              <span class="fandom-badge">${viewer.badge}</span>
+            </div>`,
+          )
+          .join("")}
+      </div>
+    </div>
   `;
 }
 
@@ -1949,6 +2087,16 @@ function renderMessages() {
 function renderSettings() {
   const activeAvatar = avatars.find((avatar) => avatar.id === state.user.avatar) || avatars[0];
   const activeAmbience = ambiences.find((ambience) => ambience.id === state.user.ambience) || ambiences[0];
+  const premiumLabel = state.user.premium ? "Plus activo" : "Plan gratuito";
+  const settingsGroups = [
+    ["Cuenta", ["Editar perfil", "Cambiar email", "Cambiar contrasena", "Telefono", "Idioma", "Pais", "Cerrar sesion"]],
+    ["Privacidad", ["Cuenta privada", "Quien puede enviarme mensajes", "Quien puede ver mis historias", "Quien puede comentar", "Bloquear usuarios", "Usuarios bloqueados"]],
+    ["Notificaciones", ["Likes/estrellas", "Comentarios", "Mensajes", "Nuevos seguidores", "Trends", "Eventos K-pop"]],
+    ["Pagos", ["Metodo de pago", "Historial de pagos", "Estado de suscripcion", "Cancelar suscripcion", "Facturacion"]],
+    ["Legal", ["Politica de privacidad", "Terminos y condiciones", "Normas de comunidad", "Copyright y derechos de autor", "Politica de contenido fan", "Politica de menores", "Ayuda y soporte", "Reportar problema", "Eliminar cuenta"]],
+    ["Seguridad", ["Verificacion de cuenta", "Sesiones activas", "Autenticacion en dos pasos simulada", "Cambiar contrasena", "Actividad reciente"]],
+    ["Moderacion", ["Reportar usuario", "Reportar contenido", "Bloquear usuario", "Silenciar usuario"]],
+  ];
   return `
     <button class="ghost-button back-button" data-go-view="profile">Volver al perfil</button>
     <section class="settings-header">
@@ -1964,22 +2112,18 @@ function renderSettings() {
       <p>${state.backendMode === "supabase" ? "Login, perfiles, posts y media usan Supabase." : "Agrega URL y anon key en supabase-config.js para activar usuarios reales."}</p>
     </section>
     <section class="profile-panel">
-      <div class="section-heading"><h2>Configuracion general</h2><span>App</span></div>
-      <div class="settings-menu-list">
-        <button><span class="menu-dot privacy"></span><strong>Politicas de privacidad</strong><small>Datos, permisos y seguridad</small></button>
-        <button><span class="menu-dot account"></span><strong>Cuenta</strong><small>Email, usuario y acceso</small></button>
-        <button><span class="menu-dot activity"></span><strong>Tu actividad</strong><small>Likes, comentarios y tiempo de uso</small></button>
-        <button><span class="menu-dot archive"></span><strong>Archivo</strong><small>Historias, posts guardados y borradores</small></button>
-        <button><span class="menu-dot saved"></span><strong>Guardados</strong><small>Trends, grupos y fotocards</small></button>
-        <button><span class="menu-dot safety"></span><strong>Privacidad de mensajes</strong><small>Solicitudes, bloqueos y reportes</small></button>
-      </div>
-    </section>
-    <section class="profile-panel">
-      <div class="section-heading"><h2>Cuenta</h2><span>Perfil</span></div>
+      <div class="section-heading"><h2>Editar perfil</h2><span>Perfil</span></div>
       <div class="form-stack">
         <label>Nombre<input id="settings-name" value="${state.user.name}" /></label>
         <label>Usuario<input id="settings-username" value="${state.user.username}" /></label>
         <label>Biografia<textarea id="settings-bio">${state.user.bio}</textarea></label>
+        <label>Pais<input id="settings-country" value="${state.user.country || ""}" /></label>
+        <label>Fandom<input id="settings-fandom" value="${state.user.fandom || ""}" /></label>
+        <label>Bias<input id="settings-bias" value="${state.user.bias || ""}" /></label>
+        <label>Grupo favorito<input id="settings-group" value="${state.user.favoriteGroup || ""}" /></label>
+        <label>Frase destacada<input id="settings-phrase" value="${state.user.phrase || ""}" /></label>
+        <label>Telefono<input id="settings-phone" value="${state.user.phone || ""}" /></label>
+        <label>Idioma<input id="settings-language" value="${state.user.language || "Espanol"}" /></label>
       </div>
       <div class="section-heading small"><h2>Foto de perfil</h2><span>${activeAvatar.name}</span></div>
       <div class="form-stack">
@@ -1996,6 +2140,14 @@ function renderSettings() {
           )
           .join("")}
       </div>
+    </section>
+    <section class="plus-panel">
+      <div>
+        <span class="tag">${premiumLabel}</span>
+        <h2>HallyuHub Plus</h2>
+        <p>Badges exclusivos, temas premium, filtros, mas espacio para photocards y estadisticas avanzadas.</p>
+      </div>
+      <button class="primary-button" data-toggle-premium>${state.user.premium ? "Desactivar demo" : "Suscribirme"}</button>
     </section>
     <section class="profile-panel">
       <div class="section-heading"><h2>Ambiente</h2><span>${activeAmbience.group}</span></div>
@@ -2020,6 +2172,26 @@ function renderSettings() {
       <button class="primary-button" data-save-settings>Guardar cambios</button>
       <button class="ghost-button danger-button" data-logout>Cerrar sesion</button>
     </section>
+    ${settingsGroups
+      .map(
+        ([title, items]) => `
+        <section class="profile-panel settings-section">
+          <div class="section-heading"><h2>${title}</h2><span>${items.length}</span></div>
+          <div class="settings-menu-list dense">
+            ${items
+              .map(
+                (item, index) => `
+                <button>
+                  <span class="menu-dot ${index % 2 ? "privacy" : "safety"}"></span>
+                  <strong>${item}</strong>
+                  <small>${title === "Legal" || title === "Moderacion" ? "Visible para App Store / Play Store" : "Demo visual"}</small>
+                </button>`,
+              )
+              .join("")}
+          </div>
+        </section>`,
+      )
+      .join("")}
   `;
 }
 
@@ -2067,50 +2239,94 @@ function renderRookie() {
 }
 
 function renderProfile() {
+  const isPlus = Boolean(state.user.premium);
+  const activeTab = profileTabs.find(([key]) => key === state.profileTab) || profileTabs[0];
   return `
-    <section class="profile-modern">
+    <section class="premium-profile-hero ${isPlus ? "plus" : ""}">
       <button class="settings-button modern-settings" data-go-view="settings" aria-label="Abrir configuracion"><span class="gear-icon"></span></button>
-      <div class="profile-centered-head">
-        ${renderAvatarElement("profile-avatar centered", state.user.avatar, state.user.avatarUrl)}
-        <h1>${state.user.name}</h1>
-        <p>@${state.user.username}</p>
-        <span>${state.user.bio}</span>
+      <div class="profile-hero-top">
+        ${renderAvatarElement("profile-avatar premium-avatar", state.user.avatar, state.user.avatarUrl)}
+        <div class="profile-name-block">
+          <div class="profile-title-line"><h1>${state.user.name}</h1><span class="verified-badge">${isPlus ? "Plus" : "Verificado"}</span></div>
+          <p>@${state.user.username} · ${state.user.country || "Chile 🇨🇱"}</p>
+          <div class="fandom-line"><span>${state.user.fandom || "ARMY 💜"}</span><span>Bias: ${state.user.bias || "Jungkook"}</span></div>
+          <div class="fandom-line"><span>${state.user.favoriteGroup || "BTS"}</span><span>${state.user.fandomLevel || "Level 18 Fandom"}</span></div>
+        </div>
       </div>
-      <div class="profile-stat-line centered-stats">
-        <div><strong>${state.user.posts}</strong><span>publicaciones</span></div>
+      <p class="profile-phrase">${state.user.phrase || state.user.bio}</p>
+      <div class="premium-stats">
+        <div><strong>${state.user.posts}</strong><span>posts</span></div>
         <div><strong>${state.user.followers}</strong><span>seguidores</span></div>
-        <div><strong>${state.user.following}</strong><span>seguidos</span></div>
+        <div><strong>${state.user.following}</strong><span>siguiendo</span></div>
+        <div><strong>${state.user.starsReceived || "32.8K"}</strong><span>estrellas</span></div>
+        <div><strong>${state.user.trendsCreated || "21"}</strong><span>trends</span></div>
       </div>
-      <div class="profile-actions compact-actions">
-        <button class="ghost-button" data-go-view="settings">Editar perfil</button>
+      <div class="premium-profile-actions">
+        <button class="primary-button" data-go-view="settings">Editar perfil</button>
         <button class="ghost-button">Compartir perfil</button>
+        <button class="ghost-button" data-go-view="settings">Ajustes ⚙</button>
       </div>
     </section>
-    <section class="profile-shortcuts">
-      <button><span class="shortcut-icon photos"></span><strong>Fotos</strong></button>
-      <button><span class="shortcut-icon albums"></span><strong>Albumes</strong></button>
-      <button><span class="shortcut-icon cards"></span><strong>Fotocard</strong></button>
+    <section class="highlight-row">
+      ${profileHighlights
+        .map(
+          (item, index) => `
+          <button>
+            <span class="highlight-orb" style="--art:${art[index % art.length]}"></span>
+            <strong>${item}</strong>
+          </button>`,
+        )
+        .join("")}
+    </section>
+    <section class="profile-fandom-dashboard">
+      ${profileAchievements
+        .map(
+          ([title, detail], index) => `
+          <article>
+            <span class="mini-lightstick" style="--art:${art[index % art.length]}"></span>
+            <strong>${title}</strong>
+            <small>${detail}</small>
+          </article>`,
+        )
+        .join("")}
     </section>
     <section class="profile-panel slim-panel">
-      <div class="section-heading"><h2>Publicaciones</h2><span>Seguidores</span></div>
-      <div class="profile-photo-grid large-grid">
-        ${profilePhotos
-          .concat(["Bias wall", "Trend clip", "Unboxing"])
-          .map(
-            (photo, index) => `<div class="profile-photo" style="--art:${art[index % art.length]}">${photo}</div>`,
-          )
+      <div class="profile-tabs">
+        ${profileTabs
+          .map(([key, label]) => `<button class="${state.profileTab === key ? "active" : ""}" data-profile-tab="${key}">${label}</button>`)
           .join("")}
+      </div>
+      <div class="profile-grid-premium">
+        ${renderProfileGrid(activeTab[0])}
       </div>
     </section>
     <section class="profile-panel">
-      <div class="section-heading"><h2>Mis grupos top</h2><span>Editar</span></div>
-      <div class="bias-row">
-        <div class="bias-card"><strong>SKZ</strong><span class="muted">Bias: Felix</span></div>
-        <div class="bias-card"><strong>BTS</strong><span class="muted">Bias: Jimin</span></div>
-        <div class="bias-card"><strong>IVE</strong><span class="muted">Bias: Rei</span></div>
+      <div class="section-heading"><h2>Badges fandom</h2><span>HallyuHub</span></div>
+      <div class="badge-cloud">
+        ${fandomBadges.map((badge) => `<span>${badge}</span>`).join("")}
       </div>
     </section>
   `;
+}
+
+function renderProfileGrid(tab) {
+  const labels = {
+    posts: profilePhotos,
+    trends: ["Dance cover", "Random play", "Challenge", "Duet", "Stage edit", "Viral step", "Practice", "Fan cam", "Remix"],
+    photocards: ["JK rare", "Felix", "Lisa", "Wonyoung", "Momo", "Hanni", "Jimin", "Rei", "Bang Chan"],
+    saved: ["Guia comeback", "Evento", "Trade", "Mentoria", "Playlist", "Outfit", "Fan art", "Shop", "Live"],
+    favorites: ["BTS", "SKZ", "BLACKPINK", "TWICE", "NewJeans", "IVE", "ATEEZ", "TXT", "SEVENTEEN"],
+  };
+  return (labels[tab] || labels.posts)
+    .map(
+      (label, index) => `
+      <article class="profile-grid-item" style="--art:${art[index % art.length]}">
+        <span class="grid-badge">${index % 2 ? "Trend" : "★ " + (index + 12)}</span>
+        <strong>${label}</strong>
+        <small>${index + 3} comentarios</small>
+      </article>`,
+    )
+    .join("");
 }
 
 document.querySelectorAll(".nav-item").forEach((button) => {
