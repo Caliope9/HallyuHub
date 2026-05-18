@@ -6,6 +6,7 @@ const state = {
   selectedGroup: "skz",
   activityTab: "activity",
   profileTab: "posts",
+  profileEditorOpen: false,
   settingsPanel: null,
   viewedProfile: null,
   followedProfiles: {},
@@ -91,6 +92,7 @@ const defaultUser = {
   fandom: "ARMY 💜",
   bias: "Jungkook",
   favoriteGroup: "BTS",
+  socials: "Instagram @lunahallyu · TikTok @lunahallyu",
   phrase: "Brillando en cada comeback.",
   fandomLevel: "Level 18 Fandom",
   starsReceived: "32.8K",
@@ -773,7 +775,10 @@ const profileAchievements = [
 
 function setView(nextView) {
   if (nextView !== "settings") state.settingsPanel = null;
-  if (nextView !== "profile") state.viewedProfile = null;
+  if (nextView !== "profile") {
+    state.viewedProfile = null;
+    state.profileEditorOpen = false;
+  }
   if (nextView !== "home") {
     state.activeStory = null;
     state.storyComposerOpen = false;
@@ -1028,10 +1033,31 @@ function bindDynamicActions() {
     });
   });
 
+  document.querySelectorAll("[data-profile-edit-open]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedAvatar = state.user.avatar;
+      state.selectedProfileBg = state.user.profileBg;
+      state.profileEditorOpen = true;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-profile-edit-close]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.profileEditorOpen = false;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-save-profile-edit]").forEach((button) => {
+    button.addEventListener("click", saveProfileEdit);
+  });
+
   document.querySelectorAll("[data-open-profile]").forEach((button) => {
     button.addEventListener("click", () => {
       const profile = state.liveProfiles.find((item) => item.id === button.dataset.openProfile);
       if (!profile) return;
+      state.profileEditorOpen = false;
       state.viewedProfile = {
         id: profile.id,
         name: profile.name || "Hallyu fan",
@@ -1288,6 +1314,35 @@ async function saveSettings() {
   state.selectedAvatar = state.user.avatar;
   state.selectedProfileBg = state.user.profileBg;
   state.ambience = state.user.ambience;
+  if (state.backendMode === "supabase" && state.session?.user) {
+    await upsertProfile(state.session.user, state.user);
+  }
+  storage.set("hallyuHubUser", state.user);
+  render();
+}
+
+async function saveProfileEdit() {
+  const selectedAvatar = document.querySelector("[data-avatar].active")?.dataset.avatar || state.selectedAvatar || state.user.avatar;
+  const selectedProfileBg = document.querySelector("[data-profile-bg].active")?.dataset.profileBg || state.selectedProfileBg || state.user.profileBg;
+  const avatarFile = document.getElementById("profile-edit-avatar-file")?.files?.[0];
+  const uploadedAvatarUrl =
+    state.backendMode === "supabase" && avatarFile ? await uploadMedia(avatarFile, supabaseBuckets.avatars) : state.user.avatarUrl;
+
+  state.user = {
+    ...state.user,
+    name: document.getElementById("profile-edit-name")?.value.trim() || state.user.name,
+    username: document.getElementById("profile-edit-username")?.value.trim() || state.user.username,
+    bio: document.getElementById("profile-edit-bio")?.value.trim() || state.user.bio,
+    favoriteGroup: document.getElementById("profile-edit-groups")?.value.trim() || state.user.favoriteGroup,
+    socials: document.getElementById("profile-edit-socials")?.value.trim() || state.user.socials || "",
+    avatar: selectedAvatar,
+    avatarUrl: uploadedAvatarUrl,
+    profileBg: selectedProfileBg,
+  };
+
+  state.selectedAvatar = state.user.avatar;
+  state.selectedProfileBg = state.user.profileBg;
+  state.profileEditorOpen = false;
   if (state.backendMode === "supabase" && state.session?.user) {
     await upsertProfile(state.session.user, state.user);
   }
@@ -2540,13 +2595,14 @@ function renderRookie() {
 function renderProfile() {
   const profileUser = state.viewedProfile || state.user;
   const isOwnProfile = !state.viewedProfile || profileUser.username === state.user.username || profileUser.id === state.session?.user?.id;
+  if (isOwnProfile && state.profileEditorOpen) return renderProfileEditor();
   const isPlus = Boolean(profileUser.premium);
   const activeTab = profileTabs.find(([key]) => key === state.profileTab) || profileTabs[0];
   const profileBg = getProfileBackground(profileUser.profileBg);
   const isFollowing = Boolean(state.followedProfiles[profileUser.id || profileUser.username]);
   return `
     <section class="premium-profile-hero ${isPlus ? "plus" : ""}" style="--profile-bg:${profileBg.art}">
-      ${isOwnProfile ? `<button class="settings-button modern-settings" data-go-view="settings" aria-label="Abrir configuracion"><span class="gear-icon"></span></button>` : ""}
+      ${isOwnProfile ? `<button class="settings-button modern-settings" data-go-view="settings" aria-label="Abrir ajustes"><span class="gear-icon"></span></button>` : ""}
       <div class="profile-hero-top">
         ${renderAvatarElement("profile-avatar premium-avatar", profileUser.avatar, profileUser.avatarUrl)}
         <div class="profile-name-block">
@@ -2566,8 +2622,7 @@ function renderProfile() {
       <div class="premium-profile-actions ${isOwnProfile ? "own-actions" : "other-actions"}">
         ${
           isOwnProfile
-            ? `<button class="primary-button profile-main-action" data-go-view="settings">Editar perfil</button>
-               <button class="ghost-button profile-icon-action" data-go-view="settings"><span class="slider-icon"></span></button>`
+            ? `<button class="primary-button profile-main-action" data-profile-edit-open>Editar perfil</button>`
             : `<button class="primary-button profile-main-action" data-profile-follow="${profileUser.id || profileUser.username}">${isFollowing ? "Siguiendo" : "Seguir"}</button>
                <button class="ghost-button profile-share-action">Compartir perfil</button>`
         }
@@ -2597,6 +2652,46 @@ function renderProfile() {
   `;
 }
 
+function renderProfileEditor() {
+  const activeAvatar = avatars.find((avatar) => avatar.id === (state.selectedAvatar || state.user.avatar)) || avatars[0];
+  return `
+    <section class="profile-editor-card">
+      <button class="ghost-button back-button" data-profile-edit-close>Volver al perfil</button>
+      <div class="profile-edit-cover" style="--profile-bg:${getProfileBackground(state.selectedProfileBg || state.user.profileBg).art}">
+        ${renderAvatarElement("profile-avatar premium-avatar edit-avatar", state.selectedAvatar || state.user.avatar, state.user.avatarUrl)}
+        <div>
+          <p class="eyebrow">Editar perfil</p>
+          <h2>Tu identidad HallyuHub</h2>
+          <p class="muted">Solo datos visibles en tu perfil. Cuenta, privacidad y legal quedan en Ajustes.</p>
+        </div>
+      </div>
+      <div class="form-stack profile-edit-form">
+        <label>Cambiar foto real<input id="profile-edit-avatar-file" type="file" accept="image/*" /></label>
+        <label>Nombre visible<input id="profile-edit-name" value="${state.user.name}" /></label>
+        <label>Nombre de usuario<input id="profile-edit-username" value="${state.user.username}" /></label>
+        <label>Bio / descripción<textarea id="profile-edit-bio">${state.user.bio}</textarea></label>
+        <label>Grupos favoritos<input id="profile-edit-groups" value="${state.user.favoriteGroup || ""}" placeholder="BTS, Stray Kids, BLACKPINK" /></label>
+        <label>Redes sociales<input id="profile-edit-socials" value="${state.user.socials || ""}" placeholder="Instagram, TikTok, YouTube..." /></label>
+      </div>
+      <div class="section-heading small"><h2>Avatar prediseñado</h2><span>${activeAvatar.name}</span></div>
+      <div class="avatar-picker compact-picker">
+        ${avatars
+          .map(
+            (avatar) => `
+            <button class="avatar-choice ${(state.selectedAvatar || state.user.avatar) === avatar.id ? "active" : ""}" data-avatar="${avatar.id}">
+              <div class="plush-avatar pick" style="--avatar:${avatar.gradient}"><span></span></div>
+              <strong>${avatar.name}</strong>
+            </button>`,
+          )
+          .join("")}
+      </div>
+      <div class="section-heading small"><h2>Cambiar portada / fondo</h2><span>Perfil</span></div>
+      ${renderProfileBackgroundPicker()}
+      <button class="primary-button" data-save-profile-edit>Guardar cambios</button>
+    </section>
+  `;
+}
+
 function renderProfileGrid(tab) {
   const labels = {
     posts: profilePhotos,
@@ -2619,7 +2714,10 @@ function renderProfileGrid(tab) {
 
 document.querySelectorAll(".nav-item").forEach((button) => {
   button.addEventListener("click", () => {
-    if (button.dataset.view === "profile") state.viewedProfile = null;
+    if (button.dataset.view === "profile") {
+      state.viewedProfile = null;
+      state.profileEditorOpen = false;
+    }
     setView(button.dataset.view);
   });
 });
