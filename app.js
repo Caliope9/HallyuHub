@@ -190,6 +190,7 @@ const userPosts = [
     id: "demo-post-1",
     user: "Luna Hallyu",
     group: "STAY Chile",
+    category: "posts",
     time: "hace 2 min",
     badge: "Stay ⭐",
     online: true,
@@ -197,11 +198,15 @@ const userPosts = [
     caption: "Mi setup para ver el comeback con amigas. Ya tengo snacks, light stick y playlist lista.",
     likes: "2.4K",
     comments: "188",
+    location: "Santiago, Chile",
+    taggedPeople: "@cami.stay, @mika",
+    taggedPlace: "Cupsleeve Providencia",
   },
   {
     id: "demo-post-2",
     user: "Cami.STAY",
     group: "Buenos Aires",
+    category: "photocards",
     time: "hace 8 min",
     badge: "Blink 🖤💖",
     online: true,
@@ -214,6 +219,7 @@ const userPosts = [
     id: "demo-post-3",
     user: "Vale Multi",
     group: "K-pop 101",
+    category: "posts",
     time: "hace 15 min",
     badge: "Army 💜",
     online: false,
@@ -758,6 +764,7 @@ const profileHighlights = ["Conciertos", "Fancams", "Bias", "Photocards", "Dance
 const profileTabs = [
   ["posts", "Publicaciones"],
   ["trends", "Trends"],
+  ["outfits", "Outfit"],
   ["photocards", "Photocards"],
   ["saved", "Guardados"],
   ["favorites", "Favoritos"],
@@ -1214,6 +1221,10 @@ async function initApp() {
   const savedUser = storage.get("hallyuHubUser", null);
   const savedSession = storage.get("hallyuHubSession", false);
   state.user = savedUser || defaultUser;
+  const savedLocalPosts = storage.get("hallyuHubUserPosts", []);
+  if (Array.isArray(savedLocalPosts) && savedLocalPosts.length) {
+    userPosts.unshift(...savedLocalPosts.filter((post) => !userPosts.some((item) => item.id === post.id)));
+  }
   state.ownStory = storage.get("hallyuHubOwnStory", null);
   state.storyInbox = storage.get("hallyuHubStoryInbox", []);
   state.isAuthenticated = Boolean(savedSession);
@@ -1478,14 +1489,30 @@ async function loadProfiles() {
 async function createPost() {
   const caption = document.getElementById("post-caption")?.value.trim() || "";
   const file = document.getElementById("post-media")?.files?.[0];
+  const category = document.getElementById("post-category")?.value || "posts";
+  const optionalFields = {
+    location: document.getElementById("post-location")?.value.trim() || "",
+    date: document.getElementById("post-date")?.value || "",
+    hour: document.getElementById("post-hour")?.value || "",
+    taggedPeople: document.getElementById("post-tagged-people")?.value.trim() || "",
+    taggedPlace: document.getElementById("post-tagged-place")?.value.trim() || "",
+  };
   if (state.backendMode !== "supabase") {
     userPosts.unshift({
+      id: `local-${Date.now()}`,
       user: state.user.name,
-      group: "Nuevo post local",
+      group: getPostCategoryLabel(category),
+      category,
+      time: optionalFields.date || optionalFields.hour ? [optionalFields.date, optionalFields.hour].filter(Boolean).join(" · ") : "Ahora",
+      badge: state.user.fandom || "Army 💜",
+      online: true,
       caption: caption || "Publicacion nueva en modo demo.",
       likes: "0",
       comments: "0",
+      hashtags: ["#HallyuHub", "#KpopLatam"],
+      ...optionalFields,
     });
+    storage.set("hallyuHubUserPosts", userPosts.filter((post) => String(post.id || "").startsWith("local-")));
     setView("home");
     return;
   }
@@ -1496,7 +1523,7 @@ async function createPost() {
     caption,
     media_url: mediaUrl,
     media_type: mediaType,
-    category: "post",
+    category: getPostCategoryLabel(category),
   });
   if (error) {
     alert(error.message);
@@ -1504,6 +1531,18 @@ async function createPost() {
   }
   await loadPosts();
   setView("home");
+}
+
+function getPostCategoryLabel(category) {
+  const labels = {
+    posts: "Publicacion",
+    trends: "Trend",
+    outfits: "Outfit",
+    photocards: "Photocard",
+    saved: "Guardado",
+    favorites: "Favorito",
+  };
+  return labels[category] || "Publicacion";
 }
 
 async function toggleLike(postId) {
@@ -1638,6 +1677,7 @@ function renderHome() {
           userId: post.user_id,
           user: post.profiles?.name || "Hallyu fan",
           group: post.category || "Post",
+          category: "posts",
           time: "hace un momento",
           badge: "Tokki 🐰",
           online: true,
@@ -1698,38 +1738,7 @@ function renderHome() {
     <div class="section-heading"><h2>Publicaciones</h2><span>Siguiendo</span></div>
     <div class="social-feed">
       ${feedPosts
-        .map(
-          (post, index) => `
-          <article class="post-card">
-            <div class="post-head centered-post-head">
-              <div>
-                <div class="post-user-line">
-                  <span class="online-dot ${post.online ? "active" : ""}"></span>
-                  <h3>${post.user}</h3>
-                  <span class="fandom-badge">${post.badge || "Army 💜"}</span>
-                </div>
-                <p class="muted">${post.group} · ${post.time || "hace 2 min"}</p>
-              </div>
-            </div>
-            ${
-              post.mediaUrl
-                ? post.mediaType === "video"
-                  ? `<video class="post-media real-media" src="${post.mediaUrl}" controls playsinline></video>`
-                  : `<img class="post-media real-media" src="${post.mediaUrl}" alt="Publicacion de ${post.user}" />`
-                : `<div class="post-media" style="--art:${art[index % art.length]}"></div>`
-            }
-            <p>${post.caption}</p>
-            <div class="post-hashtags">
-              ${(post.hashtags || ["#KpopLatam", "#HallyuHub"]).map((tag) => `<button type="button">${tag}</button>`).join("")}
-            </div>
-            <div class="post-actions premium-actions">
-              <button class="post-action-star" ${post.id ? `data-like-post="${post.id}"` : ""}><span>★</span><strong>${post.likes}</strong></button>
-              <button class="post-action-comment" ${post.id ? `data-comment-post="${post.id}"` : ""}><span></span><strong>${post.comments}</strong></button>
-              <button class="post-action-share"><span></span><strong>${index + 24}</strong></button>
-              <button class="post-action-save"><span></span><strong>${index + 12}</strong></button>
-            </div>
-          </article>`,
-        )
+        .map((post, index) => renderSocialPost(post, index))
         .join("")}
     </div>
     ${renderStoryViewer()}
@@ -1780,6 +1789,51 @@ function renderStoryViewer() {
       </article>
     </section>
   `;
+}
+
+function renderSocialPost(post, index, options = {}) {
+  return `
+    <article class="post-card ${options.compact ? "profile-feed-post" : ""}">
+      <div class="post-head centered-post-head">
+        <div>
+          <div class="post-user-line">
+            <span class="online-dot ${post.online ? "active" : ""}"></span>
+            <h3>${post.user}</h3>
+            <span class="fandom-badge">${post.badge || "Army 💜"}</span>
+          </div>
+          <p class="muted">${post.group || getPostCategoryLabel(post.category)}${post.time ? ` · ${post.time}` : ""}</p>
+        </div>
+      </div>
+      ${
+        post.mediaUrl
+          ? post.mediaType === "video"
+            ? `<video class="post-media real-media" src="${post.mediaUrl}" controls playsinline></video>`
+            : `<img class="post-media real-media" src="${post.mediaUrl}" alt="Publicacion de ${post.user}" />`
+          : `<div class="post-media" style="--art:${post.art || art[index % art.length]}"></div>`
+      }
+      <p>${post.caption}</p>
+      ${renderPostOptionalMeta(post)}
+      <div class="post-hashtags">
+        ${(post.hashtags || ["#KpopLatam", "#HallyuHub"]).map((tag) => `<button type="button">${tag}</button>`).join("")}
+      </div>
+      <div class="post-actions premium-actions">
+        <button class="post-action-star" ${post.id ? `data-like-post="${post.id}"` : ""}><span>★</span><strong>${post.likes || "0"}</strong></button>
+        <button class="post-action-comment" ${post.id ? `data-comment-post="${post.id}"` : ""}><span></span><strong>${post.comments || "0"}</strong></button>
+        <button class="post-action-share"><span></span><strong>${post.shares || index + 24}</strong></button>
+        <button class="post-action-save"><span></span><strong>${post.saves || index + 12}</strong></button>
+      </div>
+    </article>`;
+}
+
+function renderPostOptionalMeta(post) {
+  const items = [
+    post.location ? ["Ubicación", post.location] : null,
+    post.date || post.hour ? ["Fecha", [post.date, post.hour].filter(Boolean).join(" · ")] : null,
+    post.taggedPeople ? ["Personas", post.taggedPeople] : null,
+    post.taggedPlace ? ["Lugar", post.taggedPlace] : null,
+  ].filter(Boolean);
+  if (!items.length) return "";
+  return `<div class="post-extra-meta">${items.map(([label, value]) => `<span><strong>${label}</strong>${value}</span>`).join("")}</div>`;
 }
 
 function renderOwnStoryStats(story) {
@@ -1957,12 +2011,31 @@ function renderPublish() {
         <div><h3>${state.user.name}</h3><p class="muted">@${state.user.username}</p></div>
       </div>
       <label>Texto de la publicacion<textarea id="post-caption" placeholder="Comparte una foto, trade, noticia o momento fandom..."></textarea></label>
+      <label>Tipo de contenido
+        <select id="post-category">
+          <option value="posts">Publicacion</option>
+          <option value="trends">Trend</option>
+          <option value="outfits">Outfit</option>
+          <option value="photocards">Photocard</option>
+          <option value="favorites">Favorito</option>
+        </select>
+      </label>
       <div class="upload-zone">
         <span class="nav-icon plus-icon"></span>
         <strong>Agregar foto o video</strong>
         <input id="post-media" type="file" accept="image/*,video/*" />
         <small>${state.backendMode === "supabase" ? "Se sube a Supabase Storage." : "Modo demo local hasta configurar Supabase."}</small>
       </div>
+      <details class="optional-post-fields">
+        <summary>Agregar datos opcionales</summary>
+        <div class="optional-field-grid">
+          <label>Ubicación<input id="post-location" placeholder="Santiago, Chile" /></label>
+          <label>Fecha<input id="post-date" type="date" /></label>
+          <label>Hora<input id="post-hour" type="time" /></label>
+          <label>Etiquetar personas<input id="post-tagged-people" placeholder="@cami, @mika" /></label>
+          <label>Etiquetar lugares<input id="post-tagged-place" placeholder="Cupsleeve, evento, local" /></label>
+        </div>
+      </details>
       <div class="filter-row">
         <button class="filter-chip active">Post</button>
         <button class="filter-chip">Historia</button>
@@ -2645,8 +2718,8 @@ function renderProfile() {
           .map(([key, label]) => `<button class="${state.profileTab === key ? "active" : ""}" data-profile-tab="${key}">${label}</button>`)
           .join("")}
       </div>
-      <div class="profile-grid-premium">
-        ${renderProfileGrid(activeTab[0])}
+      <div class="profile-feed-list">
+        ${renderProfileFeed(activeTab[0], profileUser)}
       </div>
     </section>
   `;
@@ -2692,24 +2765,48 @@ function renderProfileEditor() {
   `;
 }
 
-function renderProfileGrid(tab) {
-  const labels = {
-    posts: profilePhotos,
-    trends: ["Dance cover", "Random play", "Challenge", "Duet", "Stage edit", "Viral step", "Practice", "Fan cam", "Remix"],
-    photocards: ["JK rare", "Felix", "Lisa", "Wonyoung", "Momo", "Hanni", "Jimin", "Rei", "Bang Chan"],
-    saved: ["Guia comeback", "Evento", "Trade", "Mentoria", "Playlist", "Outfit", "Fan art", "Shop", "Live"],
-    favorites: ["BTS", "SKZ", "BLACKPINK", "TWICE", "NewJeans", "IVE", "ATEEZ", "TXT", "SEVENTEEN"],
+function renderProfileFeed(tab, profileUser) {
+  const ownUser = !state.viewedProfile || profileUser.username === state.user.username;
+  const localPosts = ownUser ? userPosts.filter((post) => (post.category || "posts") === tab) : [];
+  const posts = localPosts.length ? localPosts : getProfileDemoPosts(tab, profileUser);
+  return posts.map((post, index) => renderSocialPost(post, index, { compact: true })).join("");
+}
+
+function getProfileDemoPosts(tab, profileUser) {
+  const common = {
+    user: profileUser.name,
+    badge: profileUser.fandom || "Army 💜",
+    online: true,
+    likes: "1.2K",
+    comments: "86",
   };
-  return (labels[tab] || labels.posts)
-    .map(
-      (label, index) => `
-      <article class="profile-grid-item" style="--art:${art[index % art.length]}">
-        <span class="grid-badge">${index % 2 ? "Trend" : "★ " + (index + 12)}</span>
-        <strong>${label}</strong>
-        <small>${index + 3} comentarios</small>
-      </article>`,
-    )
-    .join("");
+  const sets = {
+    posts: [
+      { ...common, id: "profile-post-1", category: "posts", group: "Publicacion", time: "hace 20 min", caption: "Nuevo moodboard para el comeback y playlist lista para estudiar.", hashtags: ["#comeback", "#HallyuHub"], location: profileUser.country || "" },
+      { ...common, id: "profile-post-2", category: "posts", group: "Publicacion", time: "ayer", caption: "Fotos del encuentro fandom con luces pastel y photocards protegidas.", hashtags: ["#KpopLatam", "#fandom"] },
+    ],
+    trends: [
+      { ...common, id: "profile-trend-1", category: "trends", group: "Trend", time: "hace 1 h", caption: "Paso corto para un random play dance con transicion de luz neon.", hashtags: ["#DanceChallenge", "#TrendKpop"], taggedPeople: "@mika, @vale" },
+      { ...common, id: "profile-trend-2", category: "trends", group: "Trend", time: "hace 3 h", caption: "Mini cover inspirado en stage idol, pensado para grabar vertical.", hashtags: ["#cover", "#fancam"] },
+    ],
+    outfits: [
+      { ...common, id: "profile-outfit-1", category: "outfits", group: "Outfit", time: "hoy", caption: "Look pastel/neon para evento K-pop: denim, brillos suaves y accesorios cute.", hashtags: ["#outfit", "#KpopStyle"], location: "Evento fandom" },
+      { ...common, id: "profile-outfit-2", category: "outfits", group: "Outfit", time: "domingo", caption: "Inspiracion comeback con lazo, gloss y colores fandom.", hashtags: ["#CuteConcept", "#comeback"] },
+    ],
+    photocards: [
+      { ...common, id: "profile-card-1", category: "photocards", group: "Photocard", time: "hace 2 dias", caption: "Nueva carpeta de photocards con sleeves holograficos.", hashtags: ["#photocard", "#tradeSeguro"], taggedPlace: "Trade meet" },
+      { ...common, id: "profile-card-2", category: "photocards", group: "Photocard", time: "esta semana", caption: "Wishlist actualizada para futuros intercambios.", hashtags: ["#wishlist", "#collector"] },
+    ],
+    saved: [
+      { ...common, id: "profile-saved-1", category: "saved", group: "Guardado", time: "guardado hoy", caption: "Guia de comeback para votar, streamear y seguir horarios.", hashtags: ["#guia", "#Kpop101"] },
+      { ...common, id: "profile-saved-2", category: "saved", group: "Guardado", time: "guardado ayer", caption: "Lista de eventos seguros por ciudad y comunidades verificadas.", hashtags: ["#eventos", "#Latam"] },
+    ],
+    favorites: [
+      { ...common, id: "profile-fav-1", category: "favorites", group: "Favorito", time: "top semanal", caption: `${profileUser.favoriteGroup || "BTS"} sigue primero en mi ranking fandom personal.`, hashtags: ["#favoritos", "#bias"] },
+      { ...common, id: "profile-fav-2", category: "favorites", group: "Favorito", time: "top mensual", caption: "Stages, fancams y momentos que quiero volver a ver.", hashtags: ["#fancam", "#idol"] },
+    ],
+  };
+  return sets[tab] || sets.posts;
 }
 
 document.querySelectorAll(".nav-item").forEach((button) => {

@@ -2156,6 +2156,55 @@ video.post-media.real-media {
   min-height: 130px;
 }
 
+.publish-card select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  padding: 12px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.optional-post-fields {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.055);
+  padding: 12px;
+}
+
+.optional-post-fields summary {
+  cursor: pointer;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.optional-field-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.optional-field-grid label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.optional-field-grid input {
+  width: 100%;
+  margin-top: 6px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  padding: 11px;
+  font: inherit;
+  font-size: 13px;
+}
+
 .upload-zone {
   min-height: 142px;
   border: 1px dashed rgba(255, 255, 255, 0.28);
@@ -3134,22 +3183,24 @@ video.post-media.real-media {
 }
 
 .modern-settings {
-  top: 10px;
-  right: 10px;
-  width: 34px;
-  height: 34px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.095);
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 13px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.055)),
+    rgba(7, 5, 19, 0.24);
   color: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 0 18px rgba(101, 228, 255, 0.08);
+  box-shadow: 0 0 18px rgba(101, 228, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .gear-icon {
   position: relative;
-  width: 18px;
-  height: 14px;
-  border-top: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
+  width: 17px;
+  height: 13px;
+  border-top: 1.7px solid currentColor;
+  border-bottom: 1.7px solid currentColor;
   border-radius: 2px;
 }
 
@@ -3159,7 +3210,7 @@ video.post-media.real-media {
   left: 0;
   right: 0;
   top: 6px;
-  border-top: 2px solid currentColor;
+  border-top: 1.7px solid currentColor;
 }
 
 .gear-icon::after {
@@ -3169,9 +3220,9 @@ video.post-media.real-media {
   height: 5px;
   border-radius: 50%;
   background: currentColor;
-  left: 4px;
-  top: -4px;
-  box-shadow: 9px 7px 0 currentColor, 2px 14px 0 currentColor;
+  left: 3px;
+  top: -3.2px;
+  box-shadow: 9px 6.8px 0 currentColor, 2px 13.4px 0 currentColor;
 }
 
 .settings-header {
@@ -4293,6 +4344,43 @@ video.post-media.real-media {
   border-color: transparent;
   background: linear-gradient(135deg, var(--pink), var(--cyan));
   color: #14061d;
+}
+
+.profile-feed-list {
+  display: grid;
+  gap: 14px;
+}
+
+.profile-feed-post {
+  border-radius: 22px;
+  padding: 12px;
+}
+
+.profile-feed-post .post-media {
+  min-height: 210px;
+  border-radius: 18px;
+}
+
+.post-extra-meta {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin: 10px 0 12px;
+}
+
+.post-extra-meta span {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.075);
+  color: var(--muted);
+  padding: 6px 9px;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.post-extra-meta strong {
+  color: rgba(255, 255, 255, 0.92);
+  margin-right: 5px;
 }
 
 .profile-grid-premium {
