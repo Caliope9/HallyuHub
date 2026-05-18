@@ -5,6 +5,8 @@ const state = {
   ambience: "hallyu",
   selectedGroup: "skz",
   activityTab: "activity",
+  activeStory: null,
+  likedStories: {},
   authMode: "login",
   isAuthenticated: false,
   user: null,
@@ -183,12 +185,20 @@ const userPosts = [
 ];
 
 const followingStories = [
-  { user: "Mika", avatar: "berry", label: "Mentora" },
-  { user: "Cami.STAY", avatar: "star", label: "Trade" },
-  { user: "Vale Multi", avatar: "mochi", label: "Playlist" },
-  { user: "Nico K", avatar: "berry", label: "Evento" },
-  { user: "ARMY Chile", avatar: "star", label: "Fanbase" },
-  { user: "DIVE Lima", avatar: "mochi", label: "Live" },
+  { user: "Mika", avatar: "berry", label: "conciertos", title: "Concierto soñado", detail: "Luces, fan chants y pulsera lista para Santiago.", stars: 248, colors: "linear-gradient(160deg, #ffb703, #ff2d55 48%, #111827)" },
+  { user: "Cami.STAY", avatar: "star", label: "fancams", title: "Fancam del dia", detail: "Mi toma favorita del dance break.", stars: 918, colors: "linear-gradient(160deg, #65e4ff, #a855f7 50%, #0c0616)" },
+  { user: "Vale Multi", avatar: "mochi", label: "outfits", title: "Outfit comeback", detail: "Rosa, denim y brillos para random dance.", stars: 573, colors: "linear-gradient(160deg, #fbbcdb, #65e4ff 52%, #ffb86b)" },
+  { user: "Nico K", avatar: "berry", label: "idols", title: "Idol mood", detail: "Visual board para elegir bias de la semana.", stars: 441, colors: "linear-gradient(160deg, #8b5cf6, #d9b4ff 52%, #101827)" },
+  { user: "ARMY Chile", avatar: "star", label: "dance practice", title: "Practice night", detail: "Ensayo grupal antes del evento.", stars: 1200, colors: "linear-gradient(160deg, #0d0718, #8b5cf6 52%, #d9b4ff)" },
+  { user: "DIVE Lima", avatar: "mochi", label: "photocards", title: "Trade seguro", detail: "Photocards protegidas y wishlist nueva.", stars: 336, colors: "linear-gradient(160deg, #fff1f9, #ff8ac8 48%, #8b5cf6)" },
+];
+
+const homeBanners = [
+  { title: "Nuevo trend BLACKPINK", meta: "Trends virales", colors: "linear-gradient(135deg, #09060a, #ff3ea5 52%, #ff8ac8)" },
+  { title: "Dance challenge BTS", meta: "Challenge semanal", colors: "linear-gradient(135deg, #0d0718, #8b5cf6 52%, #d9b4ff)" },
+  { title: "Evento K-pop Santiago", meta: "Agenda fandom", colors: "linear-gradient(135deg, #ffb703, #ff2d55 48%, #111827)" },
+  { title: "Trade de photocards", meta: "Marketplace seguro", colors: "linear-gradient(135deg, #fff1f9, #ff8ac8 48%, #8b5cf6)" },
+  { title: "Top fancams del dia", meta: "Fancams premium", colors: "linear-gradient(135deg, #65e4ff, #77f4c7 52%, #0f172a)" },
 ];
 
 const trendVideos = [
@@ -662,6 +672,7 @@ const profilePhotos = [
 ];
 
 function setView(nextView) {
+  if (nextView !== "home") state.activeStory = null;
   if (!state.isAuthenticated && nextView !== "auth") {
     state.view = "auth";
     render();
@@ -741,6 +752,39 @@ function bindDynamicActions() {
 
   document.querySelectorAll("[data-create-post]").forEach((button) => {
     button.addEventListener("click", createPost);
+  });
+
+  document.querySelectorAll("[data-story-index]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.activeStory = Number(button.dataset.storyIndex);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-close]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.activeStory = null;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-nav]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const direction = Number(button.dataset.storyNav);
+      const total = followingStories.length;
+      state.activeStory = (state.activeStory + direction + total) % total;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-star]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const index = Number(button.dataset.storyStar);
+      state.likedStories[index] = !state.likedStories[index];
+      button.classList.toggle("active", state.likedStories[index]);
+      button.classList.add("popped");
+      setTimeout(() => button.classList.remove("popped"), 260);
+    });
   });
 
   document.querySelectorAll("[data-like-post]").forEach((button) => {
@@ -1197,8 +1241,8 @@ function renderHome() {
     <div class="stories-row" aria-label="Historias de personas que sigo">
       ${followingStories
         .map(
-          (story) => `
-          <button class="story-item">
+          (story, index) => `
+          <button class="story-item" data-story-index="${index}">
             <span class="story-ring">
               <span class="plush-avatar story-avatar" style="--avatar:${getAvatarGradient(story.avatar)}"><span></span></span>
             </span>
@@ -1207,11 +1251,19 @@ function renderHome() {
         )
         .join("")}
     </div>
-    <article class="hero-card">
-      <div class="pill">Hot comeback · LATAM</div>
-      <h2>HallyuHub social</h2>
-      <p>Publicaciones, fandoms, grupos favoritos y actualidad K-pop para fans latinos.</p>
-    </article>
+    <section class="home-banner-shell" aria-label="Banners destacados">
+      <div class="home-banner-track">
+        ${homeBanners
+          .map(
+            (banner) => `
+            <article class="home-banner" style="--art:${banner.colors}">
+              <span>${banner.meta}</span>
+              <strong>${banner.title}</strong>
+            </article>`,
+          )
+          .join("")}
+      </div>
+    </section>
     <div class="quick-grid compact">
       <div class="quick-tile"><strong>42</strong><span>eventos activos</span></div>
       <div class="quick-tile"><strong>128K</strong><span>fans conectados</span></div>
@@ -1227,8 +1279,7 @@ function renderHome() {
         .map(
           (post, index) => `
           <article class="post-card">
-            <div class="post-head">
-              <div class="plush-avatar mini" style="--avatar:${avatars[index % avatars.length].gradient}"><span></span></div>
+            <div class="post-head centered-post-head">
               <div><h3>${post.user}</h3><p class="muted">${post.group}</p></div>
             </div>
             ${
@@ -1239,15 +1290,53 @@ function renderHome() {
                 : `<div class="post-media" style="--art:${art[index % art.length]}"></div>`
             }
             <p>${post.caption}</p>
-            <div class="post-actions">
-              <button ${post.id ? `data-like-post="${post.id}"` : ""}>Me gusta ${post.likes}</button>
-              <button ${post.id ? `data-comment-post="${post.id}"` : ""}>${post.comments} comentarios</button>
-              <button>Compartir</button>
+            <div class="post-actions premium-actions">
+              <button class="post-action-star" ${post.id ? `data-like-post="${post.id}"` : ""}><span>★</span><strong>${post.likes}</strong></button>
+              <button class="post-action-comment" ${post.id ? `data-comment-post="${post.id}"` : ""}><span></span><strong>${post.comments}</strong></button>
+              <button class="post-action-share"><span></span><strong>${index + 24}</strong></button>
             </div>
           </article>`,
         )
         .join("")}
     </div>
+    ${renderStoryViewer()}
+  `;
+}
+
+function renderStoryViewer() {
+  if (state.activeStory === null) return "";
+  const story = followingStories[state.activeStory];
+  const liked = state.likedStories[state.activeStory];
+  return `
+    <section class="story-viewer" aria-label="Historia abierta">
+      <div class="story-progress"><span></span></div>
+      <button class="story-close" data-story-close aria-label="Cerrar historia">X</button>
+      <button class="story-tap-zone left" data-story-nav="-1" aria-label="Historia anterior"></button>
+      <button class="story-tap-zone right" data-story-nav="1" aria-label="Historia siguiente"></button>
+      <article class="story-full-card" style="--art:${story.colors}">
+        <div class="story-full-head">
+          <span class="story-ring small-ring"><span class="plush-avatar story-avatar small" style="--avatar:${getAvatarGradient(story.avatar)}"><span></span></span></span>
+          <div><h3>${story.user}</h3><p>${story.label}</p></div>
+        </div>
+        <div class="story-full-copy">
+          <h2>${story.title}</h2>
+          <p>${story.detail}</p>
+        </div>
+        <div class="story-interactions">
+          <button class="story-star ${liked ? "active" : ""}" data-story-star="${state.activeStory}">★</button>
+          <strong>${story.stars + (liked ? 1 : 0)} estrellas</strong>
+          <div class="quick-reactions"><span>💜</span><span>🔥</span><span>✨</span><span>🫰</span><span>🎤</span></div>
+          <div class="story-comment-box">
+            <input placeholder="Comentar historia..." />
+            <button>Enviar</button>
+          </div>
+          <div class="story-comments">
+            <p><strong>Vale:</strong> Esto se ve hermoso.</p>
+            <p><strong>Nico:</strong> Lo guardo para mi proximo evento.</p>
+          </div>
+        </div>
+      </article>
+    </section>
   `;
 }
 
