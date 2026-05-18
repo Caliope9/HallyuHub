@@ -7,6 +7,7 @@ const state = {
   activityTab: "activity",
   activeStory: null,
   likedStories: {},
+  storyDirection: 1,
   authMode: "login",
   isAuthenticated: false,
   user: null,
@@ -16,6 +17,8 @@ const state = {
   livePosts: [],
   liveProfiles: [],
 };
+
+let storyAutoTimer = null;
 
 const titleByView = {
   home: "Tu universo K-pop latino",
@@ -185,12 +188,12 @@ const userPosts = [
 ];
 
 const followingStories = [
-  { user: "Mika", avatar: "berry", label: "conciertos", title: "Concierto soñado", detail: "Luces, fan chants y pulsera lista para Santiago.", stars: 248, colors: "linear-gradient(160deg, #ffb703, #ff2d55 48%, #111827)" },
-  { user: "Cami.STAY", avatar: "star", label: "fancams", title: "Fancam del dia", detail: "Mi toma favorita del dance break.", stars: 918, colors: "linear-gradient(160deg, #65e4ff, #a855f7 50%, #0c0616)" },
-  { user: "Vale Multi", avatar: "mochi", label: "outfits", title: "Outfit comeback", detail: "Rosa, denim y brillos para random dance.", stars: 573, colors: "linear-gradient(160deg, #fbbcdb, #65e4ff 52%, #ffb86b)" },
-  { user: "Nico K", avatar: "berry", label: "idols", title: "Idol mood", detail: "Visual board para elegir bias de la semana.", stars: 441, colors: "linear-gradient(160deg, #8b5cf6, #d9b4ff 52%, #101827)" },
-  { user: "ARMY Chile", avatar: "star", label: "dance practice", title: "Practice night", detail: "Ensayo grupal antes del evento.", stars: 1200, colors: "linear-gradient(160deg, #0d0718, #8b5cf6 52%, #d9b4ff)" },
-  { user: "DIVE Lima", avatar: "mochi", label: "photocards", title: "Trade seguro", detail: "Photocards protegidas y wishlist nueva.", stars: 336, colors: "linear-gradient(160deg, #fff1f9, #ff8ac8 48%, #8b5cf6)" },
+  { user: "Mika", avatar: "berry", label: "conciertos", time: "Hace 12 min", music: "BTS · live remix", title: "Concierto soñado", detail: "Luces, fan chants y pulsera lista para Santiago.", stars: 248, colors: "linear-gradient(160deg, #ffb703, #ff2d55 48%, #111827)" },
+  { user: "Cami.STAY", avatar: "star", label: "fancams", time: "Hace 26 min", music: "Stray Kids · stage cut", title: "Fancam del dia", detail: "Mi toma favorita del dance break.", stars: 918, colors: "linear-gradient(160deg, #65e4ff, #a855f7 50%, #0c0616)" },
+  { user: "Vale Multi", avatar: "mochi", label: "outfits", time: "Hace 41 min", music: "NewJeans · Y2K pop", title: "Outfit comeback", detail: "Rosa, denim y brillos para random dance.", stars: 573, colors: "linear-gradient(160deg, #fbbcdb, #65e4ff 52%, #ffb86b)" },
+  { user: "Nico K", avatar: "berry", label: "idols", time: "Hace 1 h", music: "IVE · dreamy edit", title: "Idol mood", detail: "Visual board para elegir bias de la semana.", stars: 441, colors: "linear-gradient(160deg, #8b5cf6, #d9b4ff 52%, #101827)" },
+  { user: "ARMY Chile", avatar: "star", label: "dance practice", time: "Hace 2 h", music: "BLACKPINK · dance break", title: "Practice night", detail: "Ensayo grupal antes del evento.", stars: 1200, colors: "linear-gradient(160deg, #0d0718, #8b5cf6 52%, #d9b4ff)" },
+  { user: "DIVE Lima", avatar: "mochi", label: "photocards", time: "Hace 3 h", music: "SEVENTEEN · fan chant", title: "Trade seguro", detail: "Photocards protegidas y wishlist nueva.", stars: 336, colors: "linear-gradient(160deg, #fff1f9, #ff8ac8 48%, #8b5cf6)" },
 ];
 
 const homeBanners = [
@@ -204,14 +207,14 @@ const homeBanners = [
 ];
 
 const storyReactions = [
-  "💜 Army vibe",
-  "🫰 Finger heart",
-  "✨ Idol glow",
-  "🎤 Live stage",
-  "🪩 Dance mood",
-  "💿 Comeback",
+  "💜 Army",
+  "🫰 Heart",
+  "✨ Idol",
+  "🎤 Stage",
   "📸 Fancam",
-  "🎀 Cute concept",
+  "🎀 Cute",
+  "🔥 Viral",
+  "🪩 Dance",
 ];
 
 const trendVideos = [
@@ -685,7 +688,10 @@ const profilePhotos = [
 ];
 
 function setView(nextView) {
-  if (nextView !== "home") state.activeStory = null;
+  if (nextView !== "home") {
+    state.activeStory = null;
+    clearStoryAutoplay();
+  }
   if (!state.isAuthenticated && nextView !== "auth") {
     state.view = "auth";
     render();
@@ -698,6 +704,7 @@ function setView(nextView) {
   const appScreen = document.querySelector(".app-screen");
   appScreen.classList.toggle("profile-mode", nextView === "profile");
   appScreen.classList.toggle("auth-mode", nextView === "auth");
+  appScreen.classList.toggle("home-mode", nextView === "home");
   appScreen.classList.toggle("light-mode", state.user?.mode === "light");
   appScreen.style.setProperty("--user-accent", state.user?.accent || "#fbbcdb");
   appScreen.dataset.ambience = state.ambience;
@@ -710,6 +717,7 @@ function render() {
   const appScreen = document.querySelector(".app-screen");
   appScreen.dataset.ambience = state.ambience;
   appScreen.classList.toggle("auth-mode", state.view === "auth");
+  appScreen.classList.toggle("home-mode", state.view === "home");
   appScreen.classList.toggle("light-mode", state.user?.mode === "light");
   appScreen.style.setProperty("--user-accent", state.user?.accent || "#fbbcdb");
   document.querySelector(".bottom-nav").classList.toggle("hidden", !state.isAuthenticated);
@@ -737,6 +745,25 @@ function render() {
   };
   view.innerHTML = templates[state.view]();
   bindDynamicActions();
+  scheduleStoryAutoplay();
+}
+
+function clearStoryAutoplay() {
+  if (storyAutoTimer) {
+    clearTimeout(storyAutoTimer);
+    storyAutoTimer = null;
+  }
+}
+
+function scheduleStoryAutoplay() {
+  clearStoryAutoplay();
+  if (state.view !== "home" || state.activeStory === null) return;
+  storyAutoTimer = setTimeout(() => {
+    const total = followingStories.length;
+    state.storyDirection = 1;
+    state.activeStory = (state.activeStory + 1) % total;
+    render();
+  }, 5600);
 }
 
 function bindDynamicActions() {
@@ -770,6 +797,7 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-story-index]").forEach((button) => {
     button.addEventListener("click", () => {
       state.activeStory = Number(button.dataset.storyIndex);
+      state.storyDirection = 1;
       render();
     });
   });
@@ -777,6 +805,7 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-story-close]").forEach((button) => {
     button.addEventListener("click", () => {
       state.activeStory = null;
+      clearStoryAutoplay();
       render();
     });
   });
@@ -785,6 +814,7 @@ function bindDynamicActions() {
     button.addEventListener("click", () => {
       const direction = Number(button.dataset.storyNav);
       const total = followingStories.length;
+      state.storyDirection = direction;
       state.activeStory = (state.activeStory + direction + total) % total;
       render();
     });
@@ -1268,13 +1298,20 @@ function renderHome() {
       <div class="home-banner-track">
         ${homeBanners
           .map(
-            (banner) => `
+            (banner, index) => `
             <article class="home-banner" style="--art:${banner.colors}">
               <span>${banner.meta}</span>
               <strong>${banner.title}</strong>
+              <div class="banner-actions">
+                <button type="button">${index % 3 === 0 ? "Ver noticia" : index % 3 === 1 ? "Ver trend" : "Explorar"}</button>
+                <button type="button">Guardar</button>
+              </div>
             </article>`,
           )
           .join("")}
+      </div>
+      <div class="banner-dots" aria-hidden="true">
+        ${homeBanners.map((_, index) => `<span style="--delay:${index}"></span>`).join("")}
       </div>
     </section>
     <div class="home-metric-pills" aria-label="Datos de comunidad">
@@ -1283,6 +1320,7 @@ function renderHome() {
       <div class="metric-pill"><span class="metric-dot drops"></span><strong>24h</strong><small>drops</small></div>
     </div>
     <div class="section-heading"><h2>Publicaciones</h2><span>Siguiendo</span></div>
+    <div class="home-skeleton" aria-hidden="true"><span></span><span></span><span></span></div>
     <div class="social-feed">
       ${feedPosts
         .map(
@@ -1303,6 +1341,7 @@ function renderHome() {
               <button class="post-action-star" ${post.id ? `data-like-post="${post.id}"` : ""}><span>★</span><strong>${post.likes}</strong></button>
               <button class="post-action-comment" ${post.id ? `data-comment-post="${post.id}"` : ""}><span></span><strong>${post.comments}</strong></button>
               <button class="post-action-share"><span></span><strong>${index + 24}</strong></button>
+              <button class="post-action-save"><span></span><strong>${index + 12}</strong></button>
             </div>
           </article>`,
         )
@@ -1317,16 +1356,17 @@ function renderStoryViewer() {
   const story = followingStories[state.activeStory];
   const liked = state.likedStories[state.activeStory];
   return `
-    <section class="story-viewer" aria-label="Historia abierta">
-      <div class="story-progress"><span></span></div>
+    <section class="story-viewer story-slide-${state.storyDirection > 0 ? "next" : "prev"}" aria-label="Historia abierta">
+      <div class="story-progress">${followingStories.map((_, index) => `<span class="${index <= state.activeStory ? "seen" : ""} ${index === state.activeStory ? "active" : ""}"></span>`).join("")}</div>
       <button class="story-close" data-story-close aria-label="Cerrar historia">X</button>
       <button class="story-tap-zone left" data-story-nav="-1" aria-label="Historia anterior"></button>
       <button class="story-tap-zone right" data-story-nav="1" aria-label="Historia siguiente"></button>
       <article class="story-full-card" style="--art:${story.colors}">
         <div class="story-full-head">
           <span class="story-ring small-ring"><span class="plush-avatar story-avatar small" style="--avatar:${getAvatarGradient(story.avatar)}"><span></span></span></span>
-          <div><h3>${story.user}</h3><p>${story.label}</p></div>
+          <div><h3>${story.user}</h3><p>${story.label} · ${story.time}</p></div>
         </div>
+        <div class="story-music-pill"><span>♪</span>${story.music}</div>
         <div class="story-full-copy">
           <h2>${story.title}</h2>
           <p>${story.detail}</p>
