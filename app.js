@@ -2774,7 +2774,15 @@ function renderProfile() {
   const isFollowing = Boolean(state.followedProfiles[profileUser.id || profileUser.username]);
   return `
     <section class="premium-profile-hero ${isPlus ? "plus" : ""}" style="--profile-bg:${profileBg.art}">
-      ${isOwnProfile ? `<button class="settings-button modern-settings" data-go-view="settings" aria-label="Abrir ajustes"><span class="settings-tune-icon"></span></button>` : ""}
+      ${
+        isOwnProfile
+          ? `<div class="profile-header-bar">
+              <span></span>
+              <span></span>
+              <button class="settings-button modern-settings" data-go-view="settings" aria-label="Abrir ajustes"><span class="settings-tune-icon"></span></button>
+            </div>`
+          : ""
+      }
       <div class="profile-hero-top">
         ${renderAvatarElement(`profile-avatar premium-avatar ${getRarityClass(avatarMeta)}`, profileUser.avatar, profileUser.avatarUrl)}
         <div class="profile-name-block">

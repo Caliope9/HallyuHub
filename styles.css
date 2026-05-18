@@ -3170,13 +3170,11 @@ video.post-media.real-media {
 }
 
 .settings-button {
-  position: absolute;
-  top: 22px;
-  right: 18px;
-  width: 42px;
-  height: 42px;
+  position: static;
+  width: 28px;
+  height: 28px;
   border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 15px;
+  border-radius: 11px;
   background: rgba(0, 0, 0, 0.18);
   display: grid;
   place-items: center;
@@ -3184,8 +3182,6 @@ video.post-media.real-media {
 }
 
 .modern-settings {
-  top: 12px;
-  right: 12px;
   width: 28px;
   height: 28px;
   border-radius: 11px;
@@ -4060,9 +4056,22 @@ video.post-media.real-media {
     radial-gradient(circle at 20% 12%, rgba(255, 255, 255, 0.18), transparent 8rem),
     var(--profile-bg, linear-gradient(135deg, #14091f, #8b5cf6 48%, #d9b4ff));
   backdrop-filter: blur(22px);
-  padding: 12px 12px 11px;
+  padding: 9px 12px 10px;
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.14);
   overflow: hidden;
+}
+
+.profile-header-bar {
+  display: grid;
+  grid-template-columns: 28px 1fr 28px;
+  align-items: center;
+  min-height: 28px;
+  margin-bottom: 3px;
+}
+
+.profile-header-bar .settings-button {
+  grid-column: 3;
+  justify-self: end;
 }
 
 .premium-profile-hero::before {
@@ -4089,16 +4098,16 @@ video.post-media.real-media {
 .profile-hero-top {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 5px;
   align-items: center;
   text-align: center;
-  padding: 0 36px;
+  padding: 0 8px;
 }
 
 .premium-avatar {
-  width: 68px;
-  height: 68px;
-  border-radius: 24px;
+  width: 60px;
+  height: 60px;
+  border-radius: 21px;
   border: 2px solid rgba(251, 188, 219, 0.72);
   box-shadow: 0 0 22px rgba(251, 188, 219, 0.2), 0 0 16px rgba(101, 228, 255, 0.12);
 }
@@ -4140,7 +4149,7 @@ video.post-media.real-media {
 
 .profile-title-line h1 {
   margin: 0;
-  font-size: 18px;
+  font-size: 17px;
 }
 
 .profile-name-block p {
@@ -4150,8 +4159,8 @@ video.post-media.real-media {
 }
 
 .profile-bio-line {
-  max-width: 245px;
-  margin: 0 auto 6px !important;
+  max-width: 235px;
+  margin: 0 auto 5px !important;
   color: rgba(255, 255, 255, 0.82) !important;
   line-height: 1.28;
 }
@@ -4185,7 +4194,7 @@ video.post-media.real-media {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 5px;
-  margin: 8px 0;
+  margin: 7px 0;
 }
 
 .profile-progress-card {
@@ -4197,7 +4206,7 @@ video.post-media.real-media {
   border-radius: 15px;
   background: rgba(255, 255, 255, 0.075);
   padding: 8px 9px;
-  margin-bottom: 8px;
+  margin-bottom: 7px;
 }
 
 .profile-progress-card span,
