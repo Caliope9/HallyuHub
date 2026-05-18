@@ -4,6 +4,7 @@ const state = {
   selectedAvatar: "berry",
   ambience: "hallyu",
   selectedGroup: "skz",
+  activityTab: "activity",
   authMode: "login",
   isAuthenticated: false,
   user: null,
@@ -12,8 +13,9 @@ const state = {
 const titleByView = {
   home: "Tu universo K-pop latino",
   search: "Buscar",
+  trends: "Trends K-pop",
   publish: "Crear publicacion",
-  notifications: "Notificaciones",
+  notifications: "Actividad e inbox",
   settings: "Ajustes",
   events: "Eventos fandom",
   market: "Marketplace oficial",
@@ -163,6 +165,53 @@ const userPosts = [
     caption: "Mini guia para elegir tu primer grupo: empieza por 3 canciones, 1 live stage y 1 entrevista.",
     likes: "4.8K",
     comments: "301",
+  },
+];
+
+const followingStories = [
+  { user: "Mika", avatar: "berry", label: "Mentora" },
+  { user: "Cami.STAY", avatar: "star", label: "Trade" },
+  { user: "Vale Multi", avatar: "mochi", label: "Playlist" },
+  { user: "Nico K", avatar: "berry", label: "Evento" },
+  { user: "ARMY Chile", avatar: "star", label: "Fanbase" },
+  { user: "DIVE Lima", avatar: "mochi", label: "Live" },
+];
+
+const trendVideos = [
+  {
+    user: "Cami.STAY",
+    challenge: "Dance Challenge BLACKPINK",
+    song: "BLACKPINK · dance break",
+    description: "Version corta para grabar en plaza o evento fandom.",
+    colors: "linear-gradient(160deg, #09060a, #ff3ea5 50%, #ff8ac8)",
+  },
+  {
+    user: "Mika",
+    challenge: "Paso viral de BTS",
+    song: "BTS · fan edit",
+    description: "Paso facil para fans nuevos que quieren sumarse sin presion.",
+    colors: "linear-gradient(160deg, #0d0718, #8b5cf6 52%, #d9b4ff)",
+  },
+  {
+    user: "Vale Multi",
+    challenge: "Trend NewJeans",
+    song: "NewJeans · Y2K pop",
+    description: "Movimiento suave con outfit pastel y transicion rapida.",
+    colors: "linear-gradient(160deg, #06131a, #65e4ff 46%, #77f4c7)",
+  },
+  {
+    user: "Random Play BA",
+    challenge: "Cover random play dance",
+    song: "K-pop mix · LATAM",
+    description: "Reto para grupos grandes en eventos y juntadas.",
+    colors: "linear-gradient(160deg, #ffb703, #ff2d55 48%, #111827)",
+  },
+  {
+    user: "Hallyu Chile",
+    challenge: "Challenge K-pop Chile",
+    song: "LATAM fandom · stage",
+    description: "Trend local para mostrar pasos, light sticks y comunidad.",
+    colors: "linear-gradient(160deg, #fbbcdb, #65e4ff 52%, #ffb86b)",
   },
 ];
 
@@ -635,6 +684,7 @@ function render() {
   const templates = {
     home: renderHome,
     search: renderSearch,
+    trends: renderTrends,
     publish: renderPublish,
     notifications: renderNotifications,
     settings: renderSettings,
@@ -682,6 +732,13 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-community-tab]").forEach((button) => {
     button.addEventListener("click", () => {
       state.communityTab = button.dataset.communityTab;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-activity-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.activityTab = button.dataset.activityTab;
       render();
     });
   });
@@ -823,6 +880,19 @@ function renderAuth() {
 
 function renderHome() {
   return `
+    <div class="stories-row" aria-label="Historias de personas que sigo">
+      ${followingStories
+        .map(
+          (story) => `
+          <button class="story-item">
+            <span class="story-ring">
+              <span class="plush-avatar story-avatar" style="--avatar:${getAvatarGradient(story.avatar)}"><span></span></span>
+            </span>
+            <strong>${story.user}</strong>
+          </button>`,
+        )
+        .join("")}
+    </div>
     <article class="hero-card">
       <div class="pill">Hot comeback · LATAM</div>
       <h2>HallyuHub social</h2>
@@ -888,7 +958,7 @@ function renderSearch() {
   return `
     <div class="search-box">
       <span class="nav-icon search-icon"></span>
-      <input placeholder="Buscar grupos, artistas, fandoms o fotocards" />
+      <input placeholder="Buscar idols, grupos, usuarios, hashtags o tendencias" />
     </div>
     <div class="quick-link-grid">
       <button data-go-view="groups"><span class="nav-icon music-icon"></span><strong>Grupos</strong><small>Biografias e idols</small></button>
@@ -896,7 +966,7 @@ function renderSearch() {
       <button data-go-view="market"><span class="nav-icon bag-icon"></span><strong>Shop</strong><small>Merch y fotocards</small></button>
       <button data-go-view="community"><span class="nav-icon chat-icon"></span><strong>Comunidad</strong><small>Chats por zona</small></button>
       <button data-go-view="rookie"><span class="nav-icon spark-icon"></span><strong>K-pop 101</strong><small>Para fans nuevos</small></button>
-      <button data-go-view="messages"><span class="nav-icon dm-icon"></span><strong>DM</strong><small>Privados seguros</small></button>
+      <button data-go-view="trends"><span class="nav-icon play-icon"></span><strong>Trends</strong><small>Challenges y videos</small></button>
     </div>
     <div class="section-heading"><h2>Tendencias</h2><span>Explorar</span></div>
     <div class="group-story-row">
@@ -910,6 +980,36 @@ function renderSearch() {
         )
         .join("")}
     </div>
+  `;
+}
+
+function renderTrends() {
+  return `
+    <section class="trends-feed" aria-label="Trends estilo reels">
+      ${trendVideos
+        .map(
+          (trend, index) => `
+          <article class="trend-card" style="--art:${trend.colors}">
+            <div class="trend-overlay">
+              <div class="trend-copy">
+                <div class="post-head compact-head">
+                  <div class="plush-avatar mini" style="--avatar:${avatars[index % avatars.length].gradient}"><span></span></div>
+                  <div><h3>${trend.user}</h3><p>${trend.song}</p></div>
+                </div>
+                <h2>${trend.challenge}</h2>
+                <p>${trend.description}</p>
+              </div>
+              <div class="trend-actions">
+                <button><span class="nav-icon heart-icon"></span><small>Like</small></button>
+                <button><span class="nav-icon chat-icon"></span><small>Comentar</small></button>
+                <button><span class="share-dot"></span><small>Compartir</small></button>
+                <button><span class="save-mark"></span><small>Guardar</small></button>
+              </div>
+            </div>
+          </article>`,
+        )
+        .join("")}
+    </section>
   `;
 }
 
@@ -939,24 +1039,32 @@ function renderPublish() {
 
 function renderNotifications() {
   const items = [
-    ["Cami.STAY", "empezo a seguirte", "Ahora"],
-    ["ARMY Chile", "publico un evento cerca de ti", "12 min"],
-    ["Mika mentor", "respondio tu pregunta de K-pop 101", "1 h"],
-    ["Seoul Corner", "subio nuevas photocards verificadas", "Ayer"],
+    ["Cami.STAY", "empezo a seguirte", "Nuevo seguidor", "Ahora"],
+    ["ARMY Chile", "le dio like a tu publicacion", "Like recibido", "12 min"],
+    ["Mika mentor", "comento tu pregunta de K-pop 101", "Comentario", "1 h"],
+    ["Seoul Corner", "guardo tu wishlist de photocards", "Actividad", "Ayer"],
   ];
   return `
-    <div class="notification-list">
-      ${items
-        .map(
-          ([name, action, time], index) => `
-          <article class="notification-card">
-            <div class="plush-avatar mini" style="--avatar:${avatars[index % avatars.length].gradient}"><span></span></div>
-            <div><h3>${name}</h3><p class="muted">${action}</p></div>
-            <span>${time}</span>
-          </article>`,
-        )
-        .join("")}
+    <div class="inbox-tabs">
+      <button class="${state.activityTab === "activity" ? "active" : ""}" data-activity-tab="activity">Actividad</button>
+      <button class="${state.activityTab === "messages" ? "active" : ""}" data-activity-tab="messages">Mensajes</button>
     </div>
+    ${
+      state.activityTab === "activity"
+        ? `<div class="notification-list">
+            ${items
+              .map(
+                ([name, action, type, time], index) => `
+                <article class="notification-card">
+                  <div class="plush-avatar mini" style="--avatar:${avatars[index % avatars.length].gradient}"><span></span></div>
+                  <div><h3>${name}</h3><p class="muted">${action}</p><span class="tag">${type}</span></div>
+                  <span>${time}</span>
+                </article>`,
+              )
+              .join("")}
+          </div>`
+        : renderMessages()
+    }
   `;
 }
 
@@ -1316,27 +1424,26 @@ function renderRookie() {
 function renderProfile() {
   const activeAvatar = avatars.find((avatar) => avatar.id === state.user.avatar) || avatars[0];
   return `
-    <section class="profile-cover">
-      <div class="plush-avatar hero" style="--avatar:${activeAvatar.gradient}">
-        <span></span>
+    <section class="profile-modern">
+      <button class="settings-button modern-settings" data-go-view="settings" aria-label="Abrir ajustes"><span class="gear-icon"></span></button>
+      <div class="profile-main-row">
+        <div class="plush-avatar profile-avatar" style="--avatar:${activeAvatar.gradient}"><span></span></div>
+        <div class="profile-stat-line">
+          <div><strong>${state.user.posts}</strong><span>publicaciones</span></div>
+          <div><strong>${state.user.followers}</strong><span>seguidores</span></div>
+          <div><strong>${state.user.following}</strong><span>seguidos</span></div>
+        </div>
       </div>
-      <div>
-        <p class="eyebrow">Perfil de fan</p>
+      <div class="profile-identity">
         <h1>${state.user.name}</h1>
-        <p class="muted">@${state.user.username}</p>
+        <p>@${state.user.username}</p>
+        <span>${state.user.bio}</span>
       </div>
-      <button class="settings-button" data-go-view="settings" aria-label="Abrir ajustes"><span class="gear-icon"></span></button>
+      <div class="profile-actions compact-actions">
+        <button class="ghost-button" data-go-view="settings">Editar perfil</button>
+        <button class="ghost-button">Compartir perfil</button>
+      </div>
     </section>
-    <p class="profile-bio">${state.user.bio}</p>
-    <div class="stats-row">
-      <div class="stat"><strong>${state.user.posts}</strong><span>publicaciones</span></div>
-      <div class="stat"><strong>${state.user.followers}</strong><span>seguidores</span></div>
-      <div class="stat"><strong>${state.user.following}</strong><span>seguidos</span></div>
-    </div>
-    <div class="profile-actions">
-      <button class="primary-button">Seguir</button>
-      <button class="ghost-button" data-go-view="settings">Editar perfil</button>
-    </div>
     <section class="profile-panel">
       <div class="section-heading"><h2>Mis carpetas</h2><span>Privacidad</span></div>
       <div class="folder-grid">
