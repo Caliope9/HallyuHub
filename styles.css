@@ -3180,14 +3180,15 @@ video.post-media.real-media {
   background: rgba(0, 0, 0, 0.18);
   display: grid;
   place-items: center;
+  z-index: 4;
 }
 
 .modern-settings {
-  top: 12px;
-  right: 12px;
-  width: 32px;
-  height: 32px;
-  border-radius: 13px;
+  top: 14px;
+  right: 14px;
+  width: 31px;
+  height: 31px;
+  border-radius: 12px;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.055)),
     rgba(7, 5, 19, 0.24);
@@ -3623,6 +3624,8 @@ video.post-media.real-media {
   background: rgba(255, 255, 255, 0.07);
   padding: 10px 6px;
   color: var(--muted);
+  position: relative;
+  overflow: hidden;
 }
 
 .avatar-choice strong {
@@ -3636,6 +3639,46 @@ video.post-media.real-media {
   background: rgba(168, 85, 247, 0.18);
   color: white;
   box-shadow: 0 0 22px rgba(168, 85, 247, 0.22);
+}
+
+.avatar-choice.locked,
+.profile-bg-grid button.locked {
+  opacity: 0.54;
+  filter: saturate(0.7);
+}
+
+.avatar-choice.rarity-rare {
+  border-color: rgba(101, 228, 255, 0.28);
+}
+
+.avatar-choice.rarity-epic {
+  border-color: rgba(217, 70, 239, 0.32);
+}
+
+.avatar-choice.rarity-legendary {
+  border-color: rgba(255, 209, 102, 0.36);
+}
+
+.avatar-choice em,
+.rarity-chip {
+  display: block;
+  margin-top: 4px;
+  font-style: normal;
+  font-size: 9px;
+  line-height: 1.1;
+}
+
+.rarity-chip {
+  color: var(--cyan);
+  font-weight: 1000;
+}
+
+.avatar-choice.rarity-epic .rarity-chip {
+  color: #f0abfc;
+}
+
+.avatar-choice.rarity-legendary .rarity-chip {
+  color: #ffd166;
 }
 
 .folder-grid {
@@ -4014,7 +4057,7 @@ video.post-media.real-media {
     radial-gradient(circle at 20% 12%, rgba(255, 255, 255, 0.18), transparent 8rem),
     var(--profile-bg, linear-gradient(135deg, #14091f, #8b5cf6 48%, #d9b4ff));
   backdrop-filter: blur(22px);
-  padding: 14px 14px 13px;
+  padding: 48px 14px 13px;
   box-shadow: 0 18px 46px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.14);
   overflow: hidden;
 }
@@ -4041,25 +4084,53 @@ video.post-media.real-media {
 }
 
 .profile-hero-top {
-  display: grid;
-  grid-template-columns: 78px 1fr;
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   align-items: center;
-  padding-right: 34px;
+  text-align: center;
+  padding: 0 6px;
 }
 
 .premium-avatar {
-  width: 78px;
-  height: 78px;
-  border-radius: 28px;
+  width: 84px;
+  height: 84px;
+  border-radius: 30px;
   border: 3px solid rgba(251, 188, 219, 0.72);
   box-shadow: 0 0 30px rgba(251, 188, 219, 0.26), 0 0 22px rgba(101, 228, 255, 0.16);
+}
+
+.premium-avatar.rarity-rare {
+  border-color: rgba(101, 228, 255, 0.86);
+  box-shadow: 0 0 30px rgba(101, 228, 255, 0.24), 0 0 20px rgba(251, 188, 219, 0.14);
+}
+
+.premium-avatar.rarity-epic {
+  border-color: rgba(217, 70, 239, 0.86);
+  box-shadow: 0 0 34px rgba(217, 70, 239, 0.28), 0 0 22px rgba(101, 228, 255, 0.16);
+}
+
+.premium-avatar.rarity-legendary {
+  border-color: rgba(255, 209, 102, 0.9);
+  box-shadow: 0 0 36px rgba(255, 209, 102, 0.3), 0 0 26px rgba(251, 188, 219, 0.18);
+  animation: legendaryPulse 3.2s ease-in-out infinite;
+}
+
+@keyframes legendaryPulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.14);
+  }
 }
 
 .profile-title-line,
 .fandom-line {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 7px;
   flex-wrap: wrap;
 }
@@ -4073,6 +4144,13 @@ video.post-media.real-media {
   margin: 3px 0 7px;
   color: var(--muted);
   font-size: 12px;
+}
+
+.profile-bio-line {
+  max-width: 260px;
+  margin: 0 auto 8px !important;
+  color: rgba(255, 255, 255, 0.82) !important;
+  line-height: 1.35;
 }
 
 .verified-badge,
@@ -4105,6 +4183,57 @@ video.post-media.real-media {
   grid-template-columns: repeat(4, 1fr);
   gap: 6px;
   margin: 10px 0;
+}
+
+.profile-progress-card {
+  display: grid;
+  grid-template-columns: 1fr 46px;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.075);
+  padding: 10px 11px;
+  margin-bottom: 10px;
+}
+
+.profile-progress-card span,
+.profile-progress-card strong,
+.profile-progress-card small {
+  display: block;
+}
+
+.profile-progress-card span {
+  color: var(--cyan);
+  font-size: 10px;
+  font-weight: 950;
+}
+
+.profile-progress-card strong {
+  margin: 2px 0;
+  font-size: 12px;
+}
+
+.profile-progress-card small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.progress-ring {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: conic-gradient(var(--pink) var(--progress, 45%), rgba(255, 255, 255, 0.12) 0);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 16px rgba(251, 188, 219, 0.12);
+}
+
+.progress-ring span {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(10, 4, 22, 0.9);
 }
 
 .premium-stats div {
@@ -4162,6 +4291,68 @@ video.post-media.real-media {
   padding: 14px;
   display: grid;
   gap: 12px;
+}
+
+.unlock-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.unlock-summary div,
+.reward-grid article {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.07);
+  padding: 10px;
+}
+
+.unlock-summary strong,
+.unlock-summary span,
+.reward-grid strong,
+.reward-grid span,
+.reward-grid small {
+  display: block;
+}
+
+.unlock-summary strong {
+  color: white;
+  font-size: 13px;
+}
+
+.unlock-summary span,
+.reward-grid small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.reward-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.reward-grid article {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 8px;
+  align-items: center;
+}
+
+.reward-grid strong {
+  font-size: 12px;
+}
+
+.reward-grid span {
+  border-radius: 999px;
+  background: rgba(101, 228, 255, 0.11);
+  color: var(--cyan);
+  padding: 4px 7px;
+  font-size: 10px;
+  font-weight: 1000;
+}
+
+.reward-grid small {
+  grid-column: 1 / -1;
 }
 
 .profile-edit-cover {
@@ -4515,6 +4706,18 @@ video.post-media.real-media {
 .profile-bg-grid button.active {
   border-color: var(--pink);
   box-shadow: 0 0 20px rgba(251, 188, 219, 0.18);
+}
+
+.profile-bg-grid button.rarity-rare {
+  border-color: rgba(101, 228, 255, 0.22);
+}
+
+.profile-bg-grid button.rarity-epic {
+  border-color: rgba(217, 70, 239, 0.24);
+}
+
+.profile-bg-grid button.rarity-legendary {
+  border-color: rgba(255, 209, 102, 0.3);
 }
 
 .profile-bg-grid button > span {

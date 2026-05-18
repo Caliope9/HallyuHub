@@ -95,6 +95,7 @@ const defaultUser = {
   socials: "Instagram @lunahallyu · TikTok @lunahallyu",
   phrase: "Brillando en cada comeback.",
   fandomLevel: "Level 18 Fandom",
+  level: 18,
   starsReceived: "32.8K",
   trendsCreated: "21",
   premium: false,
@@ -665,31 +666,95 @@ const avatars = [
     id: "berry",
     name: "Berry Pop",
     mood: "Rosa, dulce y fan de los comebacks brillantes.",
+    rarity: "Common",
+    minLevel: 1,
+    reward: "Gratis",
     gradient: "linear-gradient(145deg, #ffd6eb, #fbbcdb 46%, #a855f7)",
   },
   {
     id: "star",
     name: "Star Seoul",
     mood: "Neon, escenico y perfecto para fans de performance.",
+    rarity: "Common",
+    minLevel: 1,
+    reward: "Gratis",
     gradient: "linear-gradient(145deg, #fff7b3, #65e4ff 42%, #a855f7)",
   },
   {
     id: "mochi",
     name: "Mochi Beat",
     mood: "Suave, pastel y coleccionista de photocards.",
+    rarity: "Common",
+    minLevel: 1,
+    reward: "Gratis",
     gradient: "linear-gradient(145deg, #fff1f9, #77f4c7 44%, #d946ef)",
+  },
+  {
+    id: "neon",
+    name: "Neon Idol",
+    mood: "Brillo de escenario, comeback night y energia fan.",
+    rarity: "Rare",
+    minLevel: 6,
+    reward: "Publicar 5 veces",
+    gradient: "linear-gradient(145deg, #65e4ff, #d946ef 46%, #080b1d)",
+  },
+  {
+    id: "cyber",
+    name: "Cyber Hallyu",
+    mood: "Cyber, futurista y listo para trends verticales.",
+    rarity: "Rare",
+    minLevel: 9,
+    reward: "Participar en trends",
+    gradient: "linear-gradient(145deg, #77f4c7, #65e4ff 38%, #1f1147)",
+  },
+  {
+    id: "anime",
+    name: "Anime K-style",
+    mood: "K-style suave, cute concept y glow pastel.",
+    rarity: "Epic",
+    minLevel: 14,
+    reward: "Recibir 1K estrellas",
+    gradient: "linear-gradient(145deg, #fff1f9, #ff8ac8 42%, #65e4ff)",
+  },
+  {
+    id: "idol",
+    name: "Idol Aura",
+    mood: "Aura premium, marco brillante y presencia de stage.",
+    rarity: "Epic",
+    minLevel: 18,
+    reward: "Completar evento fandom",
+    gradient: "linear-gradient(145deg, #fbbcdb, #ffb703 42%, #a855f7)",
+  },
+  {
+    id: "legend",
+    name: "Legend Stage",
+    mood: "Avatar legendario con efecto estrella y borde vivo.",
+    rarity: "Legendary",
+    minLevel: 25,
+    reward: "Top fandom mensual",
+    gradient: "linear-gradient(145deg, #ffd166, #ff2d55 38%, #65e4ff)",
   },
 ];
 
 const profileBackgrounds = [
-  { id: "army", name: "Army Purple 💜", detail: "Galaxia violeta suave", art: "linear-gradient(135deg, #14091f, #8b5cf6 48%, #d9b4ff)" },
-  { id: "blink", name: "Blink Pink Black 🖤💖", detail: "Negro glossy con rosa fashion", art: "linear-gradient(135deg, #070509, #ff3ea5 54%, #ff8ac8)" },
-  { id: "once", name: "Once Candy 🍭", detail: "Dulce, coral y celeste", art: "linear-gradient(135deg, #ff8ac8, #ffd166 48%, #65e4ff)" },
-  { id: "stay", name: "Stay Star ⭐", detail: "Estrellas y escenario neon", art: "linear-gradient(135deg, #111827, #ffb703 45%, #ff2d55)" },
-  { id: "tokki", name: "Tokki Bunny 🐰", detail: "Y2K menta y cielo pop", art: "linear-gradient(135deg, #06131a, #77f4c7 48%, #65e4ff)" },
-  { id: "stage", name: "Idol Stage 🎤", detail: "Luces de escenario K-pop", art: "linear-gradient(135deg, #0b1020, #65e4ff 48%, #d946ef)" },
-  { id: "seoul", name: "Seoul Night 🌃", detail: "Noche coreana premium", art: "linear-gradient(135deg, #020617, #263d72 48%, #fbbcdb)" },
-  { id: "pastel", name: "Pastel K-pop ✨", detail: "Pastel, glow y photocards", art: "linear-gradient(135deg, #fff1f9, #fbbcdb 42%, #77f4c7)" },
+  { id: "army", name: "Army Purple 💜", detail: "Galaxia violeta suave", rarity: "Common", minLevel: 1, art: "linear-gradient(135deg, #14091f, #8b5cf6 48%, #d9b4ff)" },
+  { id: "blink", name: "Blink Pink Black 🖤💖", detail: "Negro glossy con rosa fashion", rarity: "Common", minLevel: 1, art: "linear-gradient(135deg, #070509, #ff3ea5 54%, #ff8ac8)" },
+  { id: "once", name: "Once Candy 🍭", detail: "Dulce, coral y celeste", rarity: "Common", minLevel: 1, art: "linear-gradient(135deg, #ff8ac8, #ffd166 48%, #65e4ff)" },
+  { id: "stay", name: "Stay Star ⭐", detail: "Estrellas y escenario neon", rarity: "Common", minLevel: 1, art: "linear-gradient(135deg, #111827, #ffb703 45%, #ff2d55)" },
+  { id: "tokki", name: "Tokki Bunny 🐰", detail: "Y2K menta y cielo pop", rarity: "Rare", minLevel: 6, art: "linear-gradient(135deg, #06131a, #77f4c7 48%, #65e4ff)" },
+  { id: "stage", name: "Idol Stage 🎤", detail: "Luces de escenario K-pop", rarity: "Rare", minLevel: 9, art: "linear-gradient(135deg, #0b1020, #65e4ff 48%, #d946ef)" },
+  { id: "seoul", name: "Seoul Night 🌃", detail: "Noche coreana premium", rarity: "Epic", minLevel: 14, art: "linear-gradient(135deg, #020617, #263d72 48%, #fbbcdb)" },
+  { id: "pastel", name: "Pastel K-pop ✨", detail: "Pastel, glow y photocards", rarity: "Epic", minLevel: 18, art: "linear-gradient(135deg, #fff1f9, #fbbcdb 42%, #77f4c7)" },
+  { id: "event", name: "Comeback Event", detail: "Fondo especial por eventos", rarity: "Legendary", minLevel: 22, art: "linear-gradient(135deg, #030712, #ff2d55 38%, #ffd166 72%, #65e4ff)" },
+  { id: "lightstick", name: "Lightstick Glow", detail: "Luces y marcos brillantes", rarity: "Legendary", minLevel: 25, art: "linear-gradient(135deg, #050816, #65e4ff 35%, #fbbcdb 68%, #ffffff)" },
+];
+
+const profileRewards = [
+  ["Comentar", "+5 estrellas", "Ayuda a otros fans"],
+  ["Publicar", "+25 estrellas", "Sube posts, outfits o photocards"],
+  ["Recibir likes", "+10 estrellas", "Cada fan que reacciona suma"],
+  ["Participar en trends", "+40 estrellas", "Challenges y dance covers"],
+  ["Completar eventos", "+120 estrellas", "Eventos fandom y misiones"],
 ];
 
 const profileFolders = [
@@ -2082,6 +2147,37 @@ function getAvatarGradient(avatarId) {
   return (avatars.find((avatar) => avatar.id === avatarId) || avatars[0]).gradient;
 }
 
+function getAvatarMeta(avatarId) {
+  return avatars.find((avatar) => avatar.id === avatarId) || avatars[0];
+}
+
+function getRarityClass(item) {
+  return `rarity-${String(item?.rarity || "Common").toLowerCase()}`;
+}
+
+function getFanProgress(user = state.user) {
+  const levelFromLabel = String(user?.fandomLevel || "").match(/\d+/)?.[0];
+  const stars = parseStars(user?.starsReceived);
+  const level = Number(user?.level || levelFromLabel || Math.max(1, Math.floor(stars / 1800) + 1));
+  const currentLevelStars = Math.max(0, stars - (level - 1) * 1800);
+  return {
+    level,
+    stars,
+    percent: Math.min(98, Math.round((currentLevelStars / 1800) * 100)),
+  };
+}
+
+function parseStars(value) {
+  if (typeof value === "number") return value;
+  const text = String(value || "0").trim().toLowerCase();
+  const number = Number.parseFloat(text.replace(/[^0-9.]/g, "")) || 0;
+  return text.includes("k") ? Math.round(number * 1000) : Math.round(number);
+}
+
+function isUnlocked(item, user = state.user) {
+  return getFanProgress(user).level >= (item?.minLevel || 1);
+}
+
 function getProfileBackground(bgId) {
   return profileBackgrounds.find((bg) => bg.id === (bgId || state.selectedProfileBg || state.user?.profileBg)) || profileBackgrounds[0];
 }
@@ -2092,18 +2188,19 @@ function renderProfileBackgroundPicker() {
     <div class="profile-bg-preview" style="--profile-bg:${activeBg.art}">
       <span>${activeBg.name}</span>
       <strong>Vista previa del perfil</strong>
-      <small>${activeBg.detail}</small>
+      <small>${activeBg.detail} · ${activeBg.rarity}</small>
     </div>
     <div class="profile-bg-grid">
       ${profileBackgrounds
-        .map(
-          (bg) => `
-          <button class="${activeBg.id === bg.id ? "active" : ""}" data-profile-bg="${bg.id}">
+        .map((bg) => {
+          const unlocked = isUnlocked(bg);
+          return `
+          <button class="${activeBg.id === bg.id ? "active" : ""} ${unlocked ? "" : "locked"} ${getRarityClass(bg)}" ${unlocked ? `data-profile-bg="${bg.id}"` : "disabled"}>
             <span style="--profile-bg:${bg.art}"></span>
             <strong>${bg.name}</strong>
-            <small>${bg.detail}</small>
-          </button>`,
-        )
+            <small>${unlocked ? bg.detail : `Se desbloquea en nivel ${bg.minLevel}`}</small>
+          </button>`;
+        })
         .join("")}
     </div>
   `;
@@ -2672,25 +2769,35 @@ function renderProfile() {
   const isPlus = Boolean(profileUser.premium);
   const activeTab = profileTabs.find(([key]) => key === state.profileTab) || profileTabs[0];
   const profileBg = getProfileBackground(profileUser.profileBg);
+  const avatarMeta = getAvatarMeta(profileUser.avatar);
+  const progress = getFanProgress(profileUser);
   const isFollowing = Boolean(state.followedProfiles[profileUser.id || profileUser.username]);
   return `
     <section class="premium-profile-hero ${isPlus ? "plus" : ""}" style="--profile-bg:${profileBg.art}">
       ${isOwnProfile ? `<button class="settings-button modern-settings" data-go-view="settings" aria-label="Abrir ajustes"><span class="gear-icon"></span></button>` : ""}
       <div class="profile-hero-top">
-        ${renderAvatarElement("profile-avatar premium-avatar", profileUser.avatar, profileUser.avatarUrl)}
+        ${renderAvatarElement(`profile-avatar premium-avatar ${getRarityClass(avatarMeta)}`, profileUser.avatar, profileUser.avatarUrl)}
         <div class="profile-name-block">
           <div class="profile-title-line"><h1>${profileUser.name}</h1><span class="verified-badge">${isPlus ? "Plus" : "Verificado"}</span></div>
           <p>@${profileUser.username} · ${profileUser.country || "Chile 🇨🇱"}</p>
+          <p class="profile-bio-line">${profileUser.bio || profileUser.phrase || "Fan K-pop en HallyuHub."}</p>
           <div class="fandom-line"><span>${profileUser.fandom || "ARMY 💜"}</span><span>Bias: ${profileUser.bias || "Jungkook"}</span></div>
           <div class="fandom-line"><span>${profileUser.favoriteGroup || "BTS"}</span><span>${profileUser.fandomLevel || "Level 18 Fandom"}</span></div>
         </div>
       </div>
-      <p class="profile-phrase">${profileUser.phrase || profileUser.bio}</p>
       <div class="premium-stats">
         <div><strong>${profileUser.posts}</strong><span>posts</span></div>
         <div><strong>${profileUser.followers}</strong><span>seguidores</span></div>
         <div><strong>${profileUser.following}</strong><span>siguiendo</span></div>
         <div><strong>${profileUser.starsReceived || "32.8K"}</strong><span>estrellas</span></div>
+      </div>
+      <div class="profile-progress-card">
+        <div>
+          <span>Level ${progress.level}</span>
+          <strong>${avatarMeta.rarity} · ${avatarMeta.name}</strong>
+          <small>${progress.stars.toLocaleString("es")} estrellas acumuladas</small>
+        </div>
+        <div class="progress-ring" style="--progress:${progress.percent}%"><span></span></div>
       </div>
       <div class="premium-profile-actions ${isOwnProfile ? "own-actions" : "other-actions"}">
         ${
@@ -2727,17 +2834,23 @@ function renderProfile() {
 
 function renderProfileEditor() {
   const activeAvatar = avatars.find((avatar) => avatar.id === (state.selectedAvatar || state.user.avatar)) || avatars[0];
+  const progress = getFanProgress();
   return `
     <section class="profile-editor-card">
       <button class="ghost-button back-button" data-profile-edit-close>Volver al perfil</button>
       <div class="profile-edit-cover" style="--profile-bg:${getProfileBackground(state.selectedProfileBg || state.user.profileBg).art}">
-        ${renderAvatarElement("profile-avatar premium-avatar edit-avatar", state.selectedAvatar || state.user.avatar, state.user.avatarUrl)}
+        ${renderAvatarElement(`profile-avatar premium-avatar edit-avatar ${getRarityClass(activeAvatar)}`, state.selectedAvatar || state.user.avatar, state.user.avatarUrl)}
         <div>
           <p class="eyebrow">Editar perfil</p>
           <h2>Tu identidad HallyuHub</h2>
           <p class="muted">Solo datos visibles en tu perfil. Cuenta, privacidad y legal quedan en Ajustes.</p>
         </div>
       </div>
+      <section class="unlock-summary">
+        <div><strong>Level ${progress.level}</strong><span>${progress.stars.toLocaleString("es")} estrellas</span></div>
+        <div><strong>${avatars.filter((avatar) => isUnlocked(avatar)).length}/${avatars.length}</strong><span>avatares</span></div>
+        <div><strong>${profileBackgrounds.filter((bg) => isUnlocked(bg)).length}/${profileBackgrounds.length}</strong><span>fondos</span></div>
+      </section>
       <div class="form-stack profile-edit-form">
         <label>Cambiar foto real<input id="profile-edit-avatar-file" type="file" accept="image/*" /></label>
         <label>Nombre visible<input id="profile-edit-name" value="${state.user.name}" /></label>
@@ -2746,17 +2859,24 @@ function renderProfileEditor() {
         <label>Grupos favoritos<input id="profile-edit-groups" value="${state.user.favoriteGroup || ""}" placeholder="BTS, Stray Kids, BLACKPINK" /></label>
         <label>Redes sociales<input id="profile-edit-socials" value="${state.user.socials || ""}" placeholder="Instagram, TikTok, YouTube..." /></label>
       </div>
-      <div class="section-heading small"><h2>Avatar prediseñado</h2><span>${activeAvatar.name}</span></div>
+      <div class="section-heading small"><h2>Avatares desbloqueables</h2><span>${activeAvatar.rarity}</span></div>
       <div class="avatar-picker compact-picker">
         ${avatars
-          .map(
-            (avatar) => `
-            <button class="avatar-choice ${(state.selectedAvatar || state.user.avatar) === avatar.id ? "active" : ""}" data-avatar="${avatar.id}">
+          .map((avatar) => {
+            const unlocked = isUnlocked(avatar);
+            return `
+            <button class="avatar-choice ${(state.selectedAvatar || state.user.avatar) === avatar.id ? "active" : ""} ${unlocked ? "" : "locked"} ${getRarityClass(avatar)}" ${unlocked ? `data-avatar="${avatar.id}"` : "disabled"}>
               <div class="plush-avatar pick" style="--avatar:${avatar.gradient}"><span></span></div>
               <strong>${avatar.name}</strong>
-            </button>`,
-          )
+              <small class="rarity-chip">${avatar.rarity}</small>
+              <em>${unlocked ? avatar.reward : `Nivel ${avatar.minLevel}`}</em>
+            </button>`;
+          })
           .join("")}
+      </div>
+      <div class="section-heading small"><h2>Cómo desbloquear más</h2><span>Actividad</span></div>
+      <div class="reward-grid">
+        ${profileRewards.map(([action, points, detail]) => `<article><strong>${action}</strong><span>${points}</span><small>${detail}</small></article>`).join("")}
       </div>
       <div class="section-heading small"><h2>Cambiar portada / fondo</h2><span>Perfil</span></div>
       ${renderProfileBackgroundPicker()}
