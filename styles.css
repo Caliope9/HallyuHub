@@ -4168,3 +4168,41 @@ video.post-media.real-media {
 .settings-menu-list.dense button {
   min-height: 56px;
 }
+
+.settings-detail,
+.onboarding-screen {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.065);
+  backdrop-filter: blur(22px);
+  padding: 15px;
+  display: grid;
+  gap: 12px;
+}
+
+.settings-demo-box {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--muted);
+  padding: 14px;
+  font-size: 13px;
+}
+
+.onboarding-screen {
+  min-height: 100%;
+  align-content: start;
+}
+
+.onboarding-screen h2 {
+  margin-bottom: 0;
+  font-size: 26px;
+}
+
+.settings-section {
+  padding: 12px;
+}
+
+.settings-section .section-heading {
+  margin-top: 0;
+}

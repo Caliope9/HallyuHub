@@ -6,6 +6,7 @@ const state = {
   selectedGroup: "skz",
   activityTab: "activity",
   profileTab: "posts",
+  settingsPanel: null,
   activeStory: null,
   likedStories: {},
   storyDirection: 1,
@@ -95,6 +96,7 @@ const defaultUser = {
   phone: "",
   language: "Español",
   themePremium: false,
+  onboarded: true,
 };
 
 const futureBackend = {
@@ -755,6 +757,7 @@ const profileAchievements = [
 ];
 
 function setView(nextView) {
+  if (nextView !== "settings") state.settingsPanel = null;
   if (nextView !== "home") {
     state.activeStory = null;
     state.storyComposerOpen = false;
@@ -792,6 +795,13 @@ function render() {
   document.querySelector(".topbar").classList.toggle("hidden", !state.isAuthenticated || state.view === "profile");
   if (!state.isAuthenticated) {
     view.innerHTML = renderAuth();
+    bindDynamicActions();
+    return;
+  }
+  if (state.user && state.user.onboarded === false) {
+    document.querySelector(".bottom-nav").classList.add("hidden");
+    document.querySelector(".topbar").classList.add("hidden");
+    view.innerHTML = renderOnboarding();
     bindDynamicActions();
     return;
   }
@@ -858,6 +868,24 @@ function bindDynamicActions() {
 
   document.querySelectorAll("[data-save-settings]").forEach((button) => {
     button.addEventListener("click", saveSettings);
+  });
+
+  document.querySelectorAll("[data-save-onboarding]").forEach((button) => {
+    button.addEventListener("click", saveOnboarding);
+  });
+
+  document.querySelectorAll("[data-settings-panel]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.settingsPanel = button.dataset.settingsPanel;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-settings-main]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.settingsPanel = null;
+      render();
+    });
   });
 
   document.querySelectorAll("[data-create-post]").forEach((button) => {
@@ -1132,13 +1160,14 @@ async function submitAuth(mode) {
     }
     state.session = data.session;
     state.isAuthenticated = true;
-    if (data.user) {
+  if (data.user) {
       state.user = {
         ...defaultUser,
         email,
         name,
         username,
         avatar,
+        onboarded: mode !== "register",
       };
       await upsertProfile(data.user, state.user);
       await loadProfile(data.user);
@@ -1157,6 +1186,7 @@ async function submitAuth(mode) {
     name: mode === "register" ? name : state.user?.name || name,
     username: mode === "register" ? username : state.user?.username || username,
     avatar,
+    onboarded: mode === "register" ? false : state.user?.onboarded ?? true,
   };
   state.selectedAvatar = avatar;
   state.ambience = state.user.ambience;
@@ -1199,6 +1229,27 @@ async function saveSettings() {
   }
   storage.set("hallyuHubUser", state.user);
   render();
+}
+
+function saveOnboarding() {
+  const accepted = document.getElementById("onboarding-terms")?.checked;
+  if (!accepted) {
+    alert("Para continuar debes aceptar terminos y politica de privacidad.");
+    return;
+  }
+  state.user = {
+    ...state.user,
+    name: document.getElementById("onboarding-name")?.value.trim() || state.user.name,
+    username: document.getElementById("onboarding-username")?.value.trim() || state.user.username,
+    country: document.getElementById("onboarding-country")?.value.trim() || state.user.country,
+    fandom: document.getElementById("onboarding-fandom")?.value.trim() || state.user.fandom,
+    bias: document.getElementById("onboarding-bias")?.value.trim() || state.user.bias,
+    favoriteGroup: document.getElementById("onboarding-group")?.value.trim() || state.user.favoriteGroup,
+    bio: document.getElementById("onboarding-bio")?.value.trim() || state.user.bio,
+    onboarded: true,
+  };
+  storage.set("hallyuHubUser", state.user);
+  setView("profile");
 }
 
 async function logout() {
@@ -2088,15 +2139,8 @@ function renderSettings() {
   const activeAvatar = avatars.find((avatar) => avatar.id === state.user.avatar) || avatars[0];
   const activeAmbience = ambiences.find((ambience) => ambience.id === state.user.ambience) || ambiences[0];
   const premiumLabel = state.user.premium ? "Plus activo" : "Plan gratuito";
-  const settingsGroups = [
-    ["Cuenta", ["Editar perfil", "Cambiar email", "Cambiar contrasena", "Telefono", "Idioma", "Pais", "Cerrar sesion"]],
-    ["Privacidad", ["Cuenta privada", "Quien puede enviarme mensajes", "Quien puede ver mis historias", "Quien puede comentar", "Bloquear usuarios", "Usuarios bloqueados"]],
-    ["Notificaciones", ["Likes/estrellas", "Comentarios", "Mensajes", "Nuevos seguidores", "Trends", "Eventos K-pop"]],
-    ["Pagos", ["Metodo de pago", "Historial de pagos", "Estado de suscripcion", "Cancelar suscripcion", "Facturacion"]],
-    ["Legal", ["Politica de privacidad", "Terminos y condiciones", "Normas de comunidad", "Copyright y derechos de autor", "Politica de contenido fan", "Politica de menores", "Ayuda y soporte", "Reportar problema", "Eliminar cuenta"]],
-    ["Seguridad", ["Verificacion de cuenta", "Sesiones activas", "Autenticacion en dos pasos simulada", "Cambiar contrasena", "Actividad reciente"]],
-    ["Moderacion", ["Reportar usuario", "Reportar contenido", "Bloquear usuario", "Silenciar usuario"]],
-  ];
+  const settingsGroups = getSettingsGroups();
+  if (state.settingsPanel) return renderSettingsPanel(state.settingsPanel, activeAvatar, activeAmbience, premiumLabel);
   return `
     <button class="ghost-button back-button" data-go-view="profile">Volver al perfil</button>
     <section class="settings-header">
@@ -2111,22 +2155,138 @@ function renderSettings() {
       <strong>${state.backendMode === "supabase" ? "Supabase conectado" : "Modo demo local"}</strong>
       <p>${state.backendMode === "supabase" ? "Login, perfiles, posts y media usan Supabase." : "Agrega URL y anon key en supabase-config.js para activar usuarios reales."}</p>
     </section>
-    <section class="profile-panel">
-      <div class="section-heading"><h2>Editar perfil</h2><span>Perfil</span></div>
+    ${settingsGroups
+      .map(
+        ({ title, items }) => `
+        <section class="profile-panel settings-section">
+          <div class="section-heading"><h2>${title}</h2><span>${items.length}</span></div>
+          <div class="settings-menu-list dense">
+            ${items
+              .map(
+                (item, index) => `
+                <button data-settings-panel="${item.key}">
+                  <span class="menu-dot ${index % 2 ? "privacy" : "safety"}"></span>
+                  <strong>${item.label}</strong>
+                  <small>${item.detail}</small>
+                </button>`,
+              )
+              .join("")}
+          </div>
+        </section>`,
+      )
+      .join("")}
+  `;
+}
+
+function getSettingsGroups() {
+  return [
+    {
+      title: "Cuenta",
+      items: [
+        { key: "edit-profile", label: "Editar perfil", detail: "Nombre, usuario, bio y fandom" },
+        { key: "personal-data", label: "Datos personales", detail: "Email, telefono, idioma y pais" },
+        { key: "password", label: "Cambiar contrasena", detail: "Seguridad de acceso" },
+        { key: "language", label: "Idioma", detail: state.user.language || "Espanol" },
+        { key: "logout", label: "Cerrar sesion", detail: "Salir de HallyuHub" },
+      ],
+    },
+    {
+      title: "Privacidad",
+      items: [
+        { key: "private-account", label: "Cuenta privada", detail: "Controla quien te ve" },
+        { key: "message-privacy", label: "Quien puede escribirme", detail: "Solicitudes y permisos" },
+        { key: "story-privacy", label: "Quien puede ver mis historias", detail: "Fans, seguidores o privado" },
+        { key: "blocked-users", label: "Usuarios bloqueados", detail: "Ver y administrar bloqueos" },
+      ],
+    },
+    {
+      title: "Notificaciones",
+      items: [
+        { key: "notif-messages", label: "Mensajes", detail: "DM y solicitudes" },
+        { key: "notif-stars", label: "Estrellas", detail: "Likes y reacciones" },
+        { key: "notif-comments", label: "Comentarios", detail: "Respuestas y menciones" },
+        { key: "notif-followers", label: "Seguidores", detail: "Nuevos fans" },
+        { key: "notif-trends", label: "Trends", detail: "Challenges y eventos" },
+      ],
+    },
+    {
+      title: "Apariencia",
+      items: [
+        { key: "appearance", label: "Tema claro/oscuro", detail: "Color, fondo y tema fandom" },
+        { key: "premium-theme", label: "Tema premium", detail: "Demo Plus visual" },
+      ],
+    },
+    {
+      title: "Suscripcion",
+      items: [
+        { key: "plus", label: "HallyuHub Plus", detail: state.user.premium ? "Plus activo" : "Plan gratuito" },
+        { key: "payment-methods", label: "Metodos de pago", detail: "Tarjetas y medios demo" },
+        { key: "payment-history", label: "Historial de pagos", detail: "Facturacion demo" },
+        { key: "cancel-subscription", label: "Cancelar suscripcion", detail: "Gestionar Plus" },
+      ],
+    },
+    {
+      title: "Legal y ayuda",
+      items: [
+        { key: "privacy-policy", label: "Politica de privacidad", detail: "Uso de datos y seguridad" },
+        { key: "terms", label: "Terminos y condiciones", detail: "Reglas de uso" },
+        { key: "community-rules", label: "Normas de comunidad", detail: "Convivencia fandom" },
+        { key: "copyright", label: "Copyright", detail: "Derechos de autor" },
+        { key: "fan-policy", label: "Politica de contenido fan", detail: "UGC y fan edits" },
+        { key: "report-problem", label: "Reportar problema", detail: "Soporte y seguridad" },
+        { key: "delete-account", label: "Eliminar cuenta", detail: "Accion sensible" },
+      ],
+    },
+  ];
+}
+
+function renderSettingsPanel(panel, activeAvatar, activeAmbience, premiumLabel) {
+  const titles = {
+    "edit-profile": "Editar perfil",
+    "personal-data": "Datos personales",
+    password: "Cambiar contrasena",
+    language: "Idioma",
+    logout: "Cerrar sesion",
+    "private-account": "Cuenta privada",
+    "message-privacy": "Quien puede escribirme",
+    "story-privacy": "Quien puede ver mis historias",
+    "blocked-users": "Usuarios bloqueados",
+    appearance: "Apariencia",
+    "premium-theme": "Tema premium",
+    plus: "HallyuHub Plus",
+    "payment-methods": "Metodos de pago",
+    "payment-history": "Historial de pagos",
+    "cancel-subscription": "Cancelar suscripcion",
+    "privacy-policy": "Politica de privacidad",
+    terms: "Terminos y condiciones",
+    "community-rules": "Normas de comunidad",
+    copyright: "Copyright",
+    "fan-policy": "Politica de contenido fan",
+    "report-problem": "Reportar problema",
+    "delete-account": "Eliminar cuenta",
+  };
+  const notificationPanels = ["notif-messages", "notif-stars", "notif-comments", "notif-followers", "notif-trends"];
+  const title = titles[panel] || (notificationPanels.includes(panel) ? "Notificaciones" : "Configuracion");
+  return `
+    <button class="ghost-button back-button" data-settings-main>Volver a configuracion</button>
+    <section class="settings-detail">
+      <div class="section-heading"><h2>${title}</h2><span>Demo</span></div>
+      ${renderSettingsPanelBody(panel, activeAvatar, activeAmbience, premiumLabel)}
+    </section>
+  `;
+}
+
+function renderSettingsPanelBody(panel, activeAvatar, activeAmbience, premiumLabel) {
+  if (panel === "edit-profile") {
+    return `
       <div class="form-stack">
         <label>Nombre<input id="settings-name" value="${state.user.name}" /></label>
         <label>Usuario<input id="settings-username" value="${state.user.username}" /></label>
         <label>Biografia<textarea id="settings-bio">${state.user.bio}</textarea></label>
-        <label>Pais<input id="settings-country" value="${state.user.country || ""}" /></label>
         <label>Fandom<input id="settings-fandom" value="${state.user.fandom || ""}" /></label>
         <label>Bias<input id="settings-bias" value="${state.user.bias || ""}" /></label>
         <label>Grupo favorito<input id="settings-group" value="${state.user.favoriteGroup || ""}" /></label>
         <label>Frase destacada<input id="settings-phrase" value="${state.user.phrase || ""}" /></label>
-        <label>Telefono<input id="settings-phone" value="${state.user.phone || ""}" /></label>
-        <label>Idioma<input id="settings-language" value="${state.user.language || "Espanol"}" /></label>
-      </div>
-      <div class="section-heading small"><h2>Foto de perfil</h2><span>${activeAvatar.name}</span></div>
-      <div class="form-stack">
         <label>Subir foto real<input id="settings-avatar-file" type="file" accept="image/*" /></label>
       </div>
       <div class="avatar-picker">
@@ -2140,17 +2300,22 @@ function renderSettings() {
           )
           .join("")}
       </div>
-    </section>
-    <section class="plus-panel">
-      <div>
-        <span class="tag">${premiumLabel}</span>
-        <h2>HallyuHub Plus</h2>
-        <p>Badges exclusivos, temas premium, filtros, mas espacio para photocards y estadisticas avanzadas.</p>
+      <button class="primary-button" data-save-settings>Guardar cambios</button>
+    `;
+  }
+  if (panel === "personal-data") {
+    return `
+      <div class="form-stack">
+        <label>Email<input value="${state.user.email}" /></label>
+        <label>Telefono<input id="settings-phone" value="${state.user.phone || ""}" /></label>
+        <label>Pais<input id="settings-country" value="${state.user.country || ""}" /></label>
+        <label>Idioma<input id="settings-language" value="${state.user.language || "Espanol"}" /></label>
       </div>
-      <button class="primary-button" data-toggle-premium>${state.user.premium ? "Desactivar demo" : "Suscribirme"}</button>
-    </section>
-    <section class="profile-panel">
-      <div class="section-heading"><h2>Ambiente</h2><span>${activeAmbience.group}</span></div>
+      <button class="primary-button" data-save-settings>Guardar datos</button>
+    `;
+  }
+  if (panel === "appearance" || panel === "premium-theme") {
+    return `
       <div class="ambience-grid">
         ${ambiences
           .map(
@@ -2169,29 +2334,54 @@ function renderSettings() {
         <label class="switch-row">Notificaciones<input id="settings-notifications" type="checkbox" ${state.user.notifications ? "checked" : ""} /></label>
         <label class="switch-row">Perfil privado<input id="settings-privacy" type="checkbox" ${state.user.privateProfile ? "checked" : ""} /></label>
       </div>
-      <button class="primary-button" data-save-settings>Guardar cambios</button>
-      <button class="ghost-button danger-button" data-logout>Cerrar sesion</button>
+      <button class="primary-button" data-save-settings>Guardar apariencia</button>
+    `;
+  }
+  if (panel === "plus") {
+    return `
+      <section class="plus-panel">
+        <span class="tag">${premiumLabel}</span>
+        <h2>HallyuHub Plus</h2>
+        <p>Incluye badges exclusivos, temas premium, filtros, mas espacio para photocards y estadisticas avanzadas.</p>
+        <button class="primary-button" data-toggle-premium>${state.user.premium ? "Desactivar demo" : "Suscribirme"}</button>
+      </section>
+    `;
+  }
+  if (panel === "logout") return `<p class="muted">Cierra la sesion actual en este dispositivo.</p><button class="ghost-button danger-button" data-logout>Cerrar sesion</button>`;
+  if (panel === "delete-account") return `<p class="muted">Esta pantalla demo muestra la opcion visible para eliminar cuenta, requerida para apps con usuarios.</p><button class="ghost-button danger-button">Solicitar eliminacion de cuenta</button>`;
+  if (panel === "report-problem") return `<div class="form-stack"><label>Describe el problema<textarea>Quiero reportar contenido o usuario...</textarea></label></div><button class="primary-button">Enviar reporte demo</button>`;
+  const legalText = {
+    "privacy-policy": "Explicamos que HallyuHub protege datos personales, usa localStorage en modo demo y luego Supabase para sesiones reales.",
+    terms: "Reglas demo de uso: respeto, seguridad, nada de acoso, spam, suplantacion ni contenido ilegal.",
+    "community-rules": "Normas: cuidar a fans menores, no doxxing, no bullying, no ventas inseguras y reportar contenido riesgoso.",
+    copyright: "Respeto por derechos de autor, marcas, fancams, fotos oficiales y contenido de terceros.",
+    "fan-policy": "Contenido fan permitido si respeta creditos, privacidad, derechos y normas de comunidad.",
+    "payment-methods": "Metodo de pago demo: tarjeta terminada en 4242. No se procesa dinero real.",
+    "payment-history": "Historial demo: HallyuHub Plus - pendiente de activar.",
+    "cancel-subscription": "Puedes cancelar la suscripcion demo en cualquier momento desde esta pantalla.",
+  };
+  return `<p class="muted">${legalText[panel] || "Configuracion demo lista para conectarse a funciones reales mas adelante."}</p><div class="settings-demo-box">Pantalla funcional demo sin acciones reales todavia.</div>`;
+}
+
+function renderOnboarding() {
+  return `
+    <section class="onboarding-screen">
+      <p class="eyebrow">Bienvenida a HallyuHub</p>
+      <h2>Completa tu perfil fandom</h2>
+      <p class="muted">Esto aparece solo la primera vez. Despues puedes editarlo desde Configuracion.</p>
+      <div class="form-stack">
+        <label>Nombre<input id="onboarding-name" value="${state.user.name}" /></label>
+        <label>Usuario<input id="onboarding-username" value="${state.user.username}" /></label>
+        <label>Foto<input type="file" accept="image/*" /></label>
+        <label>Pais<input id="onboarding-country" value="${state.user.country || ""}" /></label>
+        <label>Fandom principal<input id="onboarding-fandom" value="${state.user.fandom || ""}" /></label>
+        <label>Bias<input id="onboarding-bias" value="${state.user.bias || ""}" /></label>
+        <label>Grupo favorito<input id="onboarding-group" value="${state.user.favoriteGroup || ""}" /></label>
+        <label>Biografia<textarea id="onboarding-bio">${state.user.bio}</textarea></label>
+        <label class="switch-row">Acepto terminos y politica de privacidad<input id="onboarding-terms" type="checkbox" /></label>
+      </div>
+      <button class="primary-button" data-save-onboarding>Entrar a mi perfil</button>
     </section>
-    ${settingsGroups
-      .map(
-        ([title, items]) => `
-        <section class="profile-panel settings-section">
-          <div class="section-heading"><h2>${title}</h2><span>${items.length}</span></div>
-          <div class="settings-menu-list dense">
-            ${items
-              .map(
-                (item, index) => `
-                <button>
-                  <span class="menu-dot ${index % 2 ? "privacy" : "safety"}"></span>
-                  <strong>${item}</strong>
-                  <small>${title === "Legal" || title === "Moderacion" ? "Visible para App Store / Play Store" : "Demo visual"}</small>
-                </button>`,
-              )
-              .join("")}
-          </div>
-        </section>`,
-      )
-      .join("")}
   `;
 }
 
@@ -2278,18 +2468,6 @@ function renderProfile() {
         )
         .join("")}
     </section>
-    <section class="profile-fandom-dashboard">
-      ${profileAchievements
-        .map(
-          ([title, detail], index) => `
-          <article>
-            <span class="mini-lightstick" style="--art:${art[index % art.length]}"></span>
-            <strong>${title}</strong>
-            <small>${detail}</small>
-          </article>`,
-        )
-        .join("")}
-    </section>
     <section class="profile-panel slim-panel">
       <div class="profile-tabs">
         ${profileTabs
@@ -2298,12 +2476,6 @@ function renderProfile() {
       </div>
       <div class="profile-grid-premium">
         ${renderProfileGrid(activeTab[0])}
-      </div>
-    </section>
-    <section class="profile-panel">
-      <div class="section-heading"><h2>Badges fandom</h2><span>HallyuHub</span></div>
-      <div class="badge-cloud">
-        ${fandomBadges.map((badge) => `<span>${badge}</span>`).join("")}
       </div>
     </section>
   `;
