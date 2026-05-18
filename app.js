@@ -7,6 +7,8 @@ const state = {
   activityTab: "activity",
   profileTab: "posts",
   settingsPanel: null,
+  viewedProfile: null,
+  followedProfiles: {},
   selectedProfileBg: "army",
   activeStory: null,
   likedStories: {},
@@ -771,6 +773,7 @@ const profileAchievements = [
 
 function setView(nextView) {
   if (nextView !== "settings") state.settingsPanel = null;
+  if (nextView !== "profile") state.viewedProfile = null;
   if (nextView !== "home") {
     state.activeStory = null;
     state.storyComposerOpen = false;
@@ -1015,6 +1018,43 @@ function bindDynamicActions() {
 
   document.querySelectorAll("[data-follow-user]").forEach((button) => {
     button.addEventListener("click", () => followUser(button.dataset.followUser));
+  });
+
+  document.querySelectorAll("[data-profile-follow]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.profileFollow;
+      state.followedProfiles[id] = !state.followedProfiles[id];
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-open-profile]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const profile = state.liveProfiles.find((item) => item.id === button.dataset.openProfile);
+      if (!profile) return;
+      state.viewedProfile = {
+        id: profile.id,
+        name: profile.name || "Hallyu fan",
+        username: profile.username || "hallyufan",
+        avatar: profile.avatar || "star",
+        avatarUrl: profile.avatar_url,
+        bio: profile.bio || "Fan K-pop en HallyuHub.",
+        country: profile.country || "Latam",
+        fandom: profile.fandom || "Stay ⭐",
+        bias: profile.bias || "Bias secreto",
+        favoriteGroup: profile.favorite_group || "Stray Kids",
+        phrase: profile.phrase || "Compartiendo mi mundo fandom.",
+        followers: "2.1K",
+        following: "180",
+        posts: "24",
+        starsReceived: "8.2K",
+        trendsCreated: "6",
+        profileBg: "stay",
+      };
+      state.view = "profile";
+      document.querySelectorAll(".nav-item").forEach((nav) => nav.classList.toggle("active", nav.dataset.view === "profile"));
+      render();
+    });
   });
 
   document.querySelectorAll("[data-send-message]").forEach((button) => {
@@ -1805,7 +1845,9 @@ function renderSearch() {
                 (profile) => `
                 <article class="user-result-card">
                   ${renderAvatarElement("mini", profile.avatar, profile.avatar_url)}
-                  <div><h3>${profile.name}</h3><p class="muted">@${profile.username}</p></div>
+                  <button class="profile-result-main" data-open-profile="${profile.id}">
+                    <div><h3>${profile.name}</h3><p class="muted">@${profile.username}</p></div>
+                  </button>
                   <button class="ghost-button" data-follow-user="${profile.id}">Seguir</button>
                   <button class="ghost-button" data-send-message="${profile.id}">Mensaje</button>
                 </article>`,
@@ -2197,7 +2239,7 @@ function renderSettings() {
     <section class="settings-header">
       <div class="plush-avatar hero" style="--avatar:${activeAvatar.gradient}"><span></span></div>
       <div>
-        <p class="eyebrow">Configuracion</p>
+        <p class="eyebrow">Configuración</p>
         <h2>Centro de cuenta</h2>
         <p class="muted">Cuenta, privacidad, actividad, archivo, guardados, tema y seguridad.</p>
       </div>
@@ -2216,9 +2258,9 @@ function renderSettings() {
               .map(
                 (item, index) => `
                 <button data-settings-panel="${item.key}">
-                  <span class="menu-dot ${index % 2 ? "privacy" : "safety"}"></span>
-                  <strong>${item.label}</strong>
-                  <small>${item.detail}</small>
+                  <span class="setting-icon">${item.icon || "•"}</span>
+                  <span class="setting-copy"><strong>${item.label}</strong><small>${item.detail}</small></span>
+                  <span class="setting-arrow">›</span>
                 </button>`,
               )
               .join("")}
@@ -2234,59 +2276,68 @@ function getSettingsGroups() {
     {
       title: "Cuenta",
       items: [
-        { key: "edit-profile", label: "Editar perfil", detail: "Nombre, usuario, bio y fandom" },
-        { key: "personal-data", label: "Datos personales", detail: "Email, telefono, idioma y pais" },
-        { key: "password", label: "Cambiar contrasena", detail: "Seguridad de acceso" },
-        { key: "language", label: "Idioma", detail: state.user.language || "Espanol" },
-        { key: "logout", label: "Cerrar sesion", detail: "Salir de HallyuHub" },
+        { key: "personal-data", label: "Datos personales", detail: "Email, telefono, idioma y pais", icon: "ID" },
+        { key: "password", label: "Cambiar contraseña", detail: "Seguridad de acceso", icon: "PW" },
+        { key: "language", label: "Idioma", detail: state.user.language || "Espanol", icon: "文" },
+      ],
+    },
+    {
+      title: "Perfil",
+      items: [
+        { key: "edit-profile", label: "Editar perfil", detail: "Nombre, usuario, bio, avatar y fandom", icon: "PF" },
+        { key: "profile-background", label: "Fondo del perfil", detail: "Fandom, comeback, lightstick y pastel", icon: "BG" },
       ],
     },
     {
       title: "Privacidad",
       items: [
-        { key: "private-account", label: "Cuenta privada", detail: "Controla quien te ve" },
-        { key: "message-privacy", label: "Quien puede escribirme", detail: "Solicitudes y permisos" },
-        { key: "story-privacy", label: "Quien puede ver mis historias", detail: "Fans, seguidores o privado" },
-        { key: "blocked-users", label: "Usuarios bloqueados", detail: "Ver y administrar bloqueos" },
+        { key: "private-account", label: "Cuenta privada", detail: "Controla quién te ve", icon: "PR" },
+        { key: "message-privacy", label: "Quién puede escribirme", detail: "Solicitudes y permisos", icon: "DM" },
+        { key: "story-privacy", label: "Quién puede ver mis historias", detail: "Fans, seguidores o privado", icon: "ST" },
+        { key: "blocked-users", label: "Usuarios bloqueados", detail: "Ver y administrar bloqueos", icon: "BL" },
       ],
     },
     {
       title: "Notificaciones",
       items: [
-        { key: "notif-messages", label: "Mensajes", detail: "DM y solicitudes" },
-        { key: "notif-stars", label: "Estrellas", detail: "Likes y reacciones" },
-        { key: "notif-comments", label: "Comentarios", detail: "Respuestas y menciones" },
-        { key: "notif-followers", label: "Seguidores", detail: "Nuevos fans" },
-        { key: "notif-trends", label: "Trends", detail: "Challenges y eventos" },
+        { key: "notif-messages", label: "Mensajes", detail: "DM y solicitudes", icon: "✉" },
+        { key: "notif-stars", label: "Estrellas", detail: "Likes y reacciones", icon: "★" },
+        { key: "notif-comments", label: "Comentarios", detail: "Respuestas y menciones", icon: "··" },
+        { key: "notif-followers", label: "Seguidores", detail: "Nuevos fans", icon: "+" },
+        { key: "notif-trends", label: "Trends", detail: "Challenges y eventos", icon: "▶" },
       ],
     },
     {
-      title: "Apariencia",
+      title: "Seguridad",
       items: [
-        { key: "appearance", label: "Tema claro/oscuro", detail: "Color, fondo y tema fandom" },
-        { key: "profile-background", label: "Fondo del perfil", detail: "Fandom, comeback, lightstick y pastel" },
-        { key: "premium-theme", label: "Tema premium", detail: "Demo Plus visual" },
+        { key: "private-account", label: "Verificacion de cuenta", detail: "Estado y confianza", icon: "✓" },
+        { key: "password", label: "Sesiones activas", detail: "Dispositivos conectados", icon: "SE" },
+        { key: "blocked-users", label: "Bloquear usuarios", detail: "Control de seguridad", icon: "!" },
       ],
     },
     {
-      title: "Suscripcion",
+      title: "Soporte",
       items: [
-        { key: "plus", label: "HallyuHub Plus", detail: state.user.premium ? "Plus activo" : "Plan gratuito" },
-        { key: "payment-methods", label: "Metodos de pago", detail: "Tarjetas y medios demo" },
-        { key: "payment-history", label: "Historial de pagos", detail: "Facturacion demo" },
-        { key: "cancel-subscription", label: "Cancelar suscripcion", detail: "Gestionar Plus" },
+        { key: "report-problem", label: "Reportar problema", detail: "Ayuda y seguridad", icon: "?" },
+        { key: "plus", label: "HallyuHub Plus", detail: state.user.premium ? "Plus activo" : "Plan gratuito", icon: "＋" },
+        { key: "payment-methods", label: "Métodos de pago", detail: "Tarjetas y medios demo", icon: "$" },
       ],
     },
     {
-      title: "Legal y ayuda",
+      title: "Legal",
       items: [
-        { key: "privacy-policy", label: "Politica de privacidad", detail: "Uso de datos y seguridad" },
-        { key: "terms", label: "Terminos y condiciones", detail: "Reglas de uso" },
-        { key: "community-rules", label: "Normas de comunidad", detail: "Convivencia fandom" },
-        { key: "copyright", label: "Copyright", detail: "Derechos de autor" },
-        { key: "fan-policy", label: "Politica de contenido fan", detail: "UGC y fan edits" },
-        { key: "report-problem", label: "Reportar problema", detail: "Soporte y seguridad" },
-        { key: "delete-account", label: "Eliminar cuenta", detail: "Accion sensible" },
+        { key: "privacy-policy", label: "Política de privacidad", detail: "Uso de datos y seguridad", icon: "PV" },
+        { key: "terms", label: "Términos y condiciones", detail: "Reglas de uso", icon: "TC" },
+        { key: "community-rules", label: "Normas de comunidad", detail: "Convivencia fandom", icon: "NC" },
+        { key: "copyright", label: "Copyright", detail: "Derechos de autor", icon: "©" },
+        { key: "fan-policy", label: "Política de contenido fan", detail: "UGC y fan edits", icon: "FN" },
+        { key: "delete-account", label: "Eliminar cuenta", detail: "Accion sensible", icon: "×" },
+      ],
+    },
+    {
+      title: "Cerrar sesión",
+      items: [
+        { key: "logout", label: "Cerrar sesión", detail: "Salir de HallyuHub", icon: "↗" },
       ],
     },
   ];
@@ -2487,33 +2538,39 @@ function renderRookie() {
 }
 
 function renderProfile() {
-  const isPlus = Boolean(state.user.premium);
+  const profileUser = state.viewedProfile || state.user;
+  const isOwnProfile = !state.viewedProfile || profileUser.username === state.user.username || profileUser.id === state.session?.user?.id;
+  const isPlus = Boolean(profileUser.premium);
   const activeTab = profileTabs.find(([key]) => key === state.profileTab) || profileTabs[0];
-  const profileBg = getProfileBackground(state.user.profileBg);
+  const profileBg = getProfileBackground(profileUser.profileBg);
+  const isFollowing = Boolean(state.followedProfiles[profileUser.id || profileUser.username]);
   return `
     <section class="premium-profile-hero ${isPlus ? "plus" : ""}" style="--profile-bg:${profileBg.art}">
-      <button class="settings-button modern-settings" data-go-view="settings" aria-label="Abrir configuracion"><span class="gear-icon"></span></button>
+      ${isOwnProfile ? `<button class="settings-button modern-settings" data-go-view="settings" aria-label="Abrir configuracion"><span class="gear-icon"></span></button>` : ""}
       <div class="profile-hero-top">
-        ${renderAvatarElement("profile-avatar premium-avatar", state.user.avatar, state.user.avatarUrl)}
+        ${renderAvatarElement("profile-avatar premium-avatar", profileUser.avatar, profileUser.avatarUrl)}
         <div class="profile-name-block">
-          <div class="profile-title-line"><h1>${state.user.name}</h1><span class="verified-badge">${isPlus ? "Plus" : "Verificado"}</span></div>
-          <p>@${state.user.username} · ${state.user.country || "Chile 🇨🇱"}</p>
-          <div class="fandom-line"><span>${state.user.fandom || "ARMY 💜"}</span><span>Bias: ${state.user.bias || "Jungkook"}</span></div>
-          <div class="fandom-line"><span>${state.user.favoriteGroup || "BTS"}</span><span>${state.user.fandomLevel || "Level 18 Fandom"}</span></div>
+          <div class="profile-title-line"><h1>${profileUser.name}</h1><span class="verified-badge">${isPlus ? "Plus" : "Verificado"}</span></div>
+          <p>@${profileUser.username} · ${profileUser.country || "Chile 🇨🇱"}</p>
+          <div class="fandom-line"><span>${profileUser.fandom || "ARMY 💜"}</span><span>Bias: ${profileUser.bias || "Jungkook"}</span></div>
+          <div class="fandom-line"><span>${profileUser.favoriteGroup || "BTS"}</span><span>${profileUser.fandomLevel || "Level 18 Fandom"}</span></div>
         </div>
       </div>
-      <p class="profile-phrase">${state.user.phrase || state.user.bio}</p>
+      <p class="profile-phrase">${profileUser.phrase || profileUser.bio}</p>
       <div class="premium-stats">
-        <div><strong>${state.user.posts}</strong><span>posts</span></div>
-        <div><strong>${state.user.followers}</strong><span>seguidores</span></div>
-        <div><strong>${state.user.following}</strong><span>siguiendo</span></div>
-        <div><strong>${state.user.starsReceived || "32.8K"}</strong><span>estrellas</span></div>
-        <div><strong>${state.user.trendsCreated || "21"}</strong><span>trends</span></div>
+        <div><strong>${profileUser.posts}</strong><span>posts</span></div>
+        <div><strong>${profileUser.followers}</strong><span>seguidores</span></div>
+        <div><strong>${profileUser.following}</strong><span>siguiendo</span></div>
+        <div><strong>${profileUser.starsReceived || "32.8K"}</strong><span>estrellas</span></div>
       </div>
-      <div class="premium-profile-actions">
-        <button class="primary-button" data-go-view="settings">Editar perfil</button>
-        <button class="ghost-button">Compartir perfil</button>
-        <button class="ghost-button" data-go-view="settings">Ajustes ⚙</button>
+      <div class="premium-profile-actions ${isOwnProfile ? "own-actions" : "other-actions"}">
+        ${
+          isOwnProfile
+            ? `<button class="primary-button profile-main-action" data-go-view="settings">Editar perfil</button>
+               <button class="ghost-button profile-icon-action" data-go-view="settings"><span class="slider-icon"></span></button>`
+            : `<button class="primary-button profile-main-action" data-profile-follow="${profileUser.id || profileUser.username}">${isFollowing ? "Siguiendo" : "Seguir"}</button>
+               <button class="ghost-button profile-share-action">Compartir perfil</button>`
+        }
       </div>
     </section>
     <section class="highlight-row">
@@ -2561,7 +2618,10 @@ function renderProfileGrid(tab) {
 }
 
 document.querySelectorAll(".nav-item").forEach((button) => {
-  button.addEventListener("click", () => setView(button.dataset.view));
+  button.addEventListener("click", () => {
+    if (button.dataset.view === "profile") state.viewedProfile = null;
+    setView(button.dataset.view);
+  });
 });
 
 document.querySelectorAll("[data-go-view]").forEach((button) => {

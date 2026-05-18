@@ -2111,6 +2111,18 @@ video.post-media.real-media {
   font-size: 14px;
 }
 
+.profile-result-main {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  text-align: left;
+}
+
+.profile-result-main:active {
+  transform: scale(0.99);
+}
+
 .user-result-card .ghost-button {
   min-height: 32px;
   padding: 0 10px;
@@ -3128,18 +3140,32 @@ video.post-media.real-media {
 
 .gear-icon {
   position: relative;
-  width: 20px;
-  height: 20px;
-  border: 2px solid currentColor;
-  border-radius: 50%;
+  width: 22px;
+  height: 18px;
+  border-top: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  border-radius: 2px;
 }
 
 .gear-icon::before {
   content: "";
   position: absolute;
-  inset: 5px;
-  border: 2px solid currentColor;
+  left: 0;
+  right: 0;
+  top: 6px;
+  border-top: 2px solid currentColor;
+}
+
+.gear-icon::after {
+  content: "";
+  position: absolute;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
+  background: currentColor;
+  left: 5px;
+  top: -4px;
+  box-shadow: 10px 8px 0 currentColor, 3px 16px 0 currentColor;
 }
 
 .settings-header {
@@ -3147,6 +3173,7 @@ video.post-media.real-media {
   grid-template-columns: 72px 1fr;
   gap: 14px;
   align-items: center;
+  margin-bottom: 12px;
 }
 
 .settings-menu-list {
@@ -3156,16 +3183,64 @@ video.post-media.real-media {
 
 .settings-menu-list button {
   display: grid;
-  grid-template-columns: 34px 1fr;
+  grid-template-columns: 38px 1fr 18px;
   gap: 10px;
   align-items: center;
-  min-height: 58px;
+  min-height: 62px;
   border: 1px solid var(--line);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.07);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.035)),
+    rgba(255, 255, 255, 0.055);
   color: var(--text);
   padding: 10px;
   text-align: left;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.settings-menu-list button:active {
+  transform: scale(0.985);
+  border-color: rgba(251, 188, 219, 0.26);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.setting-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(251, 188, 219, 0.18), rgba(101, 228, 255, 0.12));
+  color: white;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 1000;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 0 18px rgba(101, 228, 255, 0.08);
+}
+
+.setting-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.setting-copy strong,
+.setting-copy small {
+  display: block;
+}
+
+.setting-copy strong {
+  font-size: 13px;
+}
+
+.setting-copy small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.setting-arrow {
+  color: rgba(255, 255, 255, 0.46);
+  font-size: 24px;
+  line-height: 1;
 }
 
 .settings-menu-list strong,
@@ -3969,7 +4044,7 @@ video.post-media.real-media {
 
 .premium-stats {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 6px;
   margin: 12px 0;
 }
@@ -3996,13 +4071,64 @@ video.post-media.real-media {
 
 .premium-profile-actions {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr;
+  grid-template-columns: 1fr auto;
   gap: 8px;
 }
 
 .premium-profile-actions button {
-  min-height: 38px;
-  padding: 0 9px;
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-weight: 950;
+}
+
+.premium-profile-actions.other-actions {
+  grid-template-columns: 1fr 1fr;
+}
+
+.profile-main-action {
+  box-shadow: 0 0 24px rgba(251, 188, 219, 0.12);
+}
+
+.profile-icon-action {
+  width: 46px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+.profile-share-action {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.slider-icon {
+  position: relative;
+  width: 21px;
+  height: 16px;
+  display: block;
+  border-top: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+}
+
+.slider-icon::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 5px;
+  border-top: 2px solid currentColor;
+}
+
+.slider-icon::after {
+  content: "";
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  left: 4px;
+  top: -3px;
+  box-shadow: 11px 7px 0 currentColor, 2px 14px 0 currentColor;
 }
 
 .highlight-row {
