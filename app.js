@@ -1328,6 +1328,11 @@ function renderSearch() {
 
 function renderTrends() {
   return `
+    <div class="trend-tabs">
+      <button class="active">Mas virales</button>
+      <button>Hacer mi trend</button>
+      <button>Buscar trend</button>
+    </div>
     <section class="trends-feed" aria-label="Trends estilo reels">
       ${trendVideos
         .map(
@@ -1671,14 +1676,25 @@ function renderSettings() {
     <section class="settings-header">
       <div class="plush-avatar hero" style="--avatar:${activeAvatar.gradient}"><span></span></div>
       <div>
-        <p class="eyebrow">Ajustes</p>
-        <h2>Personaliza HallyuHub</h2>
-        <p class="muted">Guardado local por ahora. Luego estos datos vivirian en ${futureBackend.next}.</p>
+        <p class="eyebrow">Configuracion</p>
+        <h2>Centro de cuenta</h2>
+        <p class="muted">Cuenta, privacidad, actividad, archivo, guardados, tema y seguridad.</p>
       </div>
     </section>
     <section class="backend-card">
       <strong>${state.backendMode === "supabase" ? "Supabase conectado" : "Modo demo local"}</strong>
       <p>${state.backendMode === "supabase" ? "Login, perfiles, posts y media usan Supabase." : "Agrega URL y anon key en supabase-config.js para activar usuarios reales."}</p>
+    </section>
+    <section class="profile-panel">
+      <div class="section-heading"><h2>Configuracion general</h2><span>App</span></div>
+      <div class="settings-menu-list">
+        <button><span class="menu-dot privacy"></span><strong>Politicas de privacidad</strong><small>Datos, permisos y seguridad</small></button>
+        <button><span class="menu-dot account"></span><strong>Cuenta</strong><small>Email, usuario y acceso</small></button>
+        <button><span class="menu-dot activity"></span><strong>Tu actividad</strong><small>Likes, comentarios y tiempo de uso</small></button>
+        <button><span class="menu-dot archive"></span><strong>Archivo</strong><small>Historias, posts guardados y borradores</small></button>
+        <button><span class="menu-dot saved"></span><strong>Guardados</strong><small>Trends, grupos y fotocards</small></button>
+        <button><span class="menu-dot safety"></span><strong>Privacidad de mensajes</strong><small>Solicitudes, bloqueos y reportes</small></button>
+      </div>
     </section>
     <section class="profile-panel">
       <div class="section-heading"><h2>Cuenta</h2><span>Perfil</span></div>
@@ -1773,40 +1789,37 @@ function renderRookie() {
 }
 
 function renderProfile() {
-  const activeAvatar = avatars.find((avatar) => avatar.id === state.user.avatar) || avatars[0];
   return `
     <section class="profile-modern">
-      <button class="settings-button modern-settings" data-go-view="settings" aria-label="Abrir ajustes"><span class="gear-icon"></span></button>
-      <div class="profile-main-row">
-        ${renderAvatarElement("profile-avatar", state.user.avatar, state.user.avatarUrl)}
-        <div class="profile-stat-line">
-          <div><strong>${state.user.posts}</strong><span>publicaciones</span></div>
-          <div><strong>${state.user.followers}</strong><span>seguidores</span></div>
-          <div><strong>${state.user.following}</strong><span>seguidos</span></div>
-        </div>
-      </div>
-      <div class="profile-identity">
+      <button class="settings-button modern-settings" data-go-view="settings" aria-label="Abrir configuracion"><span class="gear-icon"></span></button>
+      <div class="profile-centered-head">
+        ${renderAvatarElement("profile-avatar centered", state.user.avatar, state.user.avatarUrl)}
         <h1>${state.user.name}</h1>
         <p>@${state.user.username}</p>
         <span>${state.user.bio}</span>
+      </div>
+      <div class="profile-stat-line centered-stats">
+        <div><strong>${state.user.posts}</strong><span>publicaciones</span></div>
+        <div><strong>${state.user.followers}</strong><span>seguidores</span></div>
+        <div><strong>${state.user.following}</strong><span>seguidos</span></div>
       </div>
       <div class="profile-actions compact-actions">
         <button class="ghost-button" data-go-view="settings">Editar perfil</button>
         <button class="ghost-button">Compartir perfil</button>
       </div>
     </section>
-    <section class="profile-panel">
-      <div class="section-heading"><h2>Mis carpetas</h2><span>Privacidad</span></div>
-      <div class="folder-grid">
-        ${profileFolders
+    <section class="profile-shortcuts">
+      <button><span class="shortcut-icon photos"></span><strong>Fotos</strong></button>
+      <button><span class="shortcut-icon albums"></span><strong>Albumes</strong></button>
+      <button><span class="shortcut-icon cards"></span><strong>Fotocard</strong></button>
+    </section>
+    <section class="profile-panel slim-panel">
+      <div class="section-heading"><h2>Publicaciones</h2><span>Seguidores</span></div>
+      <div class="profile-photo-grid large-grid">
+        ${profilePhotos
+          .concat(["Bias wall", "Trend clip", "Unboxing"])
           .map(
-            (folder) => `
-            <article class="folder-card">
-              <div class="folder-tab"></div>
-              <strong>${folder.title}</strong>
-              <span>${folder.count} items</span>
-              <p>${folder.detail}</p>
-            </article>`,
+            (photo, index) => `<div class="profile-photo" style="--art:${art[index % art.length]}">${photo}</div>`,
           )
           .join("")}
       </div>
@@ -1817,16 +1830,6 @@ function renderProfile() {
         <div class="bias-card"><strong>SKZ</strong><span class="muted">Bias: Felix</span></div>
         <div class="bias-card"><strong>BTS</strong><span class="muted">Bias: Jimin</span></div>
         <div class="bias-card"><strong>IVE</strong><span class="muted">Bias: Rei</span></div>
-      </div>
-    </section>
-    <section class="profile-panel">
-      <div class="section-heading"><h2>Fotos</h2><span>Visible para seguidores</span></div>
-      <div class="profile-photo-grid">
-        ${profilePhotos
-          .map(
-            (photo, index) => `<div class="profile-photo" style="--art:${art[index % art.length]}">${photo}</div>`,
-          )
-          .join("")}
       </div>
     </section>
   `;

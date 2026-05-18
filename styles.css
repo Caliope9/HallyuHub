@@ -924,6 +924,35 @@ video.post-media.real-media {
   scroll-snap-type: y mandatory;
 }
 
+.trend-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 0 12px;
+  scrollbar-width: none;
+}
+
+.trend-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.trend-tabs button {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  padding: 0 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.trend-tabs button.active {
+  color: #16071d;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--user-accent), var(--violet));
+}
+
 .trend-card {
   min-height: calc(100vh - 190px);
   max-height: 680px;
@@ -1584,6 +1613,32 @@ video.post-media.real-media {
   padding: 10px 2px 0;
 }
 
+.profile-centered-head {
+  text-align: center;
+  padding: 8px 44px 0;
+}
+
+.profile-centered-head .profile-avatar {
+  margin: 0 auto 12px;
+}
+
+.profile-centered-head h1 {
+  margin-bottom: 4px;
+  font-size: 22px;
+}
+
+.profile-centered-head p {
+  margin-bottom: 8px;
+  color: var(--pink);
+  font-weight: 900;
+}
+
+.profile-centered-head span {
+  display: block;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
 .profile-main-row {
   display: grid;
   grid-template-columns: 94px 1fr;
@@ -1595,6 +1650,12 @@ video.post-media.real-media {
   width: 90px;
   height: 90px;
   border-radius: 31px;
+}
+
+.profile-avatar.centered {
+  width: 104px;
+  height: 104px;
+  border-radius: 36px;
 }
 
 .avatar-photo {
@@ -1621,6 +1682,15 @@ video.post-media.real-media {
   gap: 8px;
   text-align: center;
   padding-right: 46px;
+}
+
+.centered-stats {
+  max-width: 310px;
+  margin: 16px auto 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.07);
 }
 
 .profile-stat-line strong,
@@ -1663,6 +1733,73 @@ video.post-media.real-media {
 .compact-actions {
   grid-template-columns: 1fr 1fr;
   margin-top: 12px;
+}
+
+.profile-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.profile-shortcuts button {
+  min-height: 78px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  font-weight: 900;
+}
+
+.shortcut-icon {
+  width: 30px;
+  height: 30px;
+  display: block;
+  position: relative;
+}
+
+.shortcut-icon.photos {
+  border: 2px solid var(--pink);
+  border-radius: 9px;
+}
+
+.shortcut-icon.photos::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cyan);
+}
+
+.shortcut-icon.albums {
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--pink), var(--violet));
+  box-shadow: 5px 5px 0 rgba(255, 255, 255, 0.18);
+}
+
+.shortcut-icon.cards {
+  border-radius: 9px;
+  background: var(--art, linear-gradient(135deg, var(--cyan), var(--orange)));
+  transform: rotate(-7deg);
+  box-shadow: 6px 4px 0 rgba(251, 188, 219, 0.32);
+}
+
+.slim-panel {
+  padding: 12px;
+}
+
+.large-grid {
+  gap: 4px;
+}
+
+.large-grid .profile-photo {
+  border-radius: 6px;
 }
 
 .compact-actions .ghost-button {
@@ -1716,6 +1853,62 @@ video.post-media.real-media {
   grid-template-columns: 72px 1fr;
   gap: 14px;
   align-items: center;
+}
+
+.settings-menu-list {
+  display: grid;
+  gap: 9px;
+}
+
+.settings-menu-list button {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 10px;
+  align-items: center;
+  min-height: 58px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text);
+  padding: 10px;
+  text-align: left;
+}
+
+.settings-menu-list strong,
+.settings-menu-list small {
+  display: block;
+}
+
+.settings-menu-list small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.menu-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--pink), var(--violet));
+}
+
+.menu-dot.account {
+  background: linear-gradient(135deg, var(--cyan), var(--mint));
+}
+
+.menu-dot.activity {
+  background: linear-gradient(135deg, var(--orange), var(--pink));
+}
+
+.menu-dot.archive {
+  background: linear-gradient(135deg, #9ad7ff, #f7cadf);
+}
+
+.menu-dot.saved {
+  background: linear-gradient(135deg, #77f4c7, #ffd166);
+}
+
+.menu-dot.safety {
+  background: linear-gradient(135deg, #ff6680, #8b5cf6);
 }
 
 .backend-card {
