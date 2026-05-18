@@ -222,8 +222,19 @@ h1 {
   place-items: center;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    0 0 24px rgba(251, 188, 219, 0.18);
+    0 0 24px rgba(251, 188, 219, 0.18),
+    0 10px 26px rgba(101, 228, 255, 0.1);
   animation: inboxFloat 4s ease-in-out infinite;
+  overflow: hidden;
+}
+
+.icon-button::after {
+  content: "";
+  position: absolute;
+  inset: -18px;
+  background: linear-gradient(110deg, transparent 28%, rgba(255, 255, 255, 0.34), transparent 62%);
+  transform: translateX(-70%) rotate(14deg);
+  animation: inboxShimmer 3.8s ease-in-out infinite;
 }
 
 .bell,
@@ -246,32 +257,62 @@ h1 {
   transform: translate(3px, 16px);
 }
 
+.premium-inbox-icon {
+  position: relative;
+  width: 24px;
+  height: 20px;
+  border: 1.8px solid rgba(255, 255, 255, 0.88);
+  border-radius: 10px 10px 11px 11px;
+  background:
+    radial-gradient(circle at 70% 20%, rgba(255, 224, 102, 0.9) 0 2px, transparent 3px),
+    linear-gradient(135deg, rgba(251, 188, 219, 0.38), rgba(101, 228, 255, 0.16));
+  box-shadow: 0 0 18px rgba(251, 188, 219, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.26);
+  z-index: 1;
+}
+
+.premium-inbox-icon::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 5px;
+  height: 8px;
+  border-bottom: 1.7px solid rgba(255, 255, 255, 0.82);
+  border-radius: 0 0 9px 9px;
+}
+
+.premium-inbox-icon::after {
+  content: "★";
+  position: absolute;
+  right: -7px;
+  top: -9px;
+  color: #ffe066;
+  font-size: 12px;
+  text-shadow: 0 0 10px rgba(255, 224, 102, 0.78);
+}
+
 .notification-dot {
   position: absolute;
-  top: 10px;
-  right: 11px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--magenta);
-  box-shadow: 0 0 16px var(--magenta);
+  top: 7px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(10, 0, 21, 0.72);
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--pink), var(--violet));
+  box-shadow: 0 0 16px rgba(251, 188, 219, 0.5);
+  z-index: 2;
 }
 
 .notification-dot::after {
   content: "5";
   position: absolute;
-  left: 7px;
-  top: -8px;
-  min-width: 16px;
-  height: 16px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, var(--pink), var(--violet));
+  inset: 0;
   color: #14061d;
   display: grid;
   place-items: center;
   font-size: 9px;
   font-weight: 1000;
-  box-shadow: 0 0 14px rgba(251, 188, 219, 0.48);
 }
 
 @keyframes inboxFloat {
@@ -281,6 +322,17 @@ h1 {
   }
   50% {
     transform: translateY(-2px);
+  }
+}
+
+@keyframes inboxShimmer {
+  0%,
+  42% {
+    transform: translateX(-75%) rotate(14deg);
+  }
+  72%,
+  100% {
+    transform: translateX(75%) rotate(14deg);
   }
 }
 
@@ -619,7 +671,7 @@ h1 {
 
 .home-banner {
   width: calc(min(100vw, 430px) - 64px);
-  min-height: 132px;
+  min-height: 116px;
   margin-right: 12px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 23px;
@@ -655,60 +707,94 @@ h1 {
 
 @keyframes bannerSlide {
   0%,
-  15% {
+  10% {
     transform: translateX(0);
   }
-  20%,
-  35% {
+  14%,
+  24% {
     transform: translateX(calc(-1 * (min(100vw, 430px) - 52px)));
   }
-  40%,
-  55% {
+  28%,
+  38% {
     transform: translateX(calc(-2 * (min(100vw, 430px) - 52px)));
   }
-  60%,
-  75% {
+  42%,
+  52% {
     transform: translateX(calc(-3 * (min(100vw, 430px) - 52px)));
   }
-  80%,
-  95% {
+  56%,
+  66% {
     transform: translateX(calc(-4 * (min(100vw, 430px) - 52px)));
+  }
+  70%,
+  80% {
+    transform: translateX(calc(-5 * (min(100vw, 430px) - 52px)));
+  }
+  84%,
+  94% {
+    transform: translateX(calc(-6 * (min(100vw, 430px) - 52px)));
   }
   100% {
     transform: translateX(0);
   }
 }
 
-.news-cta {
-  width: 100%;
-  min-height: 92px;
-  margin-top: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 22px;
-  background:
-    linear-gradient(135deg, rgba(251, 188, 219, 0.94), rgba(101, 228, 255, 0.92)),
-    var(--ambient-deep);
-  color: #101827;
-  padding: 16px;
-  text-align: left;
-  box-shadow: 0 18px 42px rgba(101, 228, 255, 0.18);
+.home-metric-pills {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
-.news-cta span,
-.news-cta strong {
-  display: block;
+.home-metric-pills::-webkit-scrollbar {
+  display: none;
 }
 
-.news-cta span {
-  margin-bottom: 5px;
-  font-size: 12px;
-  font-weight: 900;
-  text-transform: uppercase;
+.metric-pill {
+  min-height: 34px;
+  flex: 1 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.075);
+  backdrop-filter: blur(16px);
+  padding: 7px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.13);
 }
 
-.news-cta strong {
-  font-size: 22px;
-  line-height: 1.05;
+.metric-pill strong {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.metric-pill small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.metric-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--pink);
+  box-shadow: 0 0 12px var(--pink);
+}
+
+.metric-dot.fans {
+  background: var(--cyan);
+  box-shadow: 0 0 12px var(--cyan);
+}
+
+.metric-dot.drops {
+  background: var(--orange);
+  box-shadow: 0 0 12px var(--orange);
 }
 
 .back-button {
@@ -994,12 +1080,22 @@ video.post-media.real-media {
 
 .story-interactions {
   display: grid;
-  gap: 10px;
+  gap: 9px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 22px;
   background: rgba(8, 3, 17, 0.42);
   backdrop-filter: blur(18px);
   padding: 12px;
+}
+
+.story-like-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.story-like-line strong {
+  font-size: 13px;
 }
 
 .story-star {
@@ -1025,17 +1121,20 @@ video.post-media.real-media {
 
 .quick-reactions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  font-size: 20px;
+  font-size: 11px;
 }
 
-.quick-reactions span {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.11);
-  display: grid;
-  place-items: center;
+.quick-reactions button {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.92);
+  padding: 7px 9px;
+  font-size: 11px;
+  font-weight: 850;
+  backdrop-filter: blur(12px);
 }
 
 .story-comment-box {

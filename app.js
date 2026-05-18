@@ -194,11 +194,24 @@ const followingStories = [
 ];
 
 const homeBanners = [
+  { title: "Noticias destacadas", meta: "K-pop al minuto", colors: "linear-gradient(135deg, #1d1024, #fbbcdb 45%, #65e4ff)" },
   { title: "Nuevo trend BLACKPINK", meta: "Trends virales", colors: "linear-gradient(135deg, #09060a, #ff3ea5 52%, #ff8ac8)" },
   { title: "Dance challenge BTS", meta: "Challenge semanal", colors: "linear-gradient(135deg, #0d0718, #8b5cf6 52%, #d9b4ff)" },
   { title: "Evento K-pop Santiago", meta: "Agenda fandom", colors: "linear-gradient(135deg, #ffb703, #ff2d55 48%, #111827)" },
+  { title: "Publicidad fan sponsor", meta: "Marcas K-pop", colors: "linear-gradient(135deg, #04131d, #77f4c7 48%, #ffd166)" },
   { title: "Trade de photocards", meta: "Marketplace seguro", colors: "linear-gradient(135deg, #fff1f9, #ff8ac8 48%, #8b5cf6)" },
   { title: "Top fancams del dia", meta: "Fancams premium", colors: "linear-gradient(135deg, #65e4ff, #77f4c7 52%, #0f172a)" },
+];
+
+const storyReactions = [
+  "💜 Army vibe",
+  "🫰 Finger heart",
+  "✨ Idol glow",
+  "🎤 Live stage",
+  "🪩 Dance mood",
+  "💿 Comeback",
+  "📸 Fancam",
+  "🎀 Cute concept",
 ];
 
 const trendVideos = [
@@ -1264,15 +1277,11 @@ function renderHome() {
           .join("")}
       </div>
     </section>
-    <div class="quick-grid compact">
-      <div class="quick-tile"><strong>42</strong><span>eventos activos</span></div>
-      <div class="quick-tile"><strong>128K</strong><span>fans conectados</span></div>
-      <div class="quick-tile"><strong>24h</strong><span>drops nuevos</span></div>
+    <div class="home-metric-pills" aria-label="Datos de comunidad">
+      <div class="metric-pill"><span class="metric-dot event"></span><strong>42</strong><small>eventos</small></div>
+      <div class="metric-pill"><span class="metric-dot fans"></span><strong>128K</strong><small>conectados</small></div>
+      <div class="metric-pill"><span class="metric-dot drops"></span><strong>24h</strong><small>drops</small></div>
     </div>
-    <button class="news-cta" data-go-view="news">
-      <span>Actualidad K-pop</span>
-      <strong>Entrar a noticias destacadas</strong>
-    </button>
     <div class="section-heading"><h2>Publicaciones</h2><span>Siguiendo</span></div>
     <div class="social-feed">
       ${feedPosts
@@ -1323,9 +1332,13 @@ function renderStoryViewer() {
           <p>${story.detail}</p>
         </div>
         <div class="story-interactions">
-          <button class="story-star ${liked ? "active" : ""}" data-story-star="${state.activeStory}">★</button>
-          <strong>${story.stars + (liked ? 1 : 0)} estrellas</strong>
-          <div class="quick-reactions"><span>💜</span><span>🔥</span><span>✨</span><span>🫰</span><span>🎤</span></div>
+          <div class="story-like-line">
+            <button class="story-star ${liked ? "active" : ""}" data-story-star="${state.activeStory}" aria-label="Me gusto esta historia">★</button>
+            <strong>${story.stars + (liked ? 1 : 0)} estrellas</strong>
+          </div>
+          <div class="quick-reactions" aria-label="Reacciones K-pop rapidas">
+            ${storyReactions.map((reaction) => `<button type="button">${reaction}</button>`).join("")}
+          </div>
           <div class="story-comment-box">
             <input placeholder="Comentar historia..." />
             <button>Enviar</button>
