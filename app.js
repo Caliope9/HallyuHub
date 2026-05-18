@@ -7,6 +7,7 @@ const state = {
   activityTab: "activity",
   profileTab: "posts",
   settingsPanel: null,
+  selectedProfileBg: "army",
   activeStory: null,
   likedStories: {},
   storyDirection: 1,
@@ -97,6 +98,7 @@ const defaultUser = {
   language: "Español",
   themePremium: false,
   onboarded: true,
+  profileBg: "army",
 };
 
 const futureBackend = {
@@ -669,6 +671,17 @@ const avatars = [
   },
 ];
 
+const profileBackgrounds = [
+  { id: "army", name: "Army Purple 💜", detail: "Galaxia violeta suave", art: "linear-gradient(135deg, #14091f, #8b5cf6 48%, #d9b4ff)" },
+  { id: "blink", name: "Blink Pink Black 🖤💖", detail: "Negro glossy con rosa fashion", art: "linear-gradient(135deg, #070509, #ff3ea5 54%, #ff8ac8)" },
+  { id: "once", name: "Once Candy 🍭", detail: "Dulce, coral y celeste", art: "linear-gradient(135deg, #ff8ac8, #ffd166 48%, #65e4ff)" },
+  { id: "stay", name: "Stay Star ⭐", detail: "Estrellas y escenario neon", art: "linear-gradient(135deg, #111827, #ffb703 45%, #ff2d55)" },
+  { id: "tokki", name: "Tokki Bunny 🐰", detail: "Y2K menta y cielo pop", art: "linear-gradient(135deg, #06131a, #77f4c7 48%, #65e4ff)" },
+  { id: "stage", name: "Idol Stage 🎤", detail: "Luces de escenario K-pop", art: "linear-gradient(135deg, #0b1020, #65e4ff 48%, #d946ef)" },
+  { id: "seoul", name: "Seoul Night 🌃", detail: "Noche coreana premium", art: "linear-gradient(135deg, #020617, #263d72 48%, #fbbcdb)" },
+  { id: "pastel", name: "Pastel K-pop ✨", detail: "Pastel, glow y photocards", art: "linear-gradient(135deg, #fff1f9, #fbbcdb 42%, #77f4c7)" },
+];
+
 const profileFolders = [
   { title: "Fotos", count: "148", detail: "Conciertos, outfits y recuerdos fandom." },
   { title: "Albumes", count: "23", detail: "Versiones fisicas, inclusiones y wishlist." },
@@ -1056,6 +1069,13 @@ function bindDynamicActions() {
     });
   });
 
+  document.querySelectorAll("[data-profile-bg]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedProfileBg = button.dataset.profileBg;
+      render();
+    });
+  });
+
   document.querySelectorAll("[data-ambience]").forEach((button) => {
     button.addEventListener("click", () => {
       document.querySelectorAll("[data-ambience]").forEach((option) => option.classList.remove("active"));
@@ -1132,6 +1152,7 @@ async function initApp() {
   state.storyInbox = storage.get("hallyuHubStoryInbox", []);
   state.isAuthenticated = Boolean(savedSession);
   state.selectedAvatar = state.user.avatar || "berry";
+  state.selectedProfileBg = state.user.profileBg || "army";
   state.ambience = state.user.ambience || "hallyu";
   state.view = state.isAuthenticated ? "home" : "auth";
   render();
@@ -1199,6 +1220,7 @@ async function submitAuth(mode) {
 async function saveSettings() {
   const selectedAvatar = document.querySelector("[data-avatar].active")?.dataset.avatar || state.selectedAvatar;
   const selectedAmbience = document.querySelector("[data-ambience].active")?.dataset.ambience || state.ambience;
+  const selectedProfileBg = document.querySelector("[data-profile-bg].active")?.dataset.profileBg || state.selectedProfileBg || state.user.profileBg;
   const avatarFile = document.getElementById("settings-avatar-file")?.files?.[0];
   const uploadedAvatarUrl =
     state.backendMode === "supabase" && avatarFile ? await uploadMedia(avatarFile, supabaseBuckets.avatars) : state.user.avatarUrl;
@@ -1215,6 +1237,7 @@ async function saveSettings() {
     phone: document.getElementById("settings-phone")?.value.trim() || state.user.phone,
     language: document.getElementById("settings-language")?.value.trim() || state.user.language,
     avatar: selectedAvatar,
+    profileBg: selectedProfileBg,
     avatarUrl: uploadedAvatarUrl,
     ambience: selectedAmbience,
     accent: document.getElementById("settings-accent")?.value || state.user.accent,
@@ -1223,6 +1246,7 @@ async function saveSettings() {
     privateProfile: Boolean(document.getElementById("settings-privacy")?.checked),
   };
   state.selectedAvatar = state.user.avatar;
+  state.selectedProfileBg = state.user.profileBg;
   state.ambience = state.user.ambience;
   if (state.backendMode === "supabase" && state.session?.user) {
     await upsertProfile(state.session.user, state.user);
@@ -1888,6 +1912,33 @@ function getAvatarGradient(avatarId) {
   return (avatars.find((avatar) => avatar.id === avatarId) || avatars[0]).gradient;
 }
 
+function getProfileBackground(bgId) {
+  return profileBackgrounds.find((bg) => bg.id === (bgId || state.selectedProfileBg || state.user?.profileBg)) || profileBackgrounds[0];
+}
+
+function renderProfileBackgroundPicker() {
+  const activeBg = getProfileBackground(state.selectedProfileBg || state.user.profileBg);
+  return `
+    <div class="profile-bg-preview" style="--profile-bg:${activeBg.art}">
+      <span>${activeBg.name}</span>
+      <strong>Vista previa del perfil</strong>
+      <small>${activeBg.detail}</small>
+    </div>
+    <div class="profile-bg-grid">
+      ${profileBackgrounds
+        .map(
+          (bg) => `
+          <button class="${activeBg.id === bg.id ? "active" : ""}" data-profile-bg="${bg.id}">
+            <span style="--profile-bg:${bg.art}"></span>
+            <strong>${bg.name}</strong>
+            <small>${bg.detail}</small>
+          </button>`,
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 function renderEvents() {
   return `
     <div class="filter-row">
@@ -2213,6 +2264,7 @@ function getSettingsGroups() {
       title: "Apariencia",
       items: [
         { key: "appearance", label: "Tema claro/oscuro", detail: "Color, fondo y tema fandom" },
+        { key: "profile-background", label: "Fondo del perfil", detail: "Fandom, comeback, lightstick y pastel" },
         { key: "premium-theme", label: "Tema premium", detail: "Demo Plus visual" },
       ],
     },
@@ -2252,6 +2304,7 @@ function renderSettingsPanel(panel, activeAvatar, activeAmbience, premiumLabel) 
     "story-privacy": "Quien puede ver mis historias",
     "blocked-users": "Usuarios bloqueados",
     appearance: "Apariencia",
+    "profile-background": "Fondo del perfil",
     "premium-theme": "Tema premium",
     plus: "HallyuHub Plus",
     "payment-methods": "Metodos de pago",
@@ -2289,6 +2342,7 @@ function renderSettingsPanelBody(panel, activeAvatar, activeAmbience, premiumLab
         <label>Frase destacada<input id="settings-phrase" value="${state.user.phrase || ""}" /></label>
         <label>Subir foto real<input id="settings-avatar-file" type="file" accept="image/*" /></label>
       </div>
+      <div class="section-heading small"><h2>Avatar prediseñado</h2><span>${activeAvatar.name}</span></div>
       <div class="avatar-picker">
         ${avatars
           .map(
@@ -2300,6 +2354,8 @@ function renderSettingsPanelBody(panel, activeAvatar, activeAmbience, premiumLab
           )
           .join("")}
       </div>
+      <div class="section-heading small"><h2>Personalizar perfil</h2><span>Fondo</span></div>
+      ${renderProfileBackgroundPicker()}
       <button class="primary-button" data-save-settings>Guardar cambios</button>
     `;
   }
@@ -2314,8 +2370,10 @@ function renderSettingsPanelBody(panel, activeAvatar, activeAmbience, premiumLab
       <button class="primary-button" data-save-settings>Guardar datos</button>
     `;
   }
-  if (panel === "appearance" || panel === "premium-theme") {
+  if (panel === "appearance" || panel === "premium-theme" || panel === "profile-background") {
     return `
+      <div class="section-heading small"><h2>Fondo del perfil</h2><span>Vista previa</span></div>
+      ${renderProfileBackgroundPicker()}
       <div class="ambience-grid">
         ${ambiences
           .map(
@@ -2431,8 +2489,9 @@ function renderRookie() {
 function renderProfile() {
   const isPlus = Boolean(state.user.premium);
   const activeTab = profileTabs.find(([key]) => key === state.profileTab) || profileTabs[0];
+  const profileBg = getProfileBackground(state.user.profileBg);
   return `
-    <section class="premium-profile-hero ${isPlus ? "plus" : ""}">
+    <section class="premium-profile-hero ${isPlus ? "plus" : ""}" style="--profile-bg:${profileBg.art}">
       <button class="settings-button modern-settings" data-go-view="settings" aria-label="Abrir configuracion"><span class="gear-icon"></span></button>
       <div class="profile-hero-top">
         ${renderAvatarElement("profile-avatar premium-avatar", state.user.avatar, state.user.avatarUrl)}
