@@ -8,7 +8,19 @@ const state = {
   profileTab: "posts",
   profileEditorOpen: false,
   homeFilter: "all",
+  selectedHashtag: null,
+  hashtagSort: "recent",
   expandedPosts: {},
+  openPostMenu: null,
+  reportTarget: null,
+  hiddenPosts: {},
+  mutedUsers: {},
+  socialReports: [],
+  toast: null,
+  openComments: {},
+  commentDrafts: {},
+  replyTo: {},
+  likedComments: {},
   savedPosts: {},
   sharedPosts: {},
   settingsPanel: null,
@@ -19,6 +31,17 @@ const state = {
   likedStories: {},
   storyDirection: 1,
   storyComposerOpen: false,
+  storyEditorOpen: false,
+  storyDraft: {
+    type: "text",
+    text: "Mi momento K-pop",
+    sticker: "✨",
+    mention: "",
+    location: "",
+    music: "Basic beat · safe loop",
+    background: "Neon pastel",
+    mediaName: "",
+  },
   ownStoryStatsOpen: false,
   ownStory: null,
   storyInbox: [],
@@ -238,6 +261,10 @@ const userPosts = [
     caption: "Mi setup para ver el comeback con amigas. Ya tengo snacks, light stick y playlist lista.",
     likes: "2.4K",
     comments: "188",
+    commentList: [
+      { id: "c1", user: "Cami.STAY", username: "cami", avatar: "star", time: "2m", body: "Ese setup quedó precioso 💜", likes: 18, replies: [{ id: "c1r1", user: "Luna Hallyu", username: "lunahallyu", avatar: "berry", time: "1m", body: "@cami gracias, falta el lightstick ✨", likes: 6 }] },
+      { id: "c2", user: "Mika", username: "mika", avatar: "mochi", time: "8m", body: "Playlist obligatoria para comeback 🔥", likes: 31, replies: [] },
+    ],
     location: "Santiago, Chile",
     taggedPeople: "@cami.stay, @mika",
     taggedPlace: "Cupsleeve Providencia",
@@ -258,6 +285,9 @@ const userPosts = [
     caption: "Intercambio de photocards en Palermo. Solo trades con referencias y entrega segura.",
     likes: "918",
     comments: "64",
+    commentList: [
+      { id: "c3", user: "Nico K", username: "nico", avatar: "cyber", time: "12m", body: "¿Aceptan trade por correo?", likes: 9, replies: [] },
+    ],
     location: "Palermo, Buenos Aires",
     taggedPlace: "K-shop local",
     shares: "32",
@@ -277,6 +307,9 @@ const userPosts = [
     caption: "Mini guia para elegir tu primer grupo: empieza por 3 canciones, 1 live stage y 1 entrevista.",
     likes: "4.8K",
     comments: "301",
+    commentList: [
+      { id: "c4", user: "Vale Multi", username: "vale", avatar: "anime", time: "1h", body: "@lunahallyu esta guía sirve mucho para fans nuevos", likes: 44, replies: [] },
+    ],
     shares: "420",
     saves: "1.2K",
   },
@@ -294,6 +327,9 @@ const userPosts = [
     caption: "Nuevo challenge para random play dance: 20 segundos, entrada fuerte y final con pose idol.",
     likes: "9.6K",
     comments: "724",
+    commentList: [
+      { id: "c5", user: "Dance Crew", username: "dancecrew", avatar: "neon", time: "5m", body: "El paso final está adictivo 🪩", likes: 102, replies: [] },
+    ],
     location: "Buenos Aires",
     taggedPeople: "@hallyu.ba, @dancecrew",
     taggedPlace: "Parque Centenario",
@@ -314,6 +350,9 @@ const userPosts = [
     caption: "Cupsleeve especial con trade zone, photo spot y playlist de comebacks. Cupos limitados.",
     likes: "6.1K",
     comments: "512",
+    commentList: [
+      { id: "c6", user: "ARMY Chile", username: "armychile", avatar: "idol", time: "20m", body: "Vamos a armar zona segura para trades", likes: 88, replies: [] },
+    ],
     location: "Santiago, Chile",
     taggedPlace: "Barrio Italia",
     shares: "550",
@@ -333,6 +372,9 @@ const userPosts = [
     caption: "Outfit pastel/neon para grabar fancam: denim claro, lazo cute y brillos suaves.",
     likes: "3.3K",
     comments: "143",
+    commentList: [
+      { id: "c7", user: "Style K-pop", username: "stylekpop", avatar: "anime", time: "35m", body: "El lazo cute concept quedó perfecto 🎀", likes: 26, replies: [] },
+    ],
     taggedPeople: "@style.kpop",
     shares: "110",
     saves: "740",
@@ -954,6 +996,18 @@ const profileTabs = [
 
 const fandomBadges = ["Army 💜", "Blink 🖤💖", "Once 🍭", "Stay ⭐", "Tokki 🐰"];
 
+const reportReasons = ["Spam", "Acoso", "Contenido ofensivo", "Derechos de autor", "Otro"];
+
+const storyMusicLibrary = [
+  { level: 1, name: "Basic beat · safe loop", detail: "Sonido corto libre para historias nuevas" },
+  { level: 1, name: "Idol sparkle · demo", detail: "Preview original HallyuHub" },
+  { level: 3, name: "Comeback pulse · safe preview", detail: "Desbloqueo por estrellas nivel 3" },
+  { level: 5, name: "Trend dance · demo loop", detail: "Sonido para challenges cortos" },
+  { level: 10, name: "Premium stage · event sound", detail: "Sonido especial para eventos premium" },
+];
+
+const storyBackgrounds = ["Neon pastel", "Idol stage", "Seoul night", "Lightstick glow", "Photocard wall", "Cute comeback"];
+
 const profileAchievements = [
   ["Lightstick virtual", "BTS · Purple glow"],
   ["Ranking fandom", "Top 4% LATAM"],
@@ -971,8 +1025,10 @@ function setView(nextView) {
   if (nextView !== "home") {
     state.activeStory = null;
     state.storyComposerOpen = false;
+    state.storyEditorOpen = false;
     clearStoryAutoplay();
   }
+  if (nextView !== "search") state.selectedHashtag = null;
   if (!state.isAuthenticated && nextView !== "auth") {
     state.view = "auth";
     render();
@@ -1124,15 +1180,130 @@ function bindDynamicActions() {
 
   document.querySelectorAll("[data-home-filter]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.homeFilter = button.dataset.homeFilter;
+      const filter = button.dataset.homeFilter;
+      if (filter.startsWith("#")) {
+        openHashtagExplore(filter);
+      } else {
+        state.homeFilter = filter;
+        render();
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-toggle-post-more]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.togglePostMore;
+      state.expandedPosts[id] = !state.expandedPosts[id];
       render();
     });
   });
 
-  document.querySelectorAll("[data-open-post]").forEach((button) => {
+  document.querySelectorAll("[data-post-menu]").forEach((button) => {
     button.addEventListener("click", () => {
-      const id = button.dataset.openPost;
-      state.expandedPosts[id] = !state.expandedPosts[id];
+      const id = button.dataset.postMenu;
+      state.openPostMenu = state.openPostMenu === id ? null : id;
+      state.reportTarget = null;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-report-post]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.reportTarget = button.dataset.reportPost;
+      state.openPostMenu = null;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-report-reason]").forEach((button) => {
+    button.addEventListener("click", () => savePostReport(button.dataset.reportReason));
+  });
+
+  document.querySelectorAll("[data-report-close]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.reportTarget = null;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-hide-post]").forEach((button) => {
+    button.addEventListener("click", () => hidePost(button.dataset.hidePost));
+  });
+
+  document.querySelectorAll("[data-unfollow-feed-user]").forEach((button) => {
+    button.addEventListener("click", () => unfollowFeedUser(button.dataset.unfollowFeedUser));
+  });
+
+  document.querySelectorAll("[data-edit-post]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.expandedPosts[button.dataset.editPost] = true;
+      state.openPostMenu = null;
+      showToast("Edicion de publicacion en modo demo");
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-delete-post]").forEach((button) => {
+    button.addEventListener("click", () => hidePost(button.dataset.deletePost, "Publicacion eliminada en modo demo"));
+  });
+
+  document.querySelectorAll("[data-hashtag-sort]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.hashtagSort = button.dataset.hashtagSort;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-toggle-comments]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.toggleComments;
+      state.openComments[id] = !state.openComments[id];
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-comment-draft]").forEach((input) => {
+    input.addEventListener("input", () => {
+      state.commentDrafts[input.dataset.commentDraft] = input.value;
+    });
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        sendInlineComment(input.dataset.commentDraft);
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-send-comment]").forEach((button) => {
+    button.addEventListener("click", () => sendInlineComment(button.dataset.sendComment));
+  });
+
+  document.querySelectorAll("[data-comment-emoji]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const [postId, emoji] = button.dataset.commentEmoji.split("|");
+      state.commentDrafts[postId] = `${state.commentDrafts[postId] || ""}${emoji}`;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-reply-comment]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const [postId, commentId, username] = button.dataset.replyComment.split(":");
+      state.replyTo[postId] = commentId;
+      state.commentDrafts[postId] = `@${username} `;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-like-comment]").forEach((button) => {
+    button.addEventListener("click", () => likeComment(button.dataset.likeComment));
+  });
+
+  document.querySelectorAll("[data-cancel-reply]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const postId = button.dataset.cancelReply;
+      state.replyTo[postId] = null;
+      state.commentDrafts[postId] = "";
       render();
     });
   });
@@ -1174,7 +1345,7 @@ function bindDynamicActions() {
         state.activeStory = -1;
         state.storyDirection = 1;
       } else {
-        createOwnStory();
+        state.storyEditorOpen = true;
       }
       state.storyComposerOpen = false;
       state.ownStoryStatsOpen = false;
@@ -1183,8 +1354,56 @@ function bindDynamicActions() {
   });
 
   document.querySelectorAll("[data-create-own-story]").forEach((button) => {
+    button.addEventListener("click", () => publishStoryFromEditor(button.dataset.createOwnStory));
+  });
+
+  document.querySelectorAll("[data-story-editor-open]").forEach((button) => {
     button.addEventListener("click", () => {
-      createOwnStory(button.dataset.createOwnStory);
+      state.storyEditorOpen = true;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-editor-close]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.storyEditorOpen = false;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-draft]").forEach((input) => {
+    input.addEventListener("input", () => {
+      state.storyDraft[input.dataset.storyDraft] = input.value;
+    });
+  });
+
+  document.querySelectorAll("[data-story-bg]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.storyDraft.background = button.dataset.storyBg;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-sticker]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.storyDraft.sticker = button.dataset.storySticker;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-music]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.storyDraft.music = button.dataset.storyMusic;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-media]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const file = input.files?.[0];
+      state.storyDraft.type = input.dataset.storyMedia;
+      state.storyDraft.mediaName = file?.name || "";
+      state.storyDraft.text = file?.name ? `Subido: ${file.name}` : state.storyDraft.text;
       render();
     });
   });
@@ -1261,8 +1480,9 @@ function bindDynamicActions() {
 
   document.querySelectorAll("[data-comment-post]").forEach((button) => {
     button.addEventListener("click", () => {
-      const body = prompt("Escribe un comentario");
-      if (body) addComment(button.dataset.commentPost, body);
+      const id = button.dataset.commentPost;
+      state.openComments[id] = !state.openComments[id];
+      render();
     });
   });
 
@@ -1468,6 +1688,9 @@ async function initApp() {
   state.newsLastUpdated = savedNews?.updatedAt || null;
   state.ownStory = storage.get("hallyuHubOwnStory", null);
   state.storyInbox = storage.get("hallyuHubStoryInbox", []);
+  state.hiddenPosts = storage.get("hallyuHubHiddenPosts", {});
+  state.mutedUsers = storage.get("hallyuHubMutedUsers", {});
+  state.socialReports = storage.get("hallyuHubReports", []);
   state.isAuthenticated = Boolean(savedSession);
   state.selectedAvatar = state.user.avatar || "berry";
   state.selectedProfileBg = state.user.profileBg || "army";
@@ -1750,6 +1973,7 @@ async function createPost() {
       caption: caption || "Publicacion nueva en modo demo.",
       likes: "0",
       comments: "0",
+      commentList: [],
       hashtags: ["#HallyuHub", "#KpopLatam"],
       ...optionalFields,
     });
@@ -1786,10 +2010,84 @@ function getPostCategoryLabel(category) {
   return labels[category] || "Publicacion";
 }
 
+function findPostById(postId) {
+  const id = String(postId);
+  return userPosts.find((item) => item.id === id) || userPosts.find((item) => item.id === id.replace(/-\d+$/, ""));
+}
+
+function getBasePostId(postId) {
+  return String(postId || "").replace(/-\d+$/, "");
+}
+
+function isOwnPost(post) {
+  const owner = normalizeProfileKey(post.user);
+  return owner === normalizeProfileKey(state.user?.name) || owner === normalizeProfileKey(state.user?.username);
+}
+
+function isPostHidden(post) {
+  return Boolean(state.hiddenPosts[getBasePostId(post.id)] || state.hiddenPosts[post.id]);
+}
+
+function isUserMuted(post) {
+  return Boolean(state.mutedUsers[normalizeProfileKey(post.user)]);
+}
+
+function showToast(message) {
+  state.toast = message;
+  setTimeout(() => {
+    if (state.toast === message) {
+      state.toast = null;
+      render();
+    }
+  }, 2200);
+}
+
+function savePostReport(key) {
+  const [postId, reason] = key.split("|");
+  const post = findPostById(postId);
+  state.socialReports = [
+    {
+      id: `report-${Date.now()}`,
+      postId: getBasePostId(postId),
+      user: post?.user || "Usuario",
+      reason,
+      status: "pendiente",
+      createdAt: new Date().toISOString(),
+    },
+    ...state.socialReports,
+  ];
+  storage.set("hallyuHubReports", state.socialReports);
+  state.reportTarget = null;
+  showToast("Reporte enviado para revision");
+  render();
+}
+
+function hidePost(postId, message = "Publicacion ocultada") {
+  state.hiddenPosts[getBasePostId(postId)] = true;
+  state.openPostMenu = null;
+  storage.set("hallyuHubHiddenPosts", state.hiddenPosts);
+  showToast(message);
+  render();
+}
+
+function unfollowFeedUser(userName) {
+  state.mutedUsers[normalizeProfileKey(userName)] = true;
+  state.openPostMenu = null;
+  storage.set("hallyuHubMutedUsers", state.mutedUsers);
+  showToast(`Dejaste de seguir a ${userName}`);
+  render();
+}
+
+function openHashtagExplore(tag) {
+  state.selectedHashtag = tag;
+  state.hashtagSort = "recent";
+  state.homeFilter = "all";
+  setView("search");
+}
+
 async function toggleLike(postId) {
   if (state.backendMode !== "supabase" || !state.session?.user) {
-    const baseId = String(postId).replace(/-\d+$/, "");
-    const post = userPosts.find((item) => item.id === baseId);
+    const post = findPostById(postId);
     if (post) post.likes = bumpEngagement(post.likes);
     render();
     return;
@@ -1799,13 +2097,77 @@ async function toggleLike(postId) {
 
 async function addComment(postId, body) {
   if (state.backendMode !== "supabase" || !state.session?.user) {
-    const baseId = String(postId).replace(/-\d+$/, "");
-    const post = userPosts.find((item) => item.id === baseId);
-    if (post) post.comments = bumpEngagement(post.comments);
+    const post = findPostById(postId);
+    if (post) {
+      post.comments = bumpEngagement(post.comments);
+      post.commentList = [
+        ...(post.commentList || []),
+        {
+          id: `comment-${Date.now()}`,
+          user: state.user?.name || "Hallyu fan",
+          username: state.user?.username || "hallyufan",
+          avatar: state.user?.avatar || "berry",
+          time: "Ahora",
+          body,
+          likes: 0,
+          replies: [],
+        },
+      ];
+    }
     render();
     return;
   }
   await state.supabase.from("comments").insert({ post_id: postId, user_id: state.session.user.id, body });
+}
+
+function sendInlineComment(postId) {
+  const body = (state.commentDrafts[postId] || "").trim();
+  if (!body) return;
+  const post = findPostById(postId);
+  if (!post) return;
+  const replyTarget = state.replyTo[postId];
+  const comment = {
+    id: `comment-${Date.now()}`,
+    user: state.user?.name || "Hallyu fan",
+    username: state.user?.username || "hallyufan",
+    avatar: state.user?.avatar || "berry",
+    time: "Ahora",
+    body,
+    likes: 0,
+    replies: [],
+  };
+  if (replyTarget) {
+    post.commentList = (post.commentList || []).map((item) =>
+      item.id === replyTarget ? { ...item, replies: [...(item.replies || []), comment] } : item,
+    );
+    state.replyTo[postId] = null;
+  } else {
+    post.commentList = [...(post.commentList || []), comment];
+  }
+  post.comments = bumpEngagement(post.comments);
+  state.commentDrafts[postId] = "";
+  state.openComments[postId] = true;
+  render();
+}
+
+function likeComment(key) {
+  const [postId, commentId] = key.split(":");
+  const post = findPostById(postId);
+  if (!post) return;
+  state.likedComments[key] = !state.likedComments[key];
+  const delta = state.likedComments[key] ? 1 : -1;
+  post.commentList = (post.commentList || []).map((comment) => updateCommentLike(comment, commentId, delta));
+  render();
+}
+
+function updateCommentLike(comment, commentId, delta) {
+  if (comment.id === commentId) {
+    return { ...comment, likes: Math.max(0, Number(comment.likes || 0) + delta) };
+  }
+  return {
+    ...comment,
+    replies: (comment.replies || []).map((reply) => updateCommentLike(reply, commentId, delta)),
+  };
 }
 
 function bumpEngagement(value) {
@@ -1815,28 +2177,51 @@ function bumpEngagement(value) {
   return String(Math.round(number + 1));
 }
 
+function normalizeProfileKey(value) {
+  return String(value || "")
+    .replace(/^@/, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function findCommentProfile(name) {
+  const key = normalizeProfileKey(name);
+  for (const post of userPosts) {
+    for (const comment of post.commentList || []) {
+      const allComments = [comment, ...(comment.replies || [])];
+      const found = allComments.find((item) => normalizeProfileKey(item.username || item.user) === key || normalizeProfileKey(item.user) === key);
+      if (found) return { ...found, sourcePost: post };
+    }
+  }
+  return null;
+}
+
 function openFeedProfile(name) {
-  const post = userPosts.find((item) => item.user === name);
-  if (!post) return;
-  if (post.user === state.user?.name) {
+  const key = normalizeProfileKey(name);
+  const post = userPosts.find((item) => normalizeProfileKey(item.user) === key || normalizeProfileKey(item.username) === key);
+  const commentProfile = post ? null : findCommentProfile(name);
+  if (!post && !commentProfile) return;
+  const source = post || commentProfile.sourcePost;
+  const profileName = post?.user || commentProfile.user;
+  if (profileName === state.user?.name || normalizeProfileKey(profileName) === normalizeProfileKey(state.user?.username)) {
     state.viewedProfile = null;
   } else {
     state.viewedProfile = {
-      id: post.user.toLowerCase().replace(/\s+/g, "-"),
-      name: post.user,
-      username: post.user.toLowerCase().replace(/[^a-z0-9]+/g, ""),
-      avatar: post.avatar || "star",
-      bio: post.caption,
-      country: post.location || "Latam",
-      fandom: post.badge || "Army 💜",
+      id: normalizeProfileKey(profileName),
+      name: profileName,
+      username: normalizeProfileKey(commentProfile?.username || profileName),
+      avatar: post?.avatar || commentProfile?.avatar || "star",
+      bio: post?.caption || `Fan activo de ${source.group || "K-pop"} en HallyuHub.`,
+      country: source.location || "Latam",
+      fandom: source.badge || "Army 💜",
       bias: "Bias secreto",
-      favoriteGroup: post.group || "K-pop",
+      favoriteGroup: source.group || "K-pop",
       phrase: "Compartiendo momentos fandom en HallyuHub.",
       followers: "2.8K",
       following: "210",
       posts: "32",
-      starsReceived: post.likes || "1.2K",
-      profileBg: post.type === "trending" ? "stage" : "pastel",
+      starsReceived: source.likes || "1.2K",
+      profileBg: source.type === "trending" ? "stage" : "pastel",
     };
   }
   setView("profile");
@@ -1921,20 +2306,44 @@ function renderAuth() {
 }
 
 function createOwnStory(style = "Neon pastel") {
+  const draft = state.storyDraft || {};
   state.ownStory = {
     user: state.user?.name || "Mi historia",
     avatar: state.user?.avatar || "berry",
     label: "mi historia",
     time: "Ahora",
-    music: "HallyuHub · fan upload",
-    title: "Mi momento K-pop",
-    detail: `Historia decorada con ${style}, stickers, brillo idol y detalles asiaticos.`,
+    music: draft.music || "HallyuHub · fan upload",
+    title: draft.text || "Mi momento K-pop",
+    detail: `Historia con ${style}, ${draft.sticker || "✨"} ${draft.mention || ""} ${draft.location ? `· ${draft.location}` : ""}`.trim(),
     stars: 0,
     views: 37,
-    colors: "linear-gradient(160deg, #fbbcdb, #65e4ff 50%, #a855f7)",
+    colors: getStoryBackground(style),
     style,
+    mediaName: draft.mediaName || "",
+    type: draft.type || "text",
   };
   storage.set("hallyuHubOwnStory", state.ownStory);
+  state.storyEditorOpen = false;
+  state.activeStory = -1;
+  state.storyDirection = 1;
+}
+
+function publishStoryFromEditor(style = state.storyDraft?.background || "Neon pastel") {
+  createOwnStory(style);
+  showToast("Historia publicada");
+  render();
+}
+
+function getStoryBackground(style) {
+  const backgrounds = {
+    "Neon pastel": "linear-gradient(160deg, #fbbcdb, #65e4ff 50%, #a855f7)",
+    "Idol stage": "linear-gradient(160deg, #101827, #d946ef 48%, #65e4ff)",
+    "Seoul night": "linear-gradient(160deg, #040711, #263d72 50%, #fbbcdb)",
+    "Lightstick glow": "linear-gradient(160deg, #fff1f9, #a855f7 45%, #12051e)",
+    "Photocard wall": "linear-gradient(160deg, #ffb86b, #fbbcdb 46%, #77f4c7)",
+    "Cute comeback": "linear-gradient(160deg, #fbbcdb, #fff1f9 48%, #65e4ff)",
+  };
+  return backgrounds[style] || backgrounds["Neon pastel"];
 }
 
 function sendStoryMessage(message) {
@@ -2037,18 +2446,22 @@ function renderHome() {
       </div>
     </div>
     ${renderStoryViewer()}
+    ${state.storyEditorOpen ? renderStoryEditor() : ""}
+    ${state.reportTarget ? renderReportSheet() : ""}
+    ${state.toast ? `<div class="app-toast">${state.toast}</div>` : ""}
   `;
 }
 
 function filterHomeFeed(posts) {
   const filter = state.homeFilter || "all";
-  if (filter === "all") return posts;
-  if (filter === "viral" || filter === "trends") return posts.filter((post) => post.type === "trending" || post.category === "trends");
-  if (filter === "outfits") return posts.filter((post) => post.category === "outfits" || post.type === "outfit");
-  if (filter === "challenges") return posts.filter((post) => post.category === "trends" || (post.hashtags || []).some((tag) => tag.toLowerCase().includes("challenge")));
-  if (filter === "events") return posts.filter((post) => post.type === "event" || (post.hashtags || []).some((tag) => tag.toLowerCase().includes("evento")));
-  if (filter.startsWith("#")) return posts.filter((post) => (post.hashtags || []).some((tag) => tag.toLowerCase() === filter.toLowerCase()));
-  return posts;
+  const visiblePosts = posts.filter((post) => !isPostHidden(post) && !isUserMuted(post));
+  if (filter === "all") return visiblePosts;
+  if (filter === "viral" || filter === "trends") return visiblePosts.filter((post) => post.type === "trending" || post.category === "trends");
+  if (filter === "outfits") return visiblePosts.filter((post) => post.category === "outfits" || post.type === "outfit");
+  if (filter === "challenges") return visiblePosts.filter((post) => post.category === "trends" || (post.hashtags || []).some((tag) => tag.toLowerCase().includes("challenge")));
+  if (filter === "events") return visiblePosts.filter((post) => post.type === "event" || (post.hashtags || []).some((tag) => tag.toLowerCase().includes("evento")));
+  if (filter.startsWith("#")) return visiblePosts.filter((post) => (post.hashtags || []).some((tag) => tag.toLowerCase() === filter.toLowerCase()));
+  return visiblePosts;
 }
 
 function getHomeFilterLabel(filter) {
@@ -2161,10 +2574,13 @@ function renderSocialPost(post, index, options = {}) {
           </div>
           <p class="muted">${post.time || "Ahora"}</p>
         </button>
-        <button class="post-menu-button" data-open-post="${post.id}" aria-label="Mas opciones">•••</button>
+        <div class="post-menu-wrap">
+          <button class="post-menu-button" data-post-menu="${post.id}" aria-label="Mas opciones">•••</button>
+          ${state.openPostMenu === post.id ? renderPostMenu(post) : ""}
+        </div>
       </div>
       <div class="post-body-card">
-        <button class="post-open-button" data-open-post="${post.id}" aria-label="${expanded ? "Contraer publicacion" : "Expandir publicacion"}">
+        <button class="post-open-button" data-toggle-post-more="${post.id}" aria-label="${expanded ? "Contraer publicacion" : "Expandir publicacion"}">
         ${
           post.mediaUrl
             ? post.mediaType === "video"
@@ -2176,15 +2592,132 @@ function renderSocialPost(post, index, options = {}) {
         <p class="post-caption ${expanded ? "expanded" : ""}">${post.caption}</p>
         ${expanded ? renderPostOptionalMeta(post) : ""}
         ${expanded ? `<div class="post-hashtags">${(post.hashtags || ["#KpopLatam", "#HallyuHub"]).map((tag) => `<button type="button" data-home-filter="${tag}">${tag}</button>`).join("")}</div>` : ""}
-        <button class="post-more-button" data-open-post="${post.id}">${expanded ? "Ver menos" : "Ver más"}</button>
+        <button class="post-more-button" data-toggle-post-more="${post.id}">${expanded ? "Ver menos" : "Ver más"}</button>
         <div class="post-actions premium-actions">
           <button class="post-action-star" ${post.id ? `data-like-post="${post.id}"` : ""}><span>★</span><strong>${post.likes || "0"}</strong></button>
           <button class="post-action-comment" ${post.id ? `data-comment-post="${post.id}"` : ""}><span></span><strong>${post.comments || "0"}</strong></button>
           <button class="post-action-share" data-share-post="${post.id}"><span></span><strong>${post.shares || index + 24}</strong></button>
           <button class="post-action-save ${state.savedPosts[post.id] ? "active" : ""}" data-save-post="${post.id}"><span></span><strong>${post.saves || index + 12}</strong></button>
         </div>
+        ${state.openComments[post.id] ? renderCommentsPanel(post) : ""}
       </div>
     </article>`;
+}
+
+function renderPostMenu(post) {
+  return isOwnPost(post)
+    ? `<div class="post-menu-popover">
+        <button type="button" data-edit-post="${post.id}">Editar publicacion</button>
+        <button type="button" data-delete-post="${post.id}">Eliminar publicacion</button>
+      </div>`
+    : `<div class="post-menu-popover">
+        <button type="button" data-report-post="${post.id}">Reportar publicacion</button>
+        <button type="button" data-hide-post="${post.id}">Ocultar publicacion</button>
+        <button type="button" data-unfollow-feed-user="${escapeAttr(post.user)}">Dejar de seguir usuario</button>
+      </div>`;
+}
+
+function renderReportSheet() {
+  const post = findPostById(state.reportTarget);
+  return `
+    <section class="report-sheet" aria-label="Reportar publicacion">
+      <div class="sheet-handle"></div>
+      <div class="composer-head">
+        <strong>Reportar publicacion</strong>
+        <button type="button" data-report-close aria-label="Cerrar">X</button>
+      </div>
+      <p>Elegí un motivo. Queda guardado como pendiente para revisión del administrador.</p>
+      <div class="report-reason-list">
+        ${reportReasons.map((reason) => `<button type="button" data-report-reason="${state.reportTarget}|${reason}">${reason}</button>`).join("")}
+      </div>
+      <small>${post ? `Publicacion de ${post.user}` : "Publicacion seleccionada"}</small>
+    </section>
+  `;
+}
+
+function renderCommentsPanel(post) {
+  const comments = post.commentList || [];
+  const replyTarget = state.replyTo[post.id];
+  const replyUser = replyTarget ? findCommentInPost(post, replyTarget)?.username : null;
+  const emojis = ["💜", "✨", "🔥", "🫰", "🎤", "📸"];
+  return `
+    <section class="comments-panel" aria-label="Comentarios de ${escapeAttr(post.user)}">
+      <div class="comments-list">
+        ${
+          comments.length
+            ? comments.map((comment) => renderCommentItem(post.id, comment)).join("")
+            : `<p class="comments-empty">Se la primera persona en comentar.</p>`
+        }
+      </div>
+      ${
+        replyTarget
+          ? `<div class="reply-context">Respondiendo a @${escapeHtml(replyUser || "fan")} <button type="button" data-cancel-reply="${post.id}">Cancelar</button></div>`
+          : ""
+      }
+      <div class="comment-composer">
+        ${renderAvatarElement("mini comment-input-avatar", state.user?.avatar || "berry", state.user?.avatarUrl)}
+        <input type="text" data-comment-draft="${post.id}" value="${escapeAttr(state.commentDrafts[post.id] || "")}" placeholder="${replyTarget ? "Responder comentario..." : "Comparte tu opinión..."}" />
+        <button class="comment-send-button" type="button" data-send-comment="${post.id}">Enviar</button>
+        <div class="comment-emoji-row">
+          ${emojis.map((emoji) => `<button type="button" data-comment-emoji="${post.id}|${emoji}" aria-label="Agregar ${emoji}">${emoji}</button>`).join("")}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderCommentItem(postId, comment, isReply = false) {
+  const key = `${postId}:${comment.id}`;
+  const liked = Boolean(state.likedComments[key]);
+  return `
+    <div class="comment-item ${isReply ? "comment-reply" : ""}">
+      ${renderAvatarElement("mini comment-avatar", comment.avatar || "berry", comment.avatarUrl)}
+      <div class="comment-main">
+        <div class="comment-meta">
+          <button type="button" data-open-feed-profile="${escapeAttr(comment.username || comment.user)}">${escapeHtml(comment.user || "Hallyu fan")}</button>
+          <span>${escapeHtml(comment.time || "Ahora")}</span>
+        </div>
+        <p class="comment-text">${renderMentionedText(comment.body || "")}</p>
+        <div class="comment-tools">
+          <button type="button" data-reply-comment="${postId}:${comment.id}:${escapeAttr(comment.username || normalizeProfileKey(comment.user))}">Responder</button>
+        </div>
+        ${(comment.replies || []).map((reply) => renderCommentItem(postId, reply, true)).join("")}
+      </div>
+      <button class="comment-like ${liked ? "active" : ""}" type="button" data-like-comment="${key}" aria-label="Dar estrella al comentario">
+        <span>★</span>
+        <strong>${Number(comment.likes || 0)}</strong>
+      </button>
+    </div>
+  `;
+}
+
+function findCommentInPost(post, commentId) {
+  for (const comment of post.commentList || []) {
+    if (comment.id === commentId) return comment;
+    const reply = (comment.replies || []).find((item) => item.id === commentId);
+    if (reply) return reply;
+  }
+  return null;
+}
+
+function renderMentionedText(text) {
+  return escapeHtml(text).replace(/@([a-zA-Z0-9_.]+)/g, (_, username) => {
+    const clean = username.replace(/\./g, "");
+    return `<button class="mention-link" type="button" data-open-feed-profile="${escapeAttr(clean)}">@${escapeHtml(username)}</button>`;
+  });
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function escapeAttr(value) {
+  return escapeHtml(value).replace(/`/g, "&#096;");
 }
 
 function renderPostOptionalMeta(post) {
@@ -2218,6 +2751,7 @@ function renderOwnStoryStats(story) {
           )
           .join("")}
       </div>
+      <button class="ghost-button compact-story-edit" type="button" data-story-editor-open>Crear nueva historia</button>
     </div>
   `;
 }
@@ -2250,6 +2784,63 @@ function renderStoryComposer(story) {
       }
       <p class="composer-note">Se envia al inbox como conversacion simulada.</p>
     </div>
+  `;
+}
+
+function renderStoryEditor() {
+  const draft = state.storyDraft;
+  const userLevel = Number(state.user?.level || 1);
+  return `
+    <section class="story-editor-overlay" aria-label="Crear historia">
+      <div class="story-editor-card">
+        <div class="composer-head">
+          <strong>Crear historia K-pop</strong>
+          <button type="button" data-story-editor-close aria-label="Cerrar editor">X</button>
+        </div>
+        <div class="story-editor-preview" style="--art:${getStoryBackground(draft.background)}">
+          <span class="editor-sticker">${draft.sticker || "✨"}</span>
+          <h2>${escapeHtml(draft.text || "Mi momento K-pop")}</h2>
+          ${draft.mention ? `<p>${renderMentionedText(draft.mention)}</p>` : ""}
+          ${draft.location ? `<small>${escapeHtml(draft.location)}</small>` : ""}
+          <div class="story-music-pill"><span>♪</span>${escapeHtml(draft.music)}</div>
+          ${draft.mediaName ? `<em>${escapeHtml(draft.mediaName)}</em>` : ""}
+        </div>
+        <div class="story-upload-grid">
+          <label>Foto<input type="file" accept="image/*" data-story-media="foto" /></label>
+          <label>Video corto<input type="file" accept="video/*" data-story-media="video" /></label>
+          <label>Camara<input type="file" accept="image/*,video/*" capture="environment" data-story-media="camara" /></label>
+        </div>
+        <div class="story-editor-fields">
+          <input data-story-draft="text" value="${escapeAttr(draft.text)}" placeholder="Texto de la historia" />
+          <input data-story-draft="mention" value="${escapeAttr(draft.mention)}" placeholder="Mencionar @usuario" />
+          <input data-story-draft="location" value="${escapeAttr(draft.location)}" placeholder="Ubicacion opcional" />
+        </div>
+        <div class="story-chip-section">
+          <strong>Stickers</strong>
+          <div class="story-chip-row">${["💜", "✨", "🫰", "🎀", "📸", "🪩", "🎤"].map((item) => `<button class="${draft.sticker === item ? "active" : ""}" data-story-sticker="${item}">${item}</button>`).join("")}</div>
+        </div>
+        <div class="story-chip-section">
+          <strong>Fondos</strong>
+          <div class="story-chip-row">${storyBackgrounds.map((item) => `<button class="${draft.background === item ? "active" : ""}" data-story-bg="${item}">${item}</button>`).join("")}</div>
+        </div>
+        <div class="story-chip-section">
+          <strong>Musica K-pop segura</strong>
+          <div class="music-unlock-list">
+            ${storyMusicLibrary
+              .map((track) => {
+                const locked = userLevel < track.level;
+                return `<button type="button" class="${draft.music === track.name ? "active" : ""} ${locked ? "locked" : ""}" ${locked ? "" : `data-story-music="${escapeAttr(track.name)}"`}>
+                  <span>${track.name}</span>
+                  <small>${locked ? `Nivel ${track.level} para desbloquear` : track.detail}</small>
+                </button>`;
+              })
+              .join("")}
+          </div>
+          <p class="legal-note">Demo con sonidos seguros. Preparado para conectar una biblioteca musical autorizada; no usa canciones completas protegidas.</p>
+        </div>
+        <button class="primary-button story-publish-button" type="button" data-create-own-story="${escapeAttr(draft.background)}">Publicar historia</button>
+      </div>
+    </section>
   `;
 }
 
@@ -2441,11 +3032,34 @@ function getNewsKey(item) {
 
 function renderSearch() {
   const users = state.backendMode === "supabase" && state.liveProfiles.length ? state.liveProfiles : [];
+  const hashtagPosts = state.selectedHashtag ? getHashtagPosts(state.selectedHashtag) : [];
   return `
     <div class="search-box">
       <span class="nav-icon search-icon"></span>
       <input placeholder="Buscar idols, grupos, usuarios, hashtags o tendencias" />
     </div>
+    ${
+      state.selectedHashtag
+        ? `<section class="hashtag-explore">
+            <div class="hashtag-title">
+              <button class="back-button" data-go-view="home">Volver</button>
+              <div><h2>${escapeHtml(state.selectedHashtag)}</h2><p>Publicaciones relacionadas</p></div>
+            </div>
+            <div class="hashtag-sort-tabs">
+              ${[
+                ["recent", "Recientes"],
+                ["popular", "Populares"],
+                ["trending", "Tendencias"],
+              ]
+                .map(([key, label]) => `<button class="${state.hashtagSort === key ? "active" : ""}" data-hashtag-sort="${key}">${label}</button>`)
+                .join("")}
+            </div>
+            <div class="social-feed hashtag-feed">
+              ${hashtagPosts.length ? hashtagPosts.map((post, index) => renderSocialPost(post, index, { compact: true })).join("") : `<p class="empty-copy">Todavia no hay publicaciones con este hashtag.</p>`}
+            </div>
+          </section>`
+        : ""
+    }
     <div class="quick-link-grid">
       <button data-go-view="groups"><span class="nav-icon music-icon"></span><strong>Grupos</strong><small>Biografias e idols</small></button>
       <button data-go-view="news"><span class="nav-icon heart-icon"></span><strong>Noticias</strong><small>Actualidad K-pop</small></button>
@@ -2487,6 +3101,20 @@ function renderSearch() {
         : ""
     }
   `;
+}
+
+function getHashtagPosts(tag) {
+  const normalized = tag.toLowerCase();
+  const posts = userPosts.filter((post) => !isPostHidden(post) && !isUserMuted(post) && (post.hashtags || []).some((item) => item.toLowerCase() === normalized));
+  if (state.hashtagSort === "popular") return [...posts].sort((a, b) => getEngagementNumber(b.likes) - getEngagementNumber(a.likes));
+  if (state.hashtagSort === "trending") return [...posts].sort((a, b) => Number(b.type === "trending") - Number(a.type === "trending") || getEngagementNumber(b.comments) - getEngagementNumber(a.comments));
+  return posts;
+}
+
+function getEngagementNumber(value) {
+  const text = String(value || "0").toLowerCase();
+  const number = Number.parseFloat(text.replace(/[^0-9.]/g, "")) || 0;
+  return text.includes("k") ? number * 1000 : number;
 }
 
 function renderTrends() {
