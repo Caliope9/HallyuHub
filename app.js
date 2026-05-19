@@ -32,6 +32,7 @@ const state = {
   storyDirection: 1,
   storyComposerOpen: false,
   storyEditorOpen: false,
+  storyToolPanel: null,
   storyDraft: {
     type: "text",
     text: "Mi momento K-pop",
@@ -1067,8 +1068,8 @@ function render() {
   appScreen.classList.toggle("home-mode", state.view === "home");
   appScreen.classList.toggle("light-mode", state.user?.mode === "light");
   appScreen.style.setProperty("--user-accent", state.user?.accent || "#fbbcdb");
-  document.querySelector(".bottom-nav").classList.toggle("hidden", !state.isAuthenticated);
-  document.querySelector(".topbar").classList.toggle("hidden", !state.isAuthenticated || state.view === "profile");
+  document.querySelector(".bottom-nav").classList.toggle("hidden", !state.isAuthenticated || state.storyEditorOpen);
+  document.querySelector(".topbar").classList.toggle("hidden", !state.isAuthenticated || state.view === "profile" || state.storyEditorOpen);
   if (!state.isAuthenticated) {
     view.innerHTML = renderAuth();
     bindDynamicActions();
@@ -1369,6 +1370,7 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-story-editor-open]").forEach((button) => {
     button.addEventListener("click", () => {
       state.storyEditorOpen = true;
+      state.storyToolPanel = null;
       render();
     });
   });
@@ -1376,6 +1378,22 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-story-editor-close]").forEach((button) => {
     button.addEventListener("click", () => {
       state.storyEditorOpen = false;
+      state.storyToolPanel = null;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-tool]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const tool = button.dataset.storyTool;
+      state.storyToolPanel = state.storyToolPanel === tool ? null : tool;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-tool-close]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.storyToolPanel = null;
       render();
     });
   });
@@ -1397,6 +1415,7 @@ function bindDynamicActions() {
     button.addEventListener("click", () => {
       state.storyDraft.sticker = button.dataset.storySticker;
       addStoryElement(button.dataset.storySticker);
+      state.storyToolPanel = null;
       render();
     });
   });
@@ -1405,6 +1424,7 @@ function bindDynamicActions() {
     button.addEventListener("pointerdown", (event) => startStoryElementDrag(event, button.dataset.storyLayer));
     button.addEventListener("click", () => {
       state.storyDraft.selectedElementId = button.dataset.storyLayer;
+      state.storyToolPanel = "adjust";
       render();
     });
   });
@@ -1413,6 +1433,7 @@ function bindDynamicActions() {
     button.addEventListener("click", () => {
       state.storyDraft.music = button.dataset.storyMusic;
       playStoryMusicPreview(button.dataset.storyMusic);
+      state.storyToolPanel = null;
       render();
     });
   });
@@ -2954,10 +2975,11 @@ function renderStoryEditor() {
   const visibleTracks = storyMusicLibrary.filter((track) => track.category === (draft.musicCategory || "Trending"));
   return `
     <section class="story-editor-overlay" aria-label="Crear historia">
-      <div class="story-editor-card">
-        <div class="composer-head">
-          <strong>Crear historia K-pop</strong>
+      <div class="story-editor-card fullscreen-editor">
+        <div class="story-editor-topbar">
           <button type="button" data-story-editor-close aria-label="Cerrar editor">X</button>
+          <strong>Historia</strong>
+          <button type="button" data-create-own-story="${escapeAttr(draft.background)}">Publicar</button>
         </div>
         <div class="story-editor-preview" style="--art:${getStoryBackground(draft.background)}">
           ${
@@ -2974,52 +2996,82 @@ function renderStoryEditor() {
           <div class="story-music-pill story-music-edit"><span>♪</span>${escapeHtml(draft.music)}</div>
           ${draft.mediaName ? `<em>${escapeHtml(draft.mediaName)}</em>` : ""}
         </div>
-        <div class="story-upload-grid">
-          <label>Foto<input type="file" accept="image/*" data-story-media="foto" /></label>
-          <label>Video corto<input type="file" accept="video/*" data-story-media="video" /></label>
-          <label>Camara<input type="file" accept="image/*,video/*" capture="environment" data-story-media="camara" /></label>
+        <div class="story-tool-rail" aria-label="Herramientas de historia">
+          <button type="button" data-story-tool="text"><span>T</span><small>Texto</small></button>
+          <button type="button" data-story-tool="stickers"><span>✦</span><small>Stickers</small></button>
+          <button type="button" data-story-tool="music"><span>♪</span><small>Música</small></button>
+          <button type="button" data-story-tool="background"><span>◎</span><small>Fondo</small></button>
+          <button type="button" data-story-tool="mention"><span>@</span><small>Info</small></button>
+          <button type="button" data-story-tool="gallery"><span>▣</span><small>Galería</small></button>
         </div>
-        <div class="story-editor-fields">
-          <input data-story-draft="text" value="${escapeAttr(draft.text)}" placeholder="Texto de la historia" />
-          <input data-story-draft="mention" value="${escapeAttr(draft.mention)}" placeholder="Mencionar @usuario" />
-          <input data-story-draft="location" value="${escapeAttr(draft.location)}" placeholder="Ubicacion opcional" />
+        <div class="story-editor-status">
+          <button type="button" data-story-tool="music"><span>♪</span>${escapeHtml(draft.music)}</button>
+          <button type="button" data-story-tool="gallery">${draft.mediaName ? escapeHtml(draft.mediaName) : "Agregar foto o video"}</button>
         </div>
-        <div class="story-chip-section">
-          <strong>Stickers y emojis movibles</strong>
-          <div class="story-chip-row">${storyStickerPalette.map((item) => `<button class="${draft.sticker === item ? "active" : ""}" data-story-sticker="${item}">${item}</button>`).join("")}</div>
-        </div>
-        <div class="story-layer-controls">
-          <div><strong>Elemento seleccionado</strong><span>${selected?.content || "Sin sticker"}</span></div>
-          <label>Tamaño <input type="range" min="20" max="86" value="${selected?.size || 34}" data-story-control="size" /></label>
-          <label>Rotar <input type="range" min="-35" max="35" value="${selected?.rotation || 0}" data-story-control="rotation" /></label>
-          <button type="button" data-story-delete-element>Eliminar sticker</button>
-        </div>
-        <div class="story-chip-section">
-          <strong>Fondos</strong>
-          <div class="story-chip-row">${storyBackgrounds.map((item) => `<button class="${draft.background === item ? "active" : ""}" data-story-bg="${item}">${item}</button>`).join("")}</div>
-        </div>
-        <div class="story-chip-section">
-          <strong>Musica K-pop segura</strong>
-          <div class="story-chip-row music-category-row">
-            ${storyMusicCategories.map((category) => `<button class="${draft.musicCategory === category ? "active" : ""}" data-story-music-category="${category}">${category}</button>`).join("")}
-          </div>
-          <div class="music-unlock-list">
-            ${visibleTracks
-              .map((track) => {
-                const locked = userLevel < track.level;
-                return `<button type="button" class="${draft.music === track.name ? "active" : ""} ${locked ? "locked" : ""}" ${locked ? "" : `data-story-music="${escapeAttr(track.name)}"`}>
-                  <span>${track.name}</span>
-                  <small>${locked ? `Nivel ${track.level} para desbloquear` : track.detail}</small>
-                  ${locked ? "" : `<em data-story-music-preview="${escapeAttr(track.name)}">Preview</em>`}
-                </button>`;
-              })
-              .join("")}
-          </div>
-          <p class="legal-note">Demo con sonidos seguros. Preparado para conectar una biblioteca musical autorizada; no usa canciones completas protegidas.</p>
-        </div>
-        <button class="primary-button story-publish-button" type="button" data-create-own-story="${escapeAttr(draft.background)}">Publicar historia</button>
+        ${state.storyToolPanel === "adjust" && selected ? renderStoryAdjustPanel(selected) : ""}
+        ${state.storyToolPanel ? renderStoryToolPanel(draft, userLevel, visibleTracks) : ""}
       </div>
     </section>
+  `;
+}
+
+function renderStoryToolPanel(draft, userLevel, visibleTracks) {
+  const tool = state.storyToolPanel;
+  if (tool === "adjust") return "";
+  const header = {
+    text: "Texto",
+    stickers: "Stickers",
+    music: "Música",
+    background: "Fondo",
+    mention: "Menciones y ubicación",
+    gallery: "Galería",
+  }[tool];
+  const body = {
+    text: `<div class="story-editor-fields compact-fields"><input data-story-draft="text" value="${escapeAttr(draft.text)}" placeholder="Texto de la historia" /></div>`,
+    stickers: `<div class="story-chip-row">${storyStickerPalette.map((item) => `<button class="${draft.sticker === item ? "active" : ""}" data-story-sticker="${item}">${item}</button>`).join("")}</div>`,
+    music: `<div class="story-chip-row music-category-row">
+        ${storyMusicCategories.map((category) => `<button class="${draft.musicCategory === category ? "active" : ""}" data-story-music-category="${category}">${category}</button>`).join("")}
+      </div>
+      <div class="music-unlock-list compact-music-list">
+        ${visibleTracks
+          .map((track) => {
+            const locked = userLevel < track.level;
+            return `<button type="button" class="${draft.music === track.name ? "active" : ""} ${locked ? "locked" : ""}" ${locked ? "" : `data-story-music="${escapeAttr(track.name)}"`}>
+              <span>${track.name}</span>
+              <small>${locked ? `Nivel ${track.level}` : track.detail}</small>
+              ${locked ? "" : `<em data-story-music-preview="${escapeAttr(track.name)}">Preview</em>`}
+            </button>`;
+          })
+          .join("")}
+      </div>
+      <p class="legal-note">Previews demo seguros, sin canciones completas con copyright.</p>`,
+    background: `<div class="story-chip-row">${storyBackgrounds.map((item) => `<button class="${draft.background === item ? "active" : ""}" data-story-bg="${item}">${item}</button>`).join("")}</div>`,
+    mention: `<div class="story-editor-fields compact-fields">
+        <input data-story-draft="mention" value="${escapeAttr(draft.mention)}" placeholder="Mencionar @usuario" />
+        <input data-story-draft="location" value="${escapeAttr(draft.location)}" placeholder="Ubicación opcional" />
+      </div>`,
+    gallery: `<div class="story-upload-grid compact-upload">
+        <label>Foto<input type="file" accept="image/*" data-story-media="foto" /></label>
+        <label>Video<input type="file" accept="video/*" data-story-media="video" /></label>
+        <label>Cámara<input type="file" accept="image/*,video/*" capture="environment" data-story-media="camara" /></label>
+      </div>`,
+  }[tool];
+  return `
+    <div class="story-floating-panel">
+      <div class="story-panel-head"><strong>${header}</strong><button type="button" data-story-tool-close>Listo</button></div>
+      ${body}
+    </div>
+  `;
+}
+
+function renderStoryAdjustPanel(selected) {
+  return `
+    <div class="story-layer-controls floating-adjust">
+      <div><strong>Sticker</strong><span>${selected.content}</span></div>
+      <label>Tamaño <input type="range" min="20" max="86" value="${selected.size || 34}" data-story-control="size" /></label>
+      <label>Rotar <input type="range" min="-35" max="35" value="${selected.rotation || 0}" data-story-control="rotation" /></label>
+      <button type="button" data-story-delete-element>Eliminar</button>
+    </div>
   `;
 }
 
