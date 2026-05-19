@@ -3909,9 +3909,16 @@ button.story-layer:active {
   margin: 0 auto 7px;
   border: 3px solid rgba(255, 255, 255, 0.18);
   border-radius: 50%;
-  background: var(--art);
+  background: var(--photo, var(--art));
+  background-position: center;
+  background-size: cover;
   position: relative;
   box-shadow: 0 0 20px rgba(101, 228, 255, 0.14);
+  color: white;
+  font-size: 15px;
+  font-weight: 1000;
+  line-height: 62px;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.58);
 }
 
 .group-story-photo::before {
@@ -3920,6 +3927,13 @@ button.story-layer:active {
   inset: 13px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.22);
+}
+
+.group-story-photo.has-photo::before,
+.group-directory-art.has-photo::before,
+.artist-photo.has-photo::before,
+.artist-photo.has-photo::after {
+  display: none;
 }
 
 .group-story strong {
@@ -3986,7 +4000,9 @@ button.story-layer:active {
   border-radius: 24px;
   background:
     linear-gradient(145deg, rgba(6, 8, 18, 0.1), rgba(6, 8, 18, 0.84)),
-    var(--art);
+    var(--cover, var(--photo, var(--art)));
+  background-position: center;
+  background-size: cover;
   padding: 18px;
   display: flex;
   flex-direction: column;
@@ -4015,6 +4031,105 @@ button.story-layer:active {
 
 .group-search-box {
   margin-bottom: 12px;
+}
+
+.group-filter-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 0 0 12px;
+  scrollbar-width: none;
+}
+
+.group-filter-row::-webkit-scrollbar {
+  display: none;
+}
+
+.group-filter-row button {
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.065);
+  color: rgba(255, 255, 255, 0.68);
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 950;
+  backdrop-filter: blur(16px);
+}
+
+.group-filter-row button.active {
+  color: white;
+  border-color: rgba(251, 188, 219, 0.34);
+  background: linear-gradient(135deg, rgba(251, 188, 219, 0.2), rgba(101, 228, 255, 0.13));
+  box-shadow: 0 10px 24px rgba(168, 85, 247, 0.15);
+}
+
+.empty-group-result {
+  min-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.065);
+  color: var(--muted);
+  padding: 14px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.group-directory-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin: 6px 0 14px;
+}
+
+.group-directory-card {
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  gap: 9px;
+  align-items: center;
+  min-height: 66px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  color: white;
+  padding: 9px;
+  text-align: left;
+}
+
+.group-directory-card.active {
+  border-color: rgba(101, 228, 255, 0.34);
+  background: rgba(101, 228, 255, 0.1);
+}
+
+.group-directory-art {
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  background: var(--photo, var(--art));
+  background-position: center;
+  background-size: cover;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  display: grid;
+  place-items: center;
+  color: white;
+  font-size: 11px;
+  font-weight: 1000;
+  text-shadow: 0 1px 9px rgba(0, 0, 0, 0.55);
+}
+
+.group-directory-card strong {
+  display: block;
+  font-size: 12px;
+  line-height: 1.05;
+}
+
+.group-directory-card small {
+  display: block;
+  margin-top: 5px;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
 .official-links-card {
@@ -4102,7 +4217,9 @@ button.story-layer:active {
 .group-photo-strip div {
   min-height: 112px;
   border-radius: 18px;
-  background: var(--art);
+  background: var(--photo, var(--cover, var(--art)));
+  background-position: center;
+  background-size: cover;
   display: flex;
   align-items: end;
   padding: 10px;
@@ -4110,6 +4227,22 @@ button.story-layer:active {
   font-size: 11px;
   font-weight: 900;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
+}
+
+.source-credit {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  margin-top: 8px;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.source-credit a {
+  color: rgba(255, 255, 255, 0.68);
+  text-decoration: none;
 }
 
 .biography-card {
@@ -4148,10 +4281,25 @@ button.story-layer:active {
   width: 58px;
   height: 58px;
   border-radius: 20px;
-  background: var(--art);
+  background: var(--photo, var(--art));
+  background-position: center;
+  background-size: cover;
   position: relative;
   overflow: hidden;
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.13);
+}
+
+.artist-photo span {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  color: white;
+  font-size: 14px;
+  font-weight: 1000;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.58);
 }
 
 .artist-photo.large {
@@ -4201,6 +4349,41 @@ button.story-layer:active {
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
 }
 
+.artist-profile-screen {
+  margin-top: 0;
+  padding-top: 46px;
+}
+
+.artist-profile-cover {
+  min-height: 248px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(6, 8, 18, 0.02), rgba(6, 8, 18, 0.72)),
+    var(--cover, var(--photo, var(--art)));
+  background-position: center;
+  background-size: cover;
+  display: flex;
+  align-items: end;
+  padding: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 18px 44px rgba(0, 0, 0, 0.22);
+}
+
+.artist-back {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 4;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.26);
+  color: white;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 950;
+  backdrop-filter: blur(16px);
+}
+
 .artist-profile-head {
   display: grid;
   grid-template-columns: 78px 1fr;
@@ -4233,12 +4416,25 @@ button.story-layer:active {
 }
 
 .mini-info-grid {
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
   margin-top: 0;
 }
 
 .compact-links {
   margin-top: 0;
+}
+
+.artist-related-card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.055);
+  padding: 11px;
+}
+
+.artist-related-card strong {
+  font-size: 12px;
 }
 
 .compact-related-feed {

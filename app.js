@@ -5,6 +5,7 @@ const state = {
   ambience: "hallyu",
   selectedGroup: "skz",
   groupSearch: "",
+  groupFilter: "all",
   selectedArtist: null,
   activityTab: "activity",
   profileTab: "posts",
@@ -522,13 +523,13 @@ const kpopGroups = [
     latest: "Ideal para noticias de actividad grupal, proyectos solistas y eventos ARMY.",
     colors: "linear-gradient(135deg, #8b5cf6, #d9b4ff 48%, #101827)",
     artists: [
-      { name: "RM", role: "Lider · rap", country: "Corea del Sur" },
-      { name: "Jin", role: "Vocal", country: "Corea del Sur" },
-      { name: "SUGA", role: "Rap · productor", country: "Corea del Sur" },
-      { name: "j-hope", role: "Dance · rap", country: "Corea del Sur" },
-      { name: "Jimin", role: "Vocal · dance", country: "Corea del Sur" },
-      { name: "V", role: "Vocal", country: "Corea del Sur" },
-      { name: "Jung Kook", role: "Vocal · dance · maknae", country: "Corea del Sur" },
+      { name: "RM", realName: "Kim Nam-joon", birth: "1994-09-12", role: "Lider · rap", country: "Corea del Sur", nationality: "Coreana" },
+      { name: "Jin", realName: "Kim Seok-jin", birth: "1992-12-04", role: "Vocal", country: "Corea del Sur", nationality: "Coreana" },
+      { name: "SUGA", realName: "Min Yoon-gi", birth: "1993-03-09", role: "Rap · productor", country: "Corea del Sur", nationality: "Coreana" },
+      { name: "j-hope", realName: "Jung Ho-seok", birth: "1994-02-18", role: "Dance · rap", country: "Corea del Sur", nationality: "Coreana" },
+      { name: "Jimin", realName: "Park Ji-min", birth: "1995-10-13", role: "Vocal · dance", country: "Corea del Sur", nationality: "Coreana" },
+      { name: "V", realName: "Kim Tae-hyung", birth: "1995-12-30", role: "Vocal", country: "Corea del Sur", nationality: "Coreana" },
+      { name: "Jung Kook", realName: "Jeon Jung-kook", birth: "1997-09-01", role: "Vocal · dance · maknae", country: "Corea del Sur", nationality: "Coreana" },
     ],
   },
   {
@@ -702,7 +703,7 @@ kpopGroups.push(
     country: "Corea del Sur",
     status: "Activo",
     style: "Pop oscuro, narrativa vampirica, performance pulida y energia juvenil.",
-    bio: "ENHYPEN nacio desde un proyecto de supervivencia y construyo una identidad marcada por conceptos dramaticos, baile preciso y una comunidad global muy conectada. Su perfil en Hallyu Hub sirve para seguir comebacks, stages, perfiles individuales y contenido ENGENE.",
+    bio: "ENHYPEN nacio desde un proyecto de supervivencia y construyo una identidad marcada por conceptos dramaticos, baile preciso y una comunidad global muy conectada. Su perfil en Hallyu Hub sirve para seguir comebacks, stages, perfiles individuales y contenido ENGENE con datos preparados para actualizarse desde fuentes oficiales.",
     latest: "Noticias de comebacks, giras, contenido Weverse y clips de performance.",
     colors: "linear-gradient(135deg, #111827, #a855f7 46%, #65e4ff)",
     officialLinks: [
@@ -712,40 +713,306 @@ kpopGroups.push(
       ["Instagram", "https://www.instagram.com/enhypen/"],
     ],
     artists: [
-      { name: "Jungwon", role: "Lider · vocal · dance", country: "Corea del Sur" },
-      { name: "Heeseung", role: "Vocal · dance", country: "Corea del Sur" },
-      { name: "Jay", role: "Rap · vocal · dance", country: "Corea / EE.UU." },
-      { name: "Jake", role: "Vocal · dance", country: "Australia / Corea" },
-      { name: "Sunghoon", role: "Vocal · dance", country: "Corea del Sur" },
-      { name: "Sunoo", role: "Vocal", country: "Corea del Sur" },
-      { name: "Ni-ki", role: "Dance · maknae", country: "Japon" },
+      { name: "Jungwon", realName: "Yang Jung-won", birth: "2004-02-09", role: "Lider · vocal · dance", country: "Corea del Sur", nationality: "Coreana" },
+      { name: "Jay", realName: "Park Jong-seong", birth: "2002-04-20", role: "Rap · vocal · dance", country: "Corea / EE.UU.", nationality: "Coreana-estadounidense" },
+      { name: "Jake", realName: "Sim Jae-yun", birth: "2002-11-15", role: "Vocal · dance", country: "Australia / Corea", nationality: "Coreana-australiana" },
+      { name: "Sunghoon", realName: "Park Sung-hoon", birth: "2002-12-08", role: "Vocal · dance", country: "Corea del Sur", nationality: "Coreana" },
+      { name: "Sunoo", realName: "Kim Sun-oo", birth: "2003-06-24", role: "Vocal", country: "Corea del Sur", nationality: "Coreana" },
+      { name: "Ni-ki", realName: "Nishimura Riki", birth: "2005-12-09", role: "Dance · maknae", country: "Japon", nationality: "Japonesa" },
     ],
   },
   {
     id: "cortis",
     name: "CORTIS",
     type: "group",
-    fandom: "CORTIS fandom",
+    fandom: "COER",
     company: "BIGHIT MUSIC",
     debut: "2025",
     country: "Corea del Sur",
     status: "Activo",
-    style: "Rookie creator crew, pop/hip-hop global, energia joven y participacion creativa.",
-    bio: "CORTIS es un grupo rookie de BIGHIT MUSIC presentado como una propuesta creativa joven. En Hallyu Hub se organiza como ficha ampliable para seguir su debut, integrantes, clips, noticias y contenido oficial sin copiar material de comunidades externas.",
+    style: "Young creator crew, pop/hip-hop global, energia joven y participacion creativa.",
+    bio: "CORTIS es un grupo de BIGHIT MUSIC con una identidad de creadores jovenes. En Hallyu Hub se organiza como ficha ampliable para seguir integrantes, clips, noticias y contenido oficial sin copiar material de comunidades externas.",
     latest: "Seguimiento de debut, clips oficiales, noticias de BIGHIT y actividad fandom.",
     colors: "linear-gradient(135deg, #101827, #77f4c7 44%, #fbbcdb)",
     officialLinks: [
-      ["Sitio oficial", "https://ibighit.com/"],
-      ["Weverse", "https://weverse.io/"],
-      ["YouTube", "https://www.youtube.com/@HYBELABELS"],
-      ["TikTok", "https://www.tiktok.com/@bighit_music"],
+      ["Sitio oficial", "https://ibighit.com/cor/eng/profile/"],
+      ["Japan official", "https://cortis-official.jp/profile"],
+      ["YouTube", "https://www.youtube.com/@cortis_bighit"],
+      ["Instagram", "https://www.instagram.com/cortis_bighit_official/"],
+      ["Weverse", "https://weverse.io/cortis"],
     ],
     artists: [
-      { name: "Martin", role: "Lider · creativo · performance", country: "Corea / Canada" },
-      { name: "James", role: "Performance · creativo", country: "Internacional" },
-      { name: "Juhoon", role: "Vocal · performance", country: "Corea del Sur" },
-      { name: "Seonghyeon", role: "Vocal · performance", country: "Corea del Sur" },
-      { name: "Keonho", role: "Vocal · maknae", country: "Corea del Sur" },
+      { name: "Martin", birth: "2008-03-20", role: "Lider · creador · performance", country: "Corea / Canada", nationality: "Coreana-canadiense" },
+      { name: "James", birth: "2005-10-14", role: "Performance · creativo", country: "Internacional" },
+      { name: "Juhoon", birth: "2008-01-03", role: "Vocal · performance", country: "Corea del Sur", nationality: "Coreana" },
+      { name: "Seonghyeon", birth: "2009-01-13", role: "Vocal · performance", country: "Corea del Sur", nationality: "Coreana" },
+      { name: "Keonho", birth: "2009-02-14", role: "Vocal · maknae", country: "Corea del Sur", nationality: "Coreana" },
+    ],
+  },
+  {
+    id: "lesserafim",
+    name: "LE SSERAFIM",
+    type: "group",
+    fandom: "FEARNOT",
+    company: "SOURCE MUSIC",
+    debut: "2022",
+    country: "Corea del Sur",
+    status: "Activo",
+    style: "Pop elegante, performance fuerte, confianza escenica y conceptos de crecimiento.",
+    bio: "LE SSERAFIM construye una identidad basada en seguridad, energia de escenario y mensajes de avance personal. En Hallyu Hub su ficha ayuda a seguir eras, integrantes, clips, photocards y noticias FEARNOT.",
+    latest: "Comebacks, stages, fancams y actividad global FEARNOT.",
+    colors: "linear-gradient(135deg, #f8fafc, #ff8ac8 48%, #111827)",
+    officialLinks: [["Sitio oficial", "https://www.le-sserafim.com/"], ["YouTube", "https://www.youtube.com/@LESSERAFIM_official"], ["Instagram", "https://www.instagram.com/le_sserafim/"], ["Weverse", "https://weverse.io/lesserafim"]],
+    artists: [
+      { name: "Sakura", role: "Vocal · performance", country: "Japon" },
+      { name: "Kim Chaewon", role: "Lider · vocal", country: "Corea del Sur" },
+      { name: "Huh Yunjin", role: "Vocal", country: "Corea / EE.UU." },
+      { name: "Kazuha", role: "Dance · vocal", country: "Japon" },
+      { name: "Hong Eunchae", role: "Vocal · dance · maknae", country: "Corea del Sur" },
+    ],
+  },
+  {
+    id: "nct",
+    name: "NCT",
+    type: "group",
+    fandom: "NCTzen",
+    company: "SM Entertainment",
+    debut: "2016",
+    country: "Corea del Sur",
+    status: "Activo",
+    style: "Sistema de unidades, pop experimental, hip-hop, performance y conceptos urbanos.",
+    bio: "NCT funciona como un universo de unidades con sonidos variados y muchos perfiles para explorar. La ficha prioriza busqueda por integrantes, unidades, lanzamientos y contenido relacionado para NCTzen.",
+    latest: "Noticias de unidades, comebacks, conciertos y actividades individuales.",
+    colors: "linear-gradient(135deg, #77f4c7, #22c55e 48%, #0f172a)",
+    officialLinks: [["Sitio oficial", "https://www.smtown.com/"], ["YouTube", "https://www.youtube.com/@NCTsmtown"], ["Instagram", "https://www.instagram.com/nct/"], ["Weverse", "https://weverse.io/nct127"]],
+    artists: [
+      { name: "Taeyong", role: "Lider · rap · dance", country: "Corea del Sur" },
+      { name: "Johnny", role: "Rap · vocal", country: "Estados Unidos / Corea" },
+      { name: "Yuta", role: "Vocal · dance", country: "Japon" },
+      { name: "Kun", role: "Lider WayV · vocal", country: "China" },
+      { name: "Doyoung", role: "Vocal", country: "Corea del Sur" },
+      { name: "Ten", role: "Dance · vocal", country: "Tailandia" },
+      { name: "Jaehyun", role: "Vocal · rap", country: "Corea del Sur" },
+      { name: "Jungwoo", role: "Vocal · dance", country: "Corea del Sur" },
+      { name: "Mark", role: "Rap · dance", country: "Canada / Corea" },
+      { name: "Haechan", role: "Vocal · dance", country: "Corea del Sur" },
+      { name: "Jeno", role: "Rap · dance", country: "Corea del Sur" },
+      { name: "Jaemin", role: "Rap · dance", country: "Corea del Sur" },
+      { name: "Chenle", role: "Vocal", country: "China" },
+      { name: "Jisung", role: "Dance · vocal", country: "Corea del Sur" },
+    ],
+  },
+  {
+    id: "riize",
+    name: "RIIZE",
+    type: "group",
+    fandom: "BRIIZE",
+    company: "SM Entertainment",
+    debut: "2023",
+    country: "Corea del Sur",
+    status: "Activo",
+    style: "Emotional pop, performance fresca, estilo juvenil y sonido brillante.",
+    bio: "RIIZE propone una imagen cercana y moderna, con canciones pensadas para momentos faciles de compartir. Su ficha organiza integrantes, clips, noticias y publicaciones de BRIIZE.",
+    latest: "Clips virales, comebacks y actividad BRIIZE.",
+    colors: "linear-gradient(135deg, #ffb703, #ff8ac8 50%, #65e4ff)",
+    officialLinks: [["Sitio oficial", "https://www.smtown.com/"], ["YouTube", "https://www.youtube.com/@RIIZE_official"], ["Instagram", "https://www.instagram.com/riize_official/"], ["Weverse", "https://weverse.io/riize"]],
+    artists: [
+      { name: "Shotaro", role: "Dance · performance", country: "Japon" },
+      { name: "Eunseok", role: "Vocal", country: "Corea del Sur" },
+      { name: "Sungchan", role: "Rap · performance", country: "Corea del Sur" },
+      { name: "Wonbin", role: "Vocal · dance", country: "Corea del Sur" },
+      { name: "Sohee", role: "Vocal", country: "Corea del Sur" },
+      { name: "Anton", role: "Vocal · maknae", country: "Estados Unidos / Corea" },
+    ],
+  },
+  {
+    id: "babymonster",
+    name: "BABYMONSTER",
+    type: "group",
+    fandom: "MONSTIEZ",
+    company: "YG Entertainment",
+    debut: "2024",
+    country: "Corea del Sur",
+    status: "Activo",
+    style: "Rap, vocal potente, performance YG y energia rookie global.",
+    bio: "BABYMONSTER combina voces fuertes, rap y una imagen de alto impacto. Su perfil esta pensado para seguir stages, challenges, fancams y contenido de cada integrante.",
+    latest: "Fancams, lanzamientos, videos oficiales y actividad MONSTIEZ.",
+    colors: "linear-gradient(135deg, #111827, #ff2d55 52%, #fbbcdb)",
+    officialLinks: [["Sitio oficial", "https://yg-babymonster.com/"], ["YouTube", "https://www.youtube.com/@BABYMONSTER"], ["Instagram", "https://www.instagram.com/babymonster_ygofficial/"], ["Weverse", "https://weverse.io/babymonster"]],
+    artists: [
+      { name: "Ruka", role: "Rap · dance", country: "Japon" },
+      { name: "Pharita", role: "Vocal", country: "Tailandia" },
+      { name: "Asa", role: "Rap · dance", country: "Japon" },
+      { name: "Ahyeon", role: "Vocal · rap", country: "Corea del Sur" },
+      { name: "Rami", role: "Vocal", country: "Corea del Sur" },
+      { name: "Rora", role: "Vocal", country: "Corea del Sur" },
+      { name: "Chiquita", role: "Dance · vocal · maknae", country: "Tailandia" },
+    ],
+  },
+  {
+    id: "itzy",
+    name: "ITZY",
+    type: "group",
+    fandom: "MIDZY",
+    company: "JYP Entertainment",
+    debut: "2019",
+    country: "Corea del Sur",
+    status: "Activo",
+    style: "Teen crush, dance, confianza, pop energetico y visual moderno.",
+    bio: "ITZY se apoya en mensajes de seguridad personal, coreografias marcadas y un estilo pop directo. Su espacio reune contenido MIDZY, stages, outfits y noticias.",
+    latest: "Comebacks, tours, dance practices y publicaciones MIDZY.",
+    colors: "linear-gradient(135deg, #65e4ff, #a855f7 48%, #ff2d55)",
+    officialLinks: [["Sitio oficial", "https://itzy.jype.com/"], ["YouTube", "https://www.youtube.com/@ITZY"], ["Instagram", "https://www.instagram.com/itzy.all.in.us/"]],
+    artists: [
+      { name: "Yeji", role: "Lider · dance · vocal", country: "Corea del Sur" },
+      { name: "Lia", role: "Vocal", country: "Corea del Sur" },
+      { name: "Ryujin", role: "Rap · dance", country: "Corea del Sur" },
+      { name: "Chaeryeong", role: "Dance · vocal", country: "Corea del Sur" },
+      { name: "Yuna", role: "Vocal · dance · maknae", country: "Corea del Sur" },
+    ],
+  },
+  {
+    id: "gidle",
+    name: "(G)I-DLE",
+    type: "group",
+    fandom: "NEVERLAND",
+    company: "Cube Entertainment",
+    debut: "2018",
+    country: "Corea del Sur",
+    status: "Activo",
+    style: "Conceptos fuertes, produccion creativa, pop alternativo y visual teatral.",
+    bio: "(G)I-DLE destaca por conceptos definidos, participacion creativa y canciones con identidad propia. Hallyu Hub lo organiza para seguir eras, integrantes y publicaciones NEVERLAND.",
+    latest: "Noticias de comebacks, proyectos individuales y contenido NEVERLAND.",
+    colors: "linear-gradient(135deg, #7c3aed, #ff8ac8 50%, #111827)",
+    officialLinks: [["Sitio oficial", "https://www.cubeent.co.kr/"], ["YouTube", "https://www.youtube.com/@official_g_i_dle"], ["Instagram", "https://www.instagram.com/official_g_i_dle/"], ["Weverse", "https://weverse.io/gidle"]],
+    artists: [
+      { name: "Miyeon", role: "Vocal", country: "Corea del Sur" },
+      { name: "Minnie", role: "Vocal", country: "Tailandia" },
+      { name: "Soyeon", role: "Lider · rap · productora", country: "Corea del Sur" },
+      { name: "Yuqi", role: "Vocal · dance", country: "China" },
+      { name: "Shuhua", role: "Vocal · visual · maknae", country: "Taiwan" },
+    ],
+  },
+  {
+    id: "zerobaseone",
+    name: "ZEROBASEONE",
+    type: "group",
+    fandom: "ZEROSE",
+    company: "WAKEONE",
+    debut: "2023",
+    country: "Corea del Sur",
+    status: "Activo",
+    style: "Pop brillante, performance de supervivencia, energia global y fandom muy activo.",
+    bio: "ZEROBASEONE reune integrantes conocidos por su paso por un programa de competencia y una base ZEROSE muy participativa. La ficha ordena perfiles, noticias y contenido viral del grupo.",
+    latest: "Comebacks, eventos, clips ZEROSE y actividad de integrantes.",
+    colors: "linear-gradient(135deg, #fff1f9, #65e4ff 50%, #a855f7)",
+    officialLinks: [["Sitio oficial", "https://wake-one.com/"], ["YouTube", "https://www.youtube.com/@ZB1_official"], ["Instagram", "https://www.instagram.com/zb1official/"], ["Weverse", "https://weverse.io/zerobaseone"]],
+    artists: [
+      { name: "Sung Hanbin", role: "Lider · dance · vocal", country: "Corea del Sur" },
+      { name: "Kim Jiwoong", role: "Vocal · visual", country: "Corea del Sur" },
+      { name: "Zhang Hao", role: "Vocal", country: "China" },
+      { name: "Seok Matthew", role: "Vocal · dance", country: "Canada / Corea" },
+      { name: "Kim Taerae", role: "Vocal", country: "Corea del Sur" },
+      { name: "Ricky", role: "Vocal · visual", country: "China" },
+      { name: "Kim Gyuvin", role: "Dance · vocal", country: "Corea del Sur" },
+      { name: "Park Gunwook", role: "Rap · dance", country: "Corea del Sur" },
+      { name: "Han Yujin", role: "Dance · maknae", country: "Corea del Sur" },
+    ],
+  },
+  {
+    id: "nmixx",
+    name: "NMIXX",
+    type: "group",
+    fandom: "NSWER",
+    company: "JYP Entertainment",
+    debut: "2022",
+    country: "Corea del Sur",
+    status: "Activo",
+    style: "Mixx pop, voces potentes, cambios de ritmo y performance tecnica.",
+    bio: "NMIXX se caracteriza por voces fuertes y canciones que mezclan estilos. Su perfil permite seguir etapas, lives, dance practices y contenido de NSWER.",
+    latest: "Stages vocales, comeback news y publicaciones NSWER.",
+    colors: "linear-gradient(135deg, #22d3ee, #d946ef 52%, #0f172a)",
+    officialLinks: [["Sitio oficial", "https://nmixx.jype.com/"], ["YouTube", "https://www.youtube.com/@NMIXXOfficial"], ["Instagram", "https://www.instagram.com/nmixx_official/"]],
+    artists: [
+      { name: "Lily", role: "Vocal", country: "Australia / Corea" },
+      { name: "Haewon", role: "Lider · vocal", country: "Corea del Sur" },
+      { name: "Sullyoon", role: "Vocal · visual", country: "Corea del Sur" },
+      { name: "Bae", role: "Vocal · dance", country: "Corea del Sur" },
+      { name: "Jiwoo", role: "Rap · dance · vocal", country: "Corea del Sur" },
+      { name: "Kyujin", role: "Dance · vocal · maknae", country: "Corea del Sur" },
+    ],
+  },
+  {
+    id: "treasure",
+    name: "TREASURE",
+    type: "group",
+    fandom: "Treasure Maker",
+    company: "YG Entertainment",
+    debut: "2020",
+    country: "Corea del Sur",
+    status: "Activo",
+    style: "Pop energetico, rap YG, performance y variedad juvenil.",
+    bio: "TREASURE combina performance, rap y una dinamica grupal amplia. Su pagina esta pensada para seguir integrantes, conciertos, lanzamientos y contenido Treasure Maker.",
+    latest: "Giras, comebacks, lives y publicaciones Treasure Maker.",
+    colors: "linear-gradient(135deg, #2563eb, #65e4ff 48%, #111827)",
+    officialLinks: [["Sitio oficial", "https://yg-treasure.com/"], ["YouTube", "https://www.youtube.com/@TREASURE"], ["Instagram", "https://www.instagram.com/yg_treasure_official/"], ["Weverse", "https://weverse.io/treasure"]],
+    artists: [
+      { name: "Choi Hyunsuk", role: "Lider · rap", country: "Corea del Sur" },
+      { name: "Jihoon", role: "Lider · vocal · dance", country: "Corea del Sur" },
+      { name: "Yoshi", role: "Rap", country: "Japon" },
+      { name: "Junkyu", role: "Vocal", country: "Corea del Sur" },
+      { name: "Yoon Jaehyuk", role: "Vocal · dance", country: "Corea del Sur" },
+      { name: "Asahi", role: "Vocal", country: "Japon" },
+      { name: "Doyoung", role: "Dance · vocal", country: "Corea del Sur" },
+      { name: "Haruto", role: "Rap", country: "Japon" },
+      { name: "Park Jeongwoo", role: "Vocal", country: "Corea del Sur" },
+      { name: "So Junghwan", role: "Dance · vocal · maknae", country: "Corea del Sur" },
+    ],
+  },
+  {
+    id: "boynextdoor",
+    name: "BOYNEXTDOOR",
+    type: "group",
+    fandom: "ONEDOOR",
+    company: "KOZ Entertainment",
+    debut: "2023",
+    country: "Corea del Sur",
+    status: "Activo",
+    style: "Pop cercano, historias cotidianas, performance fresca y energia teen.",
+    bio: "BOYNEXTDOOR trabaja una identidad amigable y expresiva, con canciones que se sienten como escenas de juventud. Su ficha ayuda a seguir clips, retos y contenido ONEDOOR.",
+    latest: "Challenges, comebacks, lives y actividad ONEDOOR.",
+    colors: "linear-gradient(135deg, #fbbcdb, #77f4c7 52%, #111827)",
+    officialLinks: [["Sitio oficial", "https://kozofficial.com/artist/profile/BOYNEXTDOOR"], ["YouTube", "https://www.youtube.com/@BOYNEXTDOOR_official"], ["Instagram", "https://www.instagram.com/boynextdoor_official/"], ["Weverse", "https://weverse.io/boynextdoor"]],
+    artists: [
+      { name: "Sungho", role: "Vocal", country: "Corea del Sur" },
+      { name: "Riwoo", role: "Dance · vocal", country: "Corea del Sur" },
+      { name: "Jaehyun", role: "Lider · rap · vocal", country: "Corea del Sur" },
+      { name: "Taesan", role: "Vocal · rap", country: "Corea del Sur" },
+      { name: "Leehan", role: "Vocal", country: "Corea del Sur" },
+      { name: "Woonhak", role: "Vocal · maknae", country: "Corea del Sur" },
+    ],
+  },
+  {
+    id: "tws",
+    name: "TWS",
+    type: "group",
+    fandom: "42",
+    company: "PLEDIS Entertainment",
+    debut: "2024",
+    country: "Corea del Sur",
+    status: "Activo",
+    style: "Boyhood pop, sonidos brillantes, coreografias limpias y energia escolar.",
+    bio: "TWS presenta una estetica clara, fresca y juvenil. En Hallyu Hub se organiza como pagina para descubrir integrantes, videos cortos, noticias y publicaciones de 42.",
+    latest: "Clips, stages, comebacks y actividad fandom 42.",
+    colors: "linear-gradient(135deg, #65e4ff, #fff1f9 52%, #77f4c7)",
+    officialLinks: [["Sitio oficial", "https://www.pledis.co.kr/"], ["YouTube", "https://www.youtube.com/@TWS_PLEDIS"], ["Instagram", "https://www.instagram.com/tws_pledis/"], ["Weverse", "https://weverse.io/tws"]],
+    artists: [
+      { name: "Shinyu", role: "Lider · rap", country: "Corea del Sur" },
+      { name: "Dohoon", role: "Vocal · dance", country: "Corea del Sur" },
+      { name: "Youngjae", role: "Vocal", country: "Corea del Sur" },
+      { name: "Hanjin", role: "Vocal", country: "China" },
+      { name: "Jihoon", role: "Dance · vocal", country: "Corea del Sur" },
+      { name: "Kyungmin", role: "Vocal · maknae", country: "Corea del Sur" },
     ],
   },
 );
@@ -763,21 +1030,68 @@ const groupOfficialLinks = {
   aespa: [["Sitio oficial", "https://www.smtown.com/"], ["YouTube", "https://www.youtube.com/@aespa"], ["Instagram", "https://www.instagram.com/aespa_official/"], ["Weverse", "https://weverse.io/aespa"]],
 };
 
+function commonsImage(fileName, width = 900) {
+  return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(fileName)}?width=${width}`;
+}
+
+const groupVisualAssets = {
+  bts: {
+    imageUrl: commonsImage('BTS at "Map of the Soul - Persona" global press conference, 17 April 2019 01.jpg', 640),
+    coverUrl: commonsImage('BTS at "Map of the Soul - Persona" global press conference, 17 April 2019 01.jpg', 1200),
+    sourceCredit: "TV Ten / Wikimedia Commons · CC BY 3.0",
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:BTS_at_%22Map_of_the_Soul_-_Persona%22_global_press_conference,_17_April_2019_01.jpg',
+  },
+};
+
+const artistVisualAssets = {
+  "bts-jungkook": {
+    imageUrl: commonsImage("Jeon Jungkook at the White House, 31 May 2022.jpg", 640),
+    coverUrl: commonsImage("Jeon Jungkook at the White House, 31 May 2022.jpg", 900),
+    sourceCredit: "The White House / Wikimedia Commons · Public domain",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Jeon_Jungkook_at_the_White_House,_31_May_2022.jpg",
+  },
+};
+
 function enrichGroupCatalog() {
   kpopGroups.forEach((group) => {
+    const visual = groupVisualAssets[group.id] || {};
     group.type ||= "group";
     group.country ||= "Corea del Sur";
     group.status ||= "Activo";
     group.officialLinks ||= groupOfficialLinks[group.id] || [["Buscar noticias", `https://news.google.com/search?q=${encodeURIComponent(group.name + " K-pop")}`]];
+    group.imageUrl ||= visual.imageUrl || "";
+    group.coverUrl ||= visual.coverUrl || group.imageUrl || "";
+    group.sourceCredit ||= visual.sourceCredit || "Placeholder premium HallyuHub · reemplazar por foto autorizada";
+    group.sourceUrl ||= visual.sourceUrl || "";
+    group.instagramUrl ||= getOfficialLink(group, "Instagram");
+    group.youtubeUrl ||= getOfficialLink(group, "YouTube");
+    group.weverseUrl ||= getOfficialLink(group, "Weverse");
     group.newsTags ||= [group.name, group.fandom].filter(Boolean);
     group.artists = (group.artists || []).map((artist, index) => ({
+      ...artist,
       id: `${group.id}-${normalizeProfileKey(artist.name || index)}`,
       groupId: group.id,
-      bio: `${artist.name} forma parte de ${group.name}. En Hallyu Hub su perfil reune rol, actividad fandom, publicaciones relacionadas y enlaces del grupo para descubrir contenido sin copiar biografias externas.`,
-      socials: group.officialLinks,
-      ...artist,
-    }));
+    })).map((artist, index) => {
+      const artistVisual = artistVisualAssets[artist.id] || {};
+      return {
+        bio: `${artist.name} forma parte de ${group.name}. En Hallyu Hub su perfil reune rol, actividad fandom, publicaciones relacionadas y enlaces del grupo para descubrir contenido sin copiar biografias externas.`,
+        socials: group.officialLinks,
+        imageUrl: artistVisual.imageUrl || artist.imageUrl || "",
+        coverUrl: artistVisual.coverUrl || artist.coverUrl || artist.imageUrl || "",
+        sourceCredit: artistVisual.sourceCredit || artist.sourceCredit || "Placeholder premium HallyuHub · reemplazar por foto autorizada",
+        sourceUrl: artistVisual.sourceUrl || artist.sourceUrl || "",
+        instagramUrl: artist.instagramUrl || group.instagramUrl,
+        youtubeUrl: artist.youtubeUrl || group.youtubeUrl,
+        weverseUrl: artist.weverseUrl || group.weverseUrl,
+        ...artist,
+      };
+    });
   });
+}
+
+function getOfficialLink(entity, label) {
+  const match = (entity.officialLinks || []).find(([name]) => normalizeProfileKey(name) === normalizeProfileKey(label));
+  return match?.[1] || "";
 }
 
 enrichGroupCatalog();
@@ -1904,13 +2218,28 @@ function bindDynamicActions() {
       if (firstMatch) state.selectedGroup = firstMatch.id;
       state.selectedArtist = null;
       render();
+      setTimeout(() => {
+        const nextInput = document.querySelector("[data-group-search]");
+        if (!nextInput) return;
+        nextInput.focus();
+        nextInput.setSelectionRange(state.groupSearch.length, state.groupSearch.length);
+      }, 0);
+    });
+  });
+
+  document.querySelectorAll("[data-group-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.groupFilter = button.dataset.groupFilter;
+      const firstMatch = getFilteredGroups()[0];
+      if (firstMatch) state.selectedGroup = firstMatch.id;
+      state.selectedArtist = null;
+      render();
     });
   });
 
   document.querySelectorAll("[data-artist-profile]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.selectedArtist = button.dataset.artistProfile;
-      render();
+      openArtistProfile(button.dataset.artistProfile);
     });
   });
 
@@ -1924,6 +2253,13 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-go-view]").forEach((button) => {
     button.addEventListener("click", () => setView(button.dataset.goView));
   });
+}
+
+function openArtistProfile(artistId) {
+  const group = kpopGroups.find((item) => (item.artists || []).some((artist) => artist.id === artistId));
+  if (group) state.selectedGroup = group.id;
+  state.selectedArtist = artistId;
+  render();
 }
 
 async function initSupabase() {
@@ -3866,29 +4202,60 @@ function renderGroups() {
   const filteredGroups = getFilteredGroups();
   const activeGroup = filteredGroups.find((group) => group.id === state.selectedGroup) || kpopGroups.find((group) => group.id === state.selectedGroup) || filteredGroups[0] || kpopGroups[0];
   const selectedArtist = activeGroup.artists.find((artist) => artist.id === state.selectedArtist);
+  if (selectedArtist) return renderArtistProfile(selectedArtist, activeGroup);
   const relatedNews = getRelatedNewsForGroup(activeGroup);
   const relatedPosts = userPosts.filter((post) => [post.group, post.badge, ...(post.hashtags || [])].join(" ").toLowerCase().includes(activeGroup.name.toLowerCase()) || (post.hashtags || []).some((tag) => tag.toLowerCase().includes(activeGroup.fandom.toLowerCase()))).slice(0, 3);
+  const groupFilters = [
+    ["all", "Todo"],
+    ["group", "Grupos"],
+    ["artist", "Integrantes"],
+    ["fandom", "Fandom"],
+    ["company", "Empresa"],
+  ];
   return `
     <div class="search-box group-search-box">
       <span class="nav-icon search-icon"></span>
-      <input data-group-search value="${escapeAttr(state.groupSearch)}" placeholder="Buscar grupo, solista, integrante o fandom" />
+      <input data-group-search value="${escapeAttr(state.groupSearch)}" placeholder="Buscar grupo, integrante, fandom o empresa" />
+    </div>
+    <div class="group-filter-row">
+      ${groupFilters.map(([key, label]) => `<button class="${state.groupFilter === key ? "active" : ""}" data-group-filter="${key}">${label}</button>`).join("")}
     </div>
     <div class="group-story-row">
+      ${
+        filteredGroups.length
+          ? filteredGroups
+              .map(
+                (group) => `
+          <button class="group-story ${activeGroup.id === group.id ? "active" : ""}" data-group="${group.id}">
+            <span class="group-story-photo ${group.imageUrl ? "has-photo" : "is-placeholder"}" style="${getVisualStyle(group, group.colors, "image")}">${group.imageUrl ? "" : getInitials(group.name)}</span>
+            <strong>${group.name}</strong>
+            <small>${group.fandom}</small>
+          </button>`,
+              )
+              .join("")
+          : `<article class="empty-group-result">No encontramos ese grupo todavia. Probá buscar por integrante, fandom o empresa.</article>`
+      }
+    </div>
+    <div class="section-heading"><h2>Todos los grupos</h2><span>${filteredGroups.length} resultados</span></div>
+    <div class="group-directory-grid">
       ${filteredGroups
         .map(
           (group) => `
-          <button class="group-story ${activeGroup.id === group.id ? "active" : ""}" data-group="${group.id}">
-            <span class="group-story-photo" style="--art:${group.colors}"></span>
-            <strong>${group.name}</strong>
-            <small>${group.fandom}</small>
+          <button class="group-directory-card ${activeGroup.id === group.id ? "active" : ""}" data-group="${group.id}">
+            <span class="group-directory-art ${group.imageUrl ? "has-photo" : "is-placeholder"}" style="${getVisualStyle(group, group.colors, "image")}">${group.imageUrl ? "" : getInitials(group.name)}</span>
+            <span>
+              <strong>${group.name}</strong>
+              <small>${group.company} · ${group.fandom}</small>
+            </span>
           </button>`,
         )
         .join("")}
     </div>
-    <article class="group-hero" style="--art:${activeGroup.colors}">
+    <article class="group-hero ${activeGroup.coverUrl ? "has-cover" : "is-placeholder"}" style="${getVisualStyle(activeGroup, activeGroup.colors, "cover")}">
       <span class="tag">${activeGroup.type === "soloist" ? "Solista" : "Grupo"} · ${activeGroup.status}</span>
       <h2>${activeGroup.name}</h2>
       <p>${activeGroup.style}</p>
+      <small class="source-credit">${renderSourceCredit(activeGroup)}</small>
     </article>
     <button class="primary-button follow-group-button" data-demo-action="Ahora seguís a ${activeGroup.name}">Seguir ${activeGroup.name}</button>
     <section class="group-info-grid">
@@ -3902,8 +4269,8 @@ function renderGroups() {
       <div>${activeGroup.officialLinks.map(([label, url]) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`).join("")}</div>
     </section>
     <div class="group-photo-strip">
-      <div style="--art:${activeGroup.colors}">Concept</div>
-      <div style="--art:${art[2]}">Stage</div>
+      <div class="${activeGroup.coverUrl ? "has-photo" : "is-placeholder"}" style="${getVisualStyle(activeGroup, activeGroup.colors, "cover")}">Portada</div>
+      <div class="${activeGroup.imageUrl ? "has-photo" : "is-placeholder"}" style="${getVisualStyle(activeGroup, activeGroup.colors, "image")}">Grupo</div>
       <div style="--art:${art[4]}">Behind</div>
     </div>
     <section class="glass-card update-card">
@@ -3930,7 +4297,7 @@ function renderGroups() {
         .map(
           (artist, index) => `
           <article class="artist-card ${state.selectedArtist === artist.id ? "active" : ""}">
-            <div class="artist-photo" style="--art:${art[index % art.length]}"></div>
+            <div class="artist-photo ${artist.imageUrl ? "has-photo" : "is-placeholder"}" style="${getVisualStyle(artist, art[index % art.length], "image")}"><span>${artist.imageUrl ? "" : getInitials(artist.name)}</span></div>
             <div>
               <h3>${artist.name}</h3>
               <p class="muted">${artist.role}</p>
@@ -3940,7 +4307,6 @@ function renderGroups() {
         )
         .join("")}
     </div>
-    ${selectedArtist ? renderArtistProfile(selectedArtist, activeGroup) : ""}
     <div class="section-heading"><h2>Publicaciones relacionadas</h2><span>${activeGroup.name}</span></div>
     <div class="social-feed compact-related-feed">
       ${relatedPosts.length ? relatedPosts.map((post, index) => renderSocialPost(post, index, { compact: true })).join("") : `<article class="settings-demo-box">Todavia no hay publicaciones relacionadas. Se pueden cargar desde Publicar usando hashtags del grupo.</article>`}
@@ -3950,16 +4316,25 @@ function renderGroups() {
 
 function getFilteredGroups() {
   const query = normalizeProfileKey(state.groupSearch);
-  if (!query) return kpopGroups;
-  return kpopGroups.filter((group) => {
-    const haystack = [
+  const filter = state.groupFilter || "all";
+  const fieldMatches = {
+    group: (group) => [group.name, group.type, group.country, group.status],
+    artist: (group) => (group.artists || []).flatMap((artist) => [artist.name, artist.realName, artist.role, artist.country, artist.nationality]),
+    fandom: (group) => [group.fandom],
+    company: (group) => [group.company],
+    all: (group) => [
       group.name,
+      group.type,
       group.fandom,
       group.company,
       group.country,
       group.status,
-      ...(group.artists || []).flatMap((artist) => [artist.name, artist.role, artist.country]),
-    ].join(" ");
+      ...(group.artists || []).flatMap((artist) => [artist.name, artist.realName, artist.role, artist.country, artist.nationality]),
+    ],
+  };
+  if (!query) return kpopGroups.filter((group) => normalizeProfileKey((fieldMatches[filter] || fieldMatches.all)(group).join(" ")));
+  return kpopGroups.filter((group) => {
+    const haystack = (fieldMatches[filter] || fieldMatches.all)(group).join(" ");
     return normalizeProfileKey(haystack).includes(query);
   });
 }
@@ -3970,27 +4345,72 @@ function getRelatedNewsForGroup(group) {
     .slice(0, 3);
 }
 
+function getInitials(name) {
+  return String(name || "HH")
+    .replace(/[()]/g, "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+}
+
+function getVisualStyle(entity, fallbackArt, variant = "image") {
+  const url = variant === "cover" ? entity.coverUrl || entity.imageUrl : entity.imageUrl || entity.coverUrl;
+  const artValue = fallbackArt || entity.colors || art[0];
+  return `--art:${artValue};${url ? `--photo:url("${escapeAttr(url)}");--cover:url("${escapeAttr(url)}");` : ""}`;
+}
+
+function renderSourceCredit(entity) {
+  if (!entity.sourceCredit) return "Imagen pendiente";
+  if (!entity.sourceUrl) return entity.sourceCredit;
+  return `<a href="${entity.sourceUrl}" target="_blank" rel="noopener noreferrer">${entity.sourceCredit}</a>`;
+}
+
 function renderArtistProfile(artist, group) {
+  const artistFacts = [
+    ["Nombre real", artist.realName],
+    ["Grupo", group.name],
+    ["Rol", artist.role],
+    ["Nacimiento", artist.birth],
+    ["Nacionalidad", artist.nationality || artist.country],
+  ].filter(([, value]) => value);
+  const artistRelatedPosts = userPosts
+    .filter((post) => [post.text, post.group, post.user, ...(post.hashtags || [])].join(" ").toLowerCase().includes(artist.name.toLowerCase()) || [post.group, post.badge, ...(post.hashtags || [])].join(" ").toLowerCase().includes(group.name.toLowerCase()))
+    .slice(0, 2);
   return `
-    <section class="artist-profile-panel" style="--art:${group.colors}">
-      <button class="artist-close" data-close-artist aria-label="Cerrar perfil">X</button>
+    <section class="artist-profile-panel artist-profile-screen" style="${getVisualStyle(artist, group.colors, "cover")}">
+      <button class="artist-back" data-close-artist aria-label="Volver a ${group.name}">← Grupo</button>
+      <div class="artist-profile-cover ${artist.coverUrl ? "has-cover" : "is-placeholder"}">
+        <span class="source-credit">${renderSourceCredit(artist)}</span>
+      </div>
       <div class="artist-profile-head">
-        <div class="artist-photo large" style="--art:${group.colors}"></div>
+        <div class="artist-photo large ${artist.imageUrl ? "has-photo" : "is-placeholder"}" style="${getVisualStyle(artist, group.colors, "image")}"><span>${artist.imageUrl ? "" : getInitials(artist.name)}</span></div>
         <div>
           <span class="tag">${group.name}</span>
           <h2>${artist.name}</h2>
           <p>${artist.role}</p>
         </div>
       </div>
+      <button class="primary-button follow-group-button" data-demo-action="Ahora seguís a ${artist.name}">Seguir artista</button>
       <p>${artist.bio}</p>
       <section class="group-info-grid mini-info-grid">
-        <div class="info-tile"><span>País</span><strong>${artist.country}</strong></div>
-        <div class="info-tile"><span>Grupo</span><strong>${group.name}</strong></div>
-        <div class="info-tile"><span>Fandom</span><strong>${group.fandom}</strong></div>
+        ${artistFacts.map(([label, value]) => `<div class="info-tile"><span>${label}</span><strong>${value}</strong></div>`).join("")}
       </section>
       <div class="official-links-card compact-links">
         <strong>Redes oficiales del artista/grupo</strong>
         <div>${(artist.socials || group.officialLinks).map(([label, url]) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`).join("")}</div>
+      </div>
+      <div class="artist-related-card">
+        <strong>Noticias y publicaciones relacionadas</strong>
+        <div class="group-news-list">
+          ${getRelatedNewsForGroup(group)
+            .slice(0, 2)
+            .map((item) => `<a href="${item.link}" target="_blank" rel="noopener noreferrer">${item.title}</a>`)
+            .join("")}
+          ${artistRelatedPosts.map((post) => `<button type="button" data-demo-action="Abriste una publicacion sobre ${artist.name}">${post.text.split(" ").slice(0, 7).join(" ")}...</button>`).join("")}
+        </div>
       </div>
     </section>
   `;
