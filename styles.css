@@ -2430,6 +2430,71 @@ video.post-media.real-media {
   z-index: 1;
 }
 
+.story-editor-media,
+.story-full-media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.72;
+}
+
+.story-full-media {
+  border-radius: inherit;
+}
+
+.story-layer-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.story-layer-stage.editable-stage {
+  pointer-events: auto;
+}
+
+.story-layer {
+  position: absolute;
+  border: 0;
+  background: transparent;
+  color: white;
+  line-height: 1;
+  padding: 0;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.42));
+}
+
+button.story-layer.selected {
+  outline: 2px solid rgba(101, 228, 255, 0.7);
+  outline-offset: 7px;
+  border-radius: 999px;
+}
+
+button.story-layer:active {
+  cursor: grabbing;
+}
+
+.story-music-sticker {
+  position: absolute;
+  right: 18px;
+  top: 74px;
+  z-index: 4;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(10, 5, 18, 0.44);
+  color: white;
+  backdrop-filter: blur(14px);
+  padding: 7px 10px;
+  font-size: 11px;
+  font-weight: 950;
+  box-shadow: 0 0 18px rgba(101, 228, 255, 0.14);
+}
+
 .story-editor-preview h2 {
   margin: 0;
   font-size: 22px;
@@ -2450,6 +2515,10 @@ video.post-media.real-media {
   right: 18px;
   font-size: 38px;
   filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.45));
+}
+
+.story-music-edit {
+  align-self: start;
 }
 
 .story-upload-grid {
@@ -2524,6 +2593,53 @@ video.post-media.real-media {
   background: linear-gradient(135deg, var(--pink), var(--cyan));
 }
 
+.story-layer-controls {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 10px;
+  margin-top: 10px;
+}
+
+.story-layer-controls div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.story-layer-controls span {
+  font-size: 18px;
+}
+
+.story-layer-controls label {
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.story-layer-controls input {
+  accent-color: var(--pink);
+}
+
+.story-layer-controls button {
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.82);
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 950;
+}
+
 .music-unlock-list {
   display: grid;
   gap: 7px;
@@ -2540,6 +2656,18 @@ video.post-media.real-media {
 .music-unlock-list button small {
   color: inherit;
   opacity: 0.68;
+}
+
+.music-unlock-list button em {
+  width: fit-content;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  padding: 4px 8px;
+  color: inherit;
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 1000;
 }
 
 .music-unlock-list button.locked {

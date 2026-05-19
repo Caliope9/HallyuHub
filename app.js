@@ -36,11 +36,16 @@ const state = {
     type: "text",
     text: "Mi momento K-pop",
     sticker: "✨",
+    elements: [{ id: "sticker-1", type: "sticker", content: "✨", x: 72, y: 18, size: 38, rotation: 0 }],
+    selectedElementId: "sticker-1",
     mention: "",
     location: "",
     music: "Basic beat · safe loop",
+    musicCategory: "Trending",
     background: "Neon pastel",
     mediaName: "",
+    mediaUrl: "",
+    mediaType: "",
   },
   ownStoryStatsOpen: false,
   ownStory: null,
@@ -999,14 +1004,18 @@ const fandomBadges = ["Army 💜", "Blink 🖤💖", "Once 🍭", "Stay ⭐", "T
 const reportReasons = ["Spam", "Acoso", "Contenido ofensivo", "Derechos de autor", "Otro"];
 
 const storyMusicLibrary = [
-  { level: 1, name: "Basic beat · safe loop", detail: "Sonido corto libre para historias nuevas" },
-  { level: 1, name: "Idol sparkle · demo", detail: "Preview original HallyuHub" },
-  { level: 3, name: "Comeback pulse · safe preview", detail: "Desbloqueo por estrellas nivel 3" },
-  { level: 5, name: "Trend dance · demo loop", detail: "Sonido para challenges cortos" },
-  { level: 10, name: "Premium stage · event sound", detail: "Sonido especial para eventos premium" },
+  { level: 1, category: "Trending", name: "Basic beat · safe loop", detail: "Sonido corto libre para historias nuevas", tone: 523 },
+  { level: 1, category: "Cute", name: "Idol sparkle · demo", detail: "Preview original HallyuHub", tone: 659 },
+  { level: 3, category: "Dance", name: "Comeback pulse · safe preview", detail: "Desbloqueo por estrellas nivel 3", tone: 784 },
+  { level: 5, category: "Dance", name: "Trend dance · demo loop", detail: "Sonido para challenges cortos", tone: 880 },
+  { level: 5, category: "Dark", name: "Dark stage · synth hit", detail: "Preview oscuro para concepts intensos", tone: 392 },
+  { level: 3, category: "Chill", name: "Seoul chill · soft loop", detail: "Preview suave para historias tranquilas", tone: 440 },
+  { level: 10, category: "Trending", name: "Premium stage · event sound", detail: "Sonido especial para eventos premium", tone: 988 },
 ];
 
 const storyBackgrounds = ["Neon pastel", "Idol stage", "Seoul night", "Lightstick glow", "Photocard wall", "Cute comeback"];
+const storyMusicCategories = ["Trending", "Cute", "Dark", "Dance", "Chill"];
+const storyStickerPalette = ["💜", "✨", "🫰", "🎀", "📸", "🪩", "🎤", "🔥", "💿", "⭐", "🌙", "👑"];
 
 const profileAchievements = [
   ["Lightstick virtual", "BTS · Purple glow"],
@@ -1387,6 +1396,15 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-story-sticker]").forEach((button) => {
     button.addEventListener("click", () => {
       state.storyDraft.sticker = button.dataset.storySticker;
+      addStoryElement(button.dataset.storySticker);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-layer]").forEach((button) => {
+    button.addEventListener("pointerdown", (event) => startStoryElementDrag(event, button.dataset.storyLayer));
+    button.addEventListener("click", () => {
+      state.storyDraft.selectedElementId = button.dataset.storyLayer;
       render();
     });
   });
@@ -1394,6 +1412,34 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-story-music]").forEach((button) => {
     button.addEventListener("click", () => {
       state.storyDraft.music = button.dataset.storyMusic;
+      playStoryMusicPreview(button.dataset.storyMusic);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-music-preview]").forEach((button) => {
+    button.addEventListener("click", () => playStoryMusicPreview(button.dataset.storyMusicPreview));
+  });
+
+  document.querySelectorAll("[data-story-music-category]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.storyDraft.musicCategory = button.dataset.storyMusicCategory;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-control]").forEach((input) => {
+    input.addEventListener("input", () => {
+      updateSelectedStoryElement(input.dataset.storyControl, Number(input.value));
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-delete-element]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = state.storyDraft.selectedElementId;
+      state.storyDraft.elements = (state.storyDraft.elements || []).filter((element) => element.id !== id);
+      state.storyDraft.selectedElementId = state.storyDraft.elements[0]?.id || "";
       render();
     });
   });
@@ -1404,7 +1450,17 @@ function bindDynamicActions() {
       state.storyDraft.type = input.dataset.storyMedia;
       state.storyDraft.mediaName = file?.name || "";
       state.storyDraft.text = file?.name ? `Subido: ${file.name}` : state.storyDraft.text;
-      render();
+      state.storyDraft.mediaType = file?.type?.startsWith("video") ? "video" : file ? "image" : "";
+      if (!file) {
+        render();
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        state.storyDraft.mediaUrl = reader.result || "";
+        render();
+      };
+      reader.readAsDataURL(file);
     });
   });
 
@@ -2305,8 +2361,86 @@ function renderAuth() {
   `;
 }
 
+function getStoryDraftElements() {
+  if (!Array.isArray(state.storyDraft.elements) || !state.storyDraft.elements.length) {
+    state.storyDraft.elements = [{ id: "sticker-1", type: "sticker", content: state.storyDraft.sticker || "✨", x: 72, y: 18, size: 38, rotation: 0 }];
+    state.storyDraft.selectedElementId = state.storyDraft.elements[0].id;
+  }
+  return state.storyDraft.elements;
+}
+
+function addStoryElement(content) {
+  const id = `layer-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  state.storyDraft.elements = [
+    ...getStoryDraftElements(),
+    {
+      id,
+      type: "sticker",
+      content,
+      x: 36 + Math.round(Math.random() * 28),
+      y: 28 + Math.round(Math.random() * 28),
+      size: 34,
+      rotation: 0,
+    },
+  ];
+  state.storyDraft.selectedElementId = id;
+}
+
+function getSelectedStoryElement() {
+  return getStoryDraftElements().find((element) => element.id === state.storyDraft.selectedElementId) || getStoryDraftElements()[0];
+}
+
+function updateSelectedStoryElement(key, value) {
+  const selectedId = state.storyDraft.selectedElementId;
+  state.storyDraft.elements = getStoryDraftElements().map((element) =>
+    element.id === selectedId ? { ...element, [key]: value } : element,
+  );
+}
+
+function startStoryElementDrag(event, elementId) {
+  event.preventDefault();
+  state.storyDraft.selectedElementId = elementId;
+  const preview = event.currentTarget.closest(".story-editor-preview");
+  const target = event.currentTarget;
+  if (!preview) return;
+  const moveLayer = (moveEvent) => {
+    const rect = preview.getBoundingClientRect();
+    const x = Math.max(4, Math.min(92, ((moveEvent.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(4, Math.min(88, ((moveEvent.clientY - rect.top) / rect.height) * 100));
+    state.storyDraft.elements = getStoryDraftElements().map((element) => (element.id === elementId ? { ...element, x, y } : element));
+    target.style.left = `${x}%`;
+    target.style.top = `${y}%`;
+  };
+  const stopDrag = () => {
+    document.removeEventListener("pointermove", moveLayer);
+    document.removeEventListener("pointerup", stopDrag);
+    render();
+  };
+  document.addEventListener("pointermove", moveLayer);
+  document.addEventListener("pointerup", stopDrag);
+}
+
+function playStoryMusicPreview(name) {
+  const track = storyMusicLibrary.find((item) => item.name === name);
+  const AudioEngine = window.AudioContext || window.webkitAudioContext;
+  if (!track || !AudioEngine) return;
+  const audio = new AudioEngine();
+  const oscillator = audio.createOscillator();
+  const gain = audio.createGain();
+  oscillator.type = "sine";
+  oscillator.frequency.value = track.tone || 523;
+  gain.gain.setValueAtTime(0.0001, audio.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.08, audio.currentTime + 0.03);
+  gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.65);
+  oscillator.connect(gain);
+  gain.connect(audio.destination);
+  oscillator.start();
+  oscillator.stop(audio.currentTime + 0.68);
+}
+
 function createOwnStory(style = "Neon pastel") {
   const draft = state.storyDraft || {};
+  const elements = getStoryDraftElements();
   state.ownStory = {
     user: state.user?.name || "Mi historia",
     avatar: state.user?.avatar || "berry",
@@ -2320,7 +2454,11 @@ function createOwnStory(style = "Neon pastel") {
     colors: getStoryBackground(style),
     style,
     mediaName: draft.mediaName || "",
+    mediaUrl: draft.mediaUrl || "",
+    mediaType: draft.mediaType || "",
     type: draft.type || "text",
+    musicCategory: draft.musicCategory || "Trending",
+    elements,
   };
   storage.set("hallyuHubOwnStory", state.ownStory);
   state.storyEditorOpen = false;
@@ -2532,7 +2670,10 @@ function renderStoryViewer() {
           <div><h3>${story.user}</h3><p>${story.label} · ${story.time}</p></div>
         </div>
         <div class="story-music-pill"><span>♪</span>${story.music}</div>
+        ${story.musicCategory ? `<div class="story-music-sticker">♪ ${story.musicCategory}</div>` : ""}
         <div class="live-fandom-pill"><span></span>Live fandom activo</div>
+        ${renderStoryMedia(story)}
+        ${renderStoryLayers(story.elements || [])}
         <div class="story-full-copy">
           <h2>${story.title}</h2>
           <p>${story.detail}</p>
@@ -2556,6 +2697,24 @@ function renderStoryViewer() {
       </article>
     </section>
   `;
+}
+
+function renderStoryMedia(story) {
+  if (!story.mediaUrl) return "";
+  return story.mediaType === "video"
+    ? `<video class="story-full-media" src="${story.mediaUrl}" autoplay muted loop playsinline></video>`
+    : `<img class="story-full-media" src="${story.mediaUrl}" alt="Historia subida por ${escapeAttr(story.user)}" />`;
+}
+
+function renderStoryLayers(elements) {
+  if (!elements.length) return "";
+  return `<div class="story-layer-stage">${elements.map((element) => renderStoryLayer(element, false)).join("")}</div>`;
+}
+
+function renderStoryLayer(element, editable = false) {
+  const Tag = editable ? "button" : "span";
+  const data = editable ? `type="button" data-story-layer="${element.id}"` : "";
+  return `<${Tag} class="story-layer ${editable && state.storyDraft.selectedElementId === element.id ? "selected" : ""}" ${data} style="left:${element.x}%; top:${element.y}%; font-size:${element.size}px; transform:translate(-50%, -50%) rotate(${element.rotation || 0}deg);">${escapeHtml(element.content)}</${Tag}>`;
 }
 
 function renderSocialPost(post, index, options = {}) {
@@ -2790,6 +2949,9 @@ function renderStoryComposer(story) {
 function renderStoryEditor() {
   const draft = state.storyDraft;
   const userLevel = Number(state.user?.level || 1);
+  const elements = getStoryDraftElements();
+  const selected = getSelectedStoryElement();
+  const visibleTracks = storyMusicLibrary.filter((track) => track.category === (draft.musicCategory || "Trending"));
   return `
     <section class="story-editor-overlay" aria-label="Crear historia">
       <div class="story-editor-card">
@@ -2798,11 +2960,18 @@ function renderStoryEditor() {
           <button type="button" data-story-editor-close aria-label="Cerrar editor">X</button>
         </div>
         <div class="story-editor-preview" style="--art:${getStoryBackground(draft.background)}">
-          <span class="editor-sticker">${draft.sticker || "✨"}</span>
+          ${
+            draft.mediaUrl
+              ? draft.mediaType === "video"
+                ? `<video class="story-editor-media" src="${draft.mediaUrl}" autoplay muted loop playsinline></video>`
+                : `<img class="story-editor-media" src="${draft.mediaUrl}" alt="Vista previa de historia" />`
+              : ""
+          }
+          <div class="story-layer-stage editable-stage">${elements.map((element) => renderStoryLayer(element, true)).join("")}</div>
           <h2>${escapeHtml(draft.text || "Mi momento K-pop")}</h2>
           ${draft.mention ? `<p>${renderMentionedText(draft.mention)}</p>` : ""}
           ${draft.location ? `<small>${escapeHtml(draft.location)}</small>` : ""}
-          <div class="story-music-pill"><span>♪</span>${escapeHtml(draft.music)}</div>
+          <div class="story-music-pill story-music-edit"><span>♪</span>${escapeHtml(draft.music)}</div>
           ${draft.mediaName ? `<em>${escapeHtml(draft.mediaName)}</em>` : ""}
         </div>
         <div class="story-upload-grid">
@@ -2816,8 +2985,14 @@ function renderStoryEditor() {
           <input data-story-draft="location" value="${escapeAttr(draft.location)}" placeholder="Ubicacion opcional" />
         </div>
         <div class="story-chip-section">
-          <strong>Stickers</strong>
-          <div class="story-chip-row">${["💜", "✨", "🫰", "🎀", "📸", "🪩", "🎤"].map((item) => `<button class="${draft.sticker === item ? "active" : ""}" data-story-sticker="${item}">${item}</button>`).join("")}</div>
+          <strong>Stickers y emojis movibles</strong>
+          <div class="story-chip-row">${storyStickerPalette.map((item) => `<button class="${draft.sticker === item ? "active" : ""}" data-story-sticker="${item}">${item}</button>`).join("")}</div>
+        </div>
+        <div class="story-layer-controls">
+          <div><strong>Elemento seleccionado</strong><span>${selected?.content || "Sin sticker"}</span></div>
+          <label>Tamaño <input type="range" min="20" max="86" value="${selected?.size || 34}" data-story-control="size" /></label>
+          <label>Rotar <input type="range" min="-35" max="35" value="${selected?.rotation || 0}" data-story-control="rotation" /></label>
+          <button type="button" data-story-delete-element>Eliminar sticker</button>
         </div>
         <div class="story-chip-section">
           <strong>Fondos</strong>
@@ -2825,13 +3000,17 @@ function renderStoryEditor() {
         </div>
         <div class="story-chip-section">
           <strong>Musica K-pop segura</strong>
+          <div class="story-chip-row music-category-row">
+            ${storyMusicCategories.map((category) => `<button class="${draft.musicCategory === category ? "active" : ""}" data-story-music-category="${category}">${category}</button>`).join("")}
+          </div>
           <div class="music-unlock-list">
-            ${storyMusicLibrary
+            ${visibleTracks
               .map((track) => {
                 const locked = userLevel < track.level;
                 return `<button type="button" class="${draft.music === track.name ? "active" : ""} ${locked ? "locked" : ""}" ${locked ? "" : `data-story-music="${escapeAttr(track.name)}"`}>
                   <span>${track.name}</span>
                   <small>${locked ? `Nivel ${track.level} para desbloquear` : track.detail}</small>
+                  ${locked ? "" : `<em data-story-music-preview="${escapeAttr(track.name)}">Preview</em>`}
                 </button>`;
               })
               .join("")}
