@@ -2118,7 +2118,7 @@ function renderPostModal() {
       <button class="post-modal-backdrop" data-close-post aria-label="Cerrar publicacion"></button>
       <article class="post-modal-card">
         <button class="story-close post-modal-close" data-close-post aria-label="Cerrar">X</button>
-        ${renderSocialPost(post, 0, { compact: true, featured: true })}
+        ${renderSocialPost(post, 0, { compact: true, featured: true, expanded: true })}
       </article>
     </section>`;
 }
@@ -2170,8 +2170,10 @@ function renderStoryViewer() {
 }
 
 function renderSocialPost(post, index, options = {}) {
+  const expanded = Boolean(options.expanded);
+  const isFeatured = options.featured || post.type === "trending" || post.type === "event";
   return `
-    <article class="post-card ${options.compact ? "profile-feed-post" : ""} ${options.featured || post.type === "trending" || post.type === "event" ? "featured-post" : ""}">
+    <article class="post-card ${options.compact ? "profile-feed-post" : ""} ${isFeatured ? "featured-post" : ""} ${expanded ? "expanded-post" : ""}">
       <div class="post-head modern-post-head">
         <button class="post-profile-button" data-open-feed-profile="${post.user}">
           ${renderAvatarElement("mini post-author-avatar", post.avatar || "berry", post.avatarUrl)}
@@ -2180,13 +2182,11 @@ function renderSocialPost(post, index, options = {}) {
           <div class="post-user-line">
             <span class="online-dot ${post.online ? "active" : ""}"></span>
             <h3>${post.user}</h3>
-            <span class="fandom-badge">${post.badge || "Army 💜"}</span>
           </div>
-          <p class="muted">${post.group || getPostCategoryLabel(post.category)}${post.time ? ` · ${post.time}` : ""}${post.location ? ` · ${post.location}` : ""}</p>
+          <p class="muted">${post.time || "Ahora"}</p>
         </button>
         <button class="post-menu-button" data-open-post="${post.id}" aria-label="Mas opciones">•••</button>
       </div>
-      ${options.featured || post.type === "trending" || post.type === "event" ? `<div class="post-feature-label">${post.type === "event" ? "Evento destacado" : post.type === "trending" ? "Trend popular" : "Destacado"}</div>` : ""}
       <button class="post-open-button" data-open-post="${post.id}" aria-label="Abrir publicacion">
       ${
         post.mediaUrl
@@ -2196,11 +2196,9 @@ function renderSocialPost(post, index, options = {}) {
           : `<div class="post-media" style="--art:${post.art || art[index % art.length]}"></div>`
       }
       </button>
-      <p class="post-caption">${post.caption}</p>
-      ${renderPostOptionalMeta(post)}
-      <div class="post-hashtags">
-        ${(post.hashtags || ["#KpopLatam", "#HallyuHub"]).map((tag) => `<button type="button" data-home-filter="${tag}">${tag}</button>`).join("")}
-      </div>
+      <p class="post-caption ${expanded ? "expanded" : ""}">${post.caption}</p>
+      ${expanded ? renderPostOptionalMeta(post) : ""}
+      ${expanded ? `<div class="post-hashtags">${(post.hashtags || ["#KpopLatam", "#HallyuHub"]).map((tag) => `<button type="button" data-home-filter="${tag}">${tag}</button>`).join("")}</div>` : `<button class="post-more-button" data-open-post="${post.id}">Ver más</button>`}
       <div class="post-actions premium-actions">
         <button class="post-action-star" ${post.id ? `data-like-post="${post.id}"` : ""}><span>★</span><strong>${post.likes || "0"}</strong></button>
         <button class="post-action-comment" ${post.id ? `data-comment-post="${post.id}"` : ""}><span></span><strong>${post.comments || "0"}</strong></button>
