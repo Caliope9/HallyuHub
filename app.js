@@ -4,6 +4,8 @@ const state = {
   selectedAvatar: "berry",
   ambience: "hallyu",
   selectedGroup: "skz",
+  groupSearch: "",
+  selectedArtist: null,
   activityTab: "activity",
   profileTab: "posts",
   profileEditorOpen: false,
@@ -688,6 +690,97 @@ const kpopGroups = [
     ],
   },
 ];
+
+kpopGroups.push(
+  {
+    id: "enhypen",
+    name: "ENHYPEN",
+    type: "group",
+    fandom: "ENGENE",
+    company: "BELIFT LAB",
+    debut: "2020",
+    country: "Corea del Sur",
+    status: "Activo",
+    style: "Pop oscuro, narrativa vampirica, performance pulida y energia juvenil.",
+    bio: "ENHYPEN nacio desde un proyecto de supervivencia y construyo una identidad marcada por conceptos dramaticos, baile preciso y una comunidad global muy conectada. Su perfil en Hallyu Hub sirve para seguir comebacks, stages, perfiles individuales y contenido ENGENE.",
+    latest: "Noticias de comebacks, giras, contenido Weverse y clips de performance.",
+    colors: "linear-gradient(135deg, #111827, #a855f7 46%, #65e4ff)",
+    officialLinks: [
+      ["Sitio oficial", "https://beliftlab.com/artist/profile/ENHYPEN"],
+      ["YouTube", "https://www.youtube.com/@ENHYPENOFFICIAL"],
+      ["Weverse", "https://weverse.io/enhypen"],
+      ["Instagram", "https://www.instagram.com/enhypen/"],
+    ],
+    artists: [
+      { name: "Jungwon", role: "Lider · vocal · dance", country: "Corea del Sur" },
+      { name: "Heeseung", role: "Vocal · dance", country: "Corea del Sur" },
+      { name: "Jay", role: "Rap · vocal · dance", country: "Corea / EE.UU." },
+      { name: "Jake", role: "Vocal · dance", country: "Australia / Corea" },
+      { name: "Sunghoon", role: "Vocal · dance", country: "Corea del Sur" },
+      { name: "Sunoo", role: "Vocal", country: "Corea del Sur" },
+      { name: "Ni-ki", role: "Dance · maknae", country: "Japon" },
+    ],
+  },
+  {
+    id: "cortis",
+    name: "CORTIS",
+    type: "group",
+    fandom: "CORTIS fandom",
+    company: "BIGHIT MUSIC",
+    debut: "2025",
+    country: "Corea del Sur",
+    status: "Activo",
+    style: "Rookie creator crew, pop/hip-hop global, energia joven y participacion creativa.",
+    bio: "CORTIS es un grupo rookie de BIGHIT MUSIC presentado como una propuesta creativa joven. En Hallyu Hub se organiza como ficha ampliable para seguir su debut, integrantes, clips, noticias y contenido oficial sin copiar material de comunidades externas.",
+    latest: "Seguimiento de debut, clips oficiales, noticias de BIGHIT y actividad fandom.",
+    colors: "linear-gradient(135deg, #101827, #77f4c7 44%, #fbbcdb)",
+    officialLinks: [
+      ["Sitio oficial", "https://ibighit.com/"],
+      ["Weverse", "https://weverse.io/"],
+      ["YouTube", "https://www.youtube.com/@HYBELABELS"],
+      ["TikTok", "https://www.tiktok.com/@bighit_music"],
+    ],
+    artists: [
+      { name: "Martin", role: "Lider · creativo · performance", country: "Corea / Canada" },
+      { name: "James", role: "Performance · creativo", country: "Internacional" },
+      { name: "Juhoon", role: "Vocal · performance", country: "Corea del Sur" },
+      { name: "Seonghyeon", role: "Vocal · performance", country: "Corea del Sur" },
+      { name: "Keonho", role: "Vocal · maknae", country: "Corea del Sur" },
+    ],
+  },
+);
+
+const groupOfficialLinks = {
+  skz: [["Sitio oficial", "https://straykids.jype.com/"], ["YouTube", "https://www.youtube.com/@StrayKids"], ["Instagram", "https://www.instagram.com/realstraykids/"], ["Weverse", "https://weverse.io/straykids"]],
+  bts: [["Sitio oficial", "https://ibighit.com/bts/"], ["YouTube", "https://www.youtube.com/@BTS"], ["Instagram", "https://www.instagram.com/bts.bighitofficial/"], ["Weverse", "https://weverse.io/bts"]],
+  bp: [["Sitio oficial", "https://www.blackpinkofficial.com/"], ["YouTube", "https://www.youtube.com/@BLACKPINK"], ["Instagram", "https://www.instagram.com/blackpinkofficial/"], ["Weverse", "https://weverse.io/blackpink"]],
+  nj: [["YouTube", "https://www.youtube.com/@NewJeans_official"], ["Instagram", "https://www.instagram.com/newjeans_official/"], ["Weverse", "https://weverse.io/newjeansofficial"]],
+  svt: [["Sitio oficial", "https://www.pledis.co.kr/"], ["YouTube", "https://www.youtube.com/@pledis17"], ["Instagram", "https://www.instagram.com/saythename_17/"], ["Weverse", "https://weverse.io/seventeen"]],
+  txt: [["Sitio oficial", "https://ibighit.com/txt/"], ["YouTube", "https://www.youtube.com/@TXT_bighit"], ["Instagram", "https://www.instagram.com/txt_bighit/"], ["Weverse", "https://weverse.io/txt"]],
+  ive: [["Sitio oficial", "https://www.starship-ent.com/"], ["YouTube", "https://www.youtube.com/@IVEstarship"], ["Instagram", "https://www.instagram.com/ivestarship/"]],
+  ateez: [["Sitio oficial", "https://ateez.kqent.com/"], ["YouTube", "https://www.youtube.com/@ATEEZofficial"], ["Instagram", "https://www.instagram.com/ateez_official_/"]],
+  twice: [["Sitio oficial", "https://twice.jype.com/"], ["YouTube", "https://www.youtube.com/@TWICE"], ["Instagram", "https://www.instagram.com/twicetagram/"]],
+  aespa: [["Sitio oficial", "https://www.smtown.com/"], ["YouTube", "https://www.youtube.com/@aespa"], ["Instagram", "https://www.instagram.com/aespa_official/"], ["Weverse", "https://weverse.io/aespa"]],
+};
+
+function enrichGroupCatalog() {
+  kpopGroups.forEach((group) => {
+    group.type ||= "group";
+    group.country ||= "Corea del Sur";
+    group.status ||= "Activo";
+    group.officialLinks ||= groupOfficialLinks[group.id] || [["Buscar noticias", `https://news.google.com/search?q=${encodeURIComponent(group.name + " K-pop")}`]];
+    group.newsTags ||= [group.name, group.fandom].filter(Boolean);
+    group.artists = (group.artists || []).map((artist, index) => ({
+      id: `${group.id}-${normalizeProfileKey(artist.name || index)}`,
+      groupId: group.id,
+      bio: `${artist.name} forma parte de ${group.name}. En Hallyu Hub su perfil reune rol, actividad fandom, publicaciones relacionadas y enlaces del grupo para descubrir contenido sin copiar biografias externas.`,
+      socials: group.officialLinks,
+      ...artist,
+    }));
+  });
+}
+
+enrichGroupCatalog();
 
 const events = [
   {
@@ -1799,6 +1892,31 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-group]").forEach((button) => {
     button.addEventListener("click", () => {
       state.selectedGroup = button.dataset.group;
+      state.selectedArtist = null;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-group-search]").forEach((input) => {
+    input.addEventListener("input", () => {
+      state.groupSearch = input.value;
+      const firstMatch = getFilteredGroups()[0];
+      if (firstMatch) state.selectedGroup = firstMatch.id;
+      state.selectedArtist = null;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-artist-profile]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedArtist = button.dataset.artistProfile;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-close-artist]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedArtist = null;
       render();
     });
   });
@@ -3745,21 +3863,30 @@ function renderMarket() {
 }
 
 function renderGroups() {
-  const activeGroup = kpopGroups.find((group) => group.id === state.selectedGroup) || kpopGroups[0];
+  const filteredGroups = getFilteredGroups();
+  const activeGroup = filteredGroups.find((group) => group.id === state.selectedGroup) || kpopGroups.find((group) => group.id === state.selectedGroup) || filteredGroups[0] || kpopGroups[0];
+  const selectedArtist = activeGroup.artists.find((artist) => artist.id === state.selectedArtist);
+  const relatedNews = getRelatedNewsForGroup(activeGroup);
+  const relatedPosts = userPosts.filter((post) => [post.group, post.badge, ...(post.hashtags || [])].join(" ").toLowerCase().includes(activeGroup.name.toLowerCase()) || (post.hashtags || []).some((tag) => tag.toLowerCase().includes(activeGroup.fandom.toLowerCase()))).slice(0, 3);
   return `
+    <div class="search-box group-search-box">
+      <span class="nav-icon search-icon"></span>
+      <input data-group-search value="${escapeAttr(state.groupSearch)}" placeholder="Buscar grupo, solista, integrante o fandom" />
+    </div>
     <div class="group-story-row">
-      ${kpopGroups
+      ${filteredGroups
         .map(
           (group) => `
           <button class="group-story ${activeGroup.id === group.id ? "active" : ""}" data-group="${group.id}">
             <span class="group-story-photo" style="--art:${group.colors}"></span>
             <strong>${group.name}</strong>
+            <small>${group.fandom}</small>
           </button>`,
         )
         .join("")}
     </div>
     <article class="group-hero" style="--art:${activeGroup.colors}">
-      <span class="tag">${activeGroup.fandom}</span>
+      <span class="tag">${activeGroup.type === "soloist" ? "Solista" : "Grupo"} · ${activeGroup.status}</span>
       <h2>${activeGroup.name}</h2>
       <p>${activeGroup.style}</p>
     </article>
@@ -3768,6 +3895,11 @@ function renderGroups() {
       <div class="info-tile"><span>Empresa</span><strong>${activeGroup.company}</strong></div>
       <div class="info-tile"><span>Debut</span><strong>${activeGroup.debut}</strong></div>
       <div class="info-tile"><span>Fandom</span><strong>${activeGroup.fandom}</strong></div>
+      <div class="info-tile"><span>País</span><strong>${activeGroup.country}</strong></div>
+    </section>
+    <section class="official-links-card">
+      <strong>Links oficiales</strong>
+      <div>${activeGroup.officialLinks.map(([label, url]) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`).join("")}</div>
     </section>
     <div class="group-photo-strip">
       <div style="--art:${activeGroup.colors}">Concept</div>
@@ -3778,6 +3910,13 @@ function renderGroups() {
       <div>
         <h3 class="card-title">Noticias destacadas</h3>
         <p class="muted">${activeGroup.latest}</p>
+        <div class="group-news-list">
+          ${
+            relatedNews.length
+              ? relatedNews.map((item) => `<a href="${item.link}" target="_blank" rel="noopener noreferrer">${item.title}</a>`).join("")
+              : `<button type="button" data-go-view="news">Ver noticias K-pop</button>`
+          }
+        </div>
       </div>
       <span class="tag">Internet ready</span>
     </section>
@@ -3790,17 +3929,70 @@ function renderGroups() {
       ${activeGroup.artists
         .map(
           (artist, index) => `
-          <article class="artist-card">
+          <article class="artist-card ${state.selectedArtist === artist.id ? "active" : ""}">
             <div class="artist-photo" style="--art:${art[index % art.length]}"></div>
             <div>
               <h3>${artist.name}</h3>
               <p class="muted">${artist.role}</p>
-              <div class="meta-row"><span>${artist.country}</span><span class="tag">Ver perfil</span></div>
+              <div class="meta-row"><span>${artist.country}</span><button class="tag" data-artist-profile="${artist.id}">Ver perfil</button></div>
             </div>
           </article>`,
         )
         .join("")}
     </div>
+    ${selectedArtist ? renderArtistProfile(selectedArtist, activeGroup) : ""}
+    <div class="section-heading"><h2>Publicaciones relacionadas</h2><span>${activeGroup.name}</span></div>
+    <div class="social-feed compact-related-feed">
+      ${relatedPosts.length ? relatedPosts.map((post, index) => renderSocialPost(post, index, { compact: true })).join("") : `<article class="settings-demo-box">Todavia no hay publicaciones relacionadas. Se pueden cargar desde Publicar usando hashtags del grupo.</article>`}
+    </div>
+  `;
+}
+
+function getFilteredGroups() {
+  const query = normalizeProfileKey(state.groupSearch);
+  if (!query) return kpopGroups;
+  return kpopGroups.filter((group) => {
+    const haystack = [
+      group.name,
+      group.fandom,
+      group.company,
+      group.country,
+      group.status,
+      ...(group.artists || []).flatMap((artist) => [artist.name, artist.role, artist.country]),
+    ].join(" ");
+    return normalizeProfileKey(haystack).includes(query);
+  });
+}
+
+function getRelatedNewsForGroup(group) {
+  return (state.newsItems.length ? state.newsItems : news)
+    .filter((item) => [item.artist, item.title, item.summary].join(" ").toLowerCase().includes(group.name.toLowerCase()))
+    .slice(0, 3);
+}
+
+function renderArtistProfile(artist, group) {
+  return `
+    <section class="artist-profile-panel" style="--art:${group.colors}">
+      <button class="artist-close" data-close-artist aria-label="Cerrar perfil">X</button>
+      <div class="artist-profile-head">
+        <div class="artist-photo large" style="--art:${group.colors}"></div>
+        <div>
+          <span class="tag">${group.name}</span>
+          <h2>${artist.name}</h2>
+          <p>${artist.role}</p>
+        </div>
+      </div>
+      <p>${artist.bio}</p>
+      <section class="group-info-grid mini-info-grid">
+        <div class="info-tile"><span>País</span><strong>${artist.country}</strong></div>
+        <div class="info-tile"><span>Grupo</span><strong>${group.name}</strong></div>
+        <div class="info-tile"><span>Fandom</span><strong>${group.fandom}</strong></div>
+      </section>
+      <div class="official-links-card compact-links">
+        <strong>Redes oficiales del artista/grupo</strong>
+        <div>${(artist.socials || group.officialLinks).map(([label, url]) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`).join("")}</div>
+      </div>
+    </section>
   `;
 }
 
