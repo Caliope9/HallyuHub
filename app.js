@@ -190,8 +190,10 @@ const userPosts = [
   {
     id: "demo-post-1",
     user: "Luna Hallyu",
+    avatar: "berry",
     group: "STAY Chile",
     category: "posts",
+    type: "popular",
     time: "hace 2 min",
     badge: "Stay ⭐",
     online: true,
@@ -202,12 +204,16 @@ const userPosts = [
     location: "Santiago, Chile",
     taggedPeople: "@cami.stay, @mika",
     taggedPlace: "Cupsleeve Providencia",
+    shares: "84",
+    saves: "210",
   },
   {
     id: "demo-post-2",
     user: "Cami.STAY",
+    avatar: "star",
     group: "Buenos Aires",
     category: "photocards",
+    type: "trade",
     time: "hace 8 min",
     badge: "Blink 🖤💖",
     online: true,
@@ -215,12 +221,18 @@ const userPosts = [
     caption: "Intercambio de photocards en Palermo. Solo trades con referencias y entrega segura.",
     likes: "918",
     comments: "64",
+    location: "Palermo, Buenos Aires",
+    taggedPlace: "K-shop local",
+    shares: "32",
+    saves: "146",
   },
   {
     id: "demo-post-3",
     user: "Vale Multi",
+    avatar: "mochi",
     group: "K-pop 101",
     category: "posts",
+    type: "guide",
     time: "hace 15 min",
     badge: "Army 💜",
     online: false,
@@ -228,6 +240,65 @@ const userPosts = [
     caption: "Mini guia para elegir tu primer grupo: empieza por 3 canciones, 1 live stage y 1 entrevista.",
     likes: "4.8K",
     comments: "301",
+    shares: "420",
+    saves: "1.2K",
+  },
+  {
+    id: "demo-post-4",
+    user: "Random Play BA",
+    avatar: "neon",
+    group: "Challenge",
+    category: "trends",
+    type: "trending",
+    time: "hace 22 min",
+    badge: "Blink 🖤💖",
+    online: true,
+    hashtags: ["#DanceChallenge", "#RandomPlay", "#BLACKPINK"],
+    caption: "Nuevo challenge para random play dance: 20 segundos, entrada fuerte y final con pose idol.",
+    likes: "9.6K",
+    comments: "724",
+    location: "Buenos Aires",
+    taggedPeople: "@hallyu.ba, @dancecrew",
+    taggedPlace: "Parque Centenario",
+    shares: "980",
+    saves: "2.4K",
+  },
+  {
+    id: "demo-post-5",
+    user: "Hallyu Chile",
+    avatar: "idol",
+    group: "Evento fandom",
+    category: "posts",
+    type: "event",
+    time: "hace 38 min",
+    badge: "Army 💜",
+    online: true,
+    hashtags: ["#EventoKpop", "#Santiago", "#FandomSeguro"],
+    caption: "Cupsleeve especial con trade zone, photo spot y playlist de comebacks. Cupos limitados.",
+    likes: "6.1K",
+    comments: "512",
+    location: "Santiago, Chile",
+    taggedPlace: "Barrio Italia",
+    shares: "550",
+    saves: "1.8K",
+  },
+  {
+    id: "demo-post-6",
+    user: "Tokki Mood",
+    avatar: "cyber",
+    group: "Outfit",
+    category: "outfits",
+    type: "outfit",
+    time: "hace 1 h",
+    badge: "Tokki 🐰",
+    online: false,
+    hashtags: ["#KpopOutfit", "#Y2K", "#PastelNeon"],
+    caption: "Outfit pastel/neon para grabar fancam: denim claro, lazo cute y brillos suaves.",
+    likes: "3.3K",
+    comments: "143",
+    taggedPeople: "@style.kpop",
+    shares: "110",
+    saves: "740",
   },
 ];
 
@@ -255,6 +326,15 @@ const homeBanners = [
   { title: "Publicidad fan sponsor", meta: "Marcas K-pop", colors: "linear-gradient(135deg, #04131d, #77f4c7 48%, #ffd166)" },
   { title: "Trade de photocards", meta: "Marketplace seguro", colors: "linear-gradient(135deg, #fff1f9, #ff8ac8 48%, #8b5cf6)" },
   { title: "Top fancams del dia", meta: "Fancams premium", colors: "linear-gradient(135deg, #65e4ff, #77f4c7 52%, #0f172a)" },
+];
+
+const homeHighlightStories = [
+  { label: "Stories", detail: "Siguiendo", avatar: "berry", colors: "linear-gradient(160deg, #fbbcdb, #a855f7)" },
+  { label: "Trends", detail: "Virales", avatar: "neon", colors: "linear-gradient(160deg, #65e4ff, #d946ef)" },
+  { label: "Idols", detail: "Bias", avatar: "idol", colors: "linear-gradient(160deg, #ffd166, #ff2d55)" },
+  { label: "Eventos", detail: "Latam", avatar: "star", colors: "linear-gradient(160deg, #ffb703, #65e4ff)" },
+  { label: "Challenges", detail: "Dance", avatar: "cyber", colors: "linear-gradient(160deg, #77f4c7, #263d72)" },
+  { label: "Fancams", detail: "Top", avatar: "anime", colors: "linear-gradient(160deg, #fff1f9, #ff8ac8)" },
 ];
 
 const storyReactions = [
@@ -1754,7 +1834,9 @@ function renderHome() {
           mediaType: post.media_type,
         }))
       : userPosts;
+  const infiniteFeedPosts = buildHomeFeed(feedPosts);
   return `
+    ${renderHomeHighlights()}
     <div class="stories-row" aria-label="Historias de personas que sigo">
       <button class="story-item own-story-item" data-own-story>
         <span class="story-ring own-ring ${state.ownStory ? "has-story" : "empty-story"}">
@@ -1800,14 +1882,47 @@ function renderHome() {
       <div class="metric-pill"><span class="metric-dot fans"></span><strong>128K</strong><small>conectados</small></div>
       <div class="metric-pill"><span class="metric-dot drops"></span><strong>24h</strong><small>drops</small></div>
     </div>
-    <div class="section-heading"><h2>Publicaciones</h2><span>Siguiendo</span></div>
-    <div class="social-feed">
-      ${feedPosts
-        .map((post, index) => renderSocialPost(post, index))
+    <div class="section-heading feed-heading"><h2>Feed vivo</h2><span>Actualizado ahora</span></div>
+    <div class="social-feed infinite-social-feed">
+      ${infiniteFeedPosts
+        .map((post, index) => renderSocialPost(post, index, { featured: index === 0 || index % 7 === 3 }))
         .join("")}
+      <div class="feed-loader">
+        <span></span><span></span><span></span>
+        <strong>Cargando más momentos fandom...</strong>
+      </div>
     </div>
     ${renderStoryViewer()}
   `;
+}
+
+function buildHomeFeed(posts) {
+  const cycles = ["Ahora", "Hace 4 min", "Hace 12 min", "Hace 25 min"];
+  return Array.from({ length: 3 }, (_, round) =>
+    posts.map((post, index) => ({
+      ...post,
+      id: `${post.id || "post"}-${round}`,
+      time: round === 0 ? post.time : cycles[(index + round) % cycles.length],
+      likes: round === 0 ? post.likes : `${Number.parseFloat(String(post.likes || "1").replace("K", "")) + round}.${index + 1}K`,
+      comments: round === 0 ? post.comments : `${Number.parseInt(String(post.comments || "40"), 10) + round * 37}`,
+    })),
+  ).flat();
+}
+
+function renderHomeHighlights() {
+  return `
+    <section class="home-highlights" aria-label="Highlights del inicio">
+      ${homeHighlightStories
+        .map(
+          (item, index) => `
+          <button type="button" class="highlight-story-card" style="--art:${item.colors}">
+            <span class="highlight-story-orb">${renderAvatarElement("mini", item.avatar)}</span>
+            <strong>${item.label}</strong>
+            <small>${item.detail}</small>
+          </button>`,
+        )
+        .join("")}
+    </section>`;
 }
 
 function renderStoryViewer() {
@@ -1858,17 +1973,20 @@ function renderStoryViewer() {
 
 function renderSocialPost(post, index, options = {}) {
   return `
-    <article class="post-card ${options.compact ? "profile-feed-post" : ""}">
-      <div class="post-head centered-post-head">
+    <article class="post-card ${options.compact ? "profile-feed-post" : ""} ${options.featured || post.type === "trending" || post.type === "event" ? "featured-post" : ""}">
+      <div class="post-head modern-post-head">
+        ${renderAvatarElement("mini post-author-avatar", post.avatar || "berry", post.avatarUrl)}
         <div>
           <div class="post-user-line">
             <span class="online-dot ${post.online ? "active" : ""}"></span>
             <h3>${post.user}</h3>
             <span class="fandom-badge">${post.badge || "Army 💜"}</span>
           </div>
-          <p class="muted">${post.group || getPostCategoryLabel(post.category)}${post.time ? ` · ${post.time}` : ""}</p>
+          <p class="muted">${post.group || getPostCategoryLabel(post.category)}${post.time ? ` · ${post.time}` : ""}${post.location ? ` · ${post.location}` : ""}</p>
         </div>
+        <button class="post-menu-button" aria-label="Mas opciones">•••</button>
       </div>
+      ${options.featured || post.type === "trending" || post.type === "event" ? `<div class="post-feature-label">${post.type === "event" ? "Evento destacado" : post.type === "trending" ? "Trend popular" : "Destacado"}</div>` : ""}
       ${
         post.mediaUrl
           ? post.mediaType === "video"
@@ -1876,7 +1994,7 @@ function renderSocialPost(post, index, options = {}) {
             : `<img class="post-media real-media" src="${post.mediaUrl}" alt="Publicacion de ${post.user}" />`
           : `<div class="post-media" style="--art:${post.art || art[index % art.length]}"></div>`
       }
-      <p>${post.caption}</p>
+      <p class="post-caption">${post.caption}</p>
       ${renderPostOptionalMeta(post)}
       <div class="post-hashtags">
         ${(post.hashtags || ["#KpopLatam", "#HallyuHub"]).map((tag) => `<button type="button">${tag}</button>`).join("")}
