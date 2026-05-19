@@ -26,6 +26,7 @@ const state = {
   settingsPanel: null,
   viewedProfile: null,
   followedProfiles: {},
+  dropFeedFilter: "viral",
   selectedProfileBg: "army",
   activeStory: null,
   likedStories: {},
@@ -47,6 +48,10 @@ const state = {
     mediaName: "",
     mediaUrl: "",
     mediaType: "",
+    font: "Inter",
+    textColor: "#ffffff",
+    textStyle: "glow",
+    stickerCategory: "Cute",
   },
   ownStoryStatsOpen: false,
   ownStory: null,
@@ -75,7 +80,7 @@ let storyAutoTimer = null;
 const titleByView = {
   home: "Tu universo K-pop latino",
   search: "Buscar",
-  trends: "Hallyu Drops",
+  trends: "Drops",
   publish: "Crear publicacion",
   notifications: "Actividad e inbox",
   settings: "Ajustes",
@@ -224,7 +229,7 @@ const news = [
   {
     id: "demo-news-bp",
     artist: "BLACKPINK",
-    title: "BLACKPINK impulsa nuevo Hallyu Drop de dance challenge",
+    title: "BLACKPINK impulsa nuevo Drop de dance challenge",
     source: "Google News demo",
     date: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
     summary: "El challenge aparece entre los clips mas compartidos por creadores de K-pop en Latinoamerica.",
@@ -405,7 +410,7 @@ const followingStories = [
 
 const homeBanners = [
   { title: "Noticias destacadas", meta: "K-pop al minuto", colors: "linear-gradient(135deg, #1d1024, #fbbcdb 45%, #65e4ff)" },
-  { title: "Nuevo Hallyu Drop BLACKPINK", meta: "Clips virales", colors: "linear-gradient(135deg, #09060a, #ff3ea5 52%, #ff8ac8)" },
+  { title: "Nuevo Drop BLACKPINK", meta: "Clips virales", colors: "linear-gradient(135deg, #09060a, #ff3ea5 52%, #ff8ac8)" },
   { title: "Dance challenge BTS", meta: "Challenge semanal", colors: "linear-gradient(135deg, #0d0718, #8b5cf6 52%, #d9b4ff)" },
   { title: "Evento K-pop Santiago", meta: "Agenda fandom", colors: "linear-gradient(135deg, #ffb703, #ff2d55 48%, #111827)" },
   { title: "Publicidad fan sponsor", meta: "Marcas K-pop", colors: "linear-gradient(135deg, #04131d, #77f4c7 48%, #ffd166)" },
@@ -415,7 +420,7 @@ const homeBanners = [
 
 const homeHighlightStories = [
   { label: "Viral", detail: "Top posts", avatar: "neon", filter: "viral", colors: "linear-gradient(160deg, #65e4ff, #d946ef)" },
-  { label: "Hallyu Drops", detail: "Clips", avatar: "idol", filter: "trends", colors: "linear-gradient(160deg, #ffd166, #ff2d55)" },
+  { label: "Drops", detail: "Clips", avatar: "idol", filter: "trends", colors: "linear-gradient(160deg, #ffd166, #ff2d55)" },
   { label: "Outfit", detail: "K-style", avatar: "anime", filter: "outfits", colors: "linear-gradient(160deg, #fff1f9, #ff8ac8)" },
   { label: "Challenges", detail: "Dance", avatar: "cyber", filter: "challenges", colors: "linear-gradient(160deg, #77f4c7, #263d72)" },
   { label: "Eventos", detail: "Latam", avatar: "star", filter: "events", colors: "linear-gradient(160deg, #ffb703, #65e4ff)" },
@@ -461,7 +466,7 @@ const trendVideos = [
   },
   {
     user: "Vale Multi",
-    challenge: "Hallyu Drop NewJeans",
+    challenge: "Drop NewJeans",
     song: "NewJeans · Y2K pop",
     description: "Movimiento suave con outfit pastel y transicion rapida.",
     colors: "linear-gradient(160deg, #06131a, #65e4ff 46%, #77f4c7)",
@@ -866,10 +871,10 @@ const avatars = [
   {
     id: "cyber",
     name: "Cyber Hallyu",
-    mood: "Cyber, futurista y listo para Hallyu Drops verticales.",
+    mood: "Cyber, futurista y listo para Drops verticales.",
     rarity: "Rare",
     minLevel: 9,
-    reward: "Participar en Hallyu Drops",
+    reward: "Participar en Drops",
     gradient: "linear-gradient(145deg, #77f4c7, #65e4ff 38%, #1f1147)",
   },
   {
@@ -918,7 +923,7 @@ const profileRewards = [
   ["Comentar", "+5 estrellas", "Ayuda a otros fans"],
   ["Publicar", "+25 estrellas", "Sube posts, outfits o photocards"],
   ["Recibir likes", "+10 estrellas", "Cada fan que reacciona suma"],
-  ["Participar en Hallyu Drops", "+40 estrellas", "Challenges y dance covers"],
+  ["Participar en Drops", "+40 estrellas", "Challenges y dance covers"],
   ["Completar eventos", "+120 estrellas", "Eventos fandom y misiones"],
 ];
 
@@ -993,7 +998,7 @@ const profileHighlights = ["Conciertos", "Fancams", "Bias", "Photocards", "Dance
 
 const profileTabs = [
   ["posts", "Publicaciones"],
-  ["trends", "Hallyu Drops"],
+  ["trends", "Drops"],
   ["outfits", "Outfit"],
   ["photocards", "Photocards"],
   ["saved", "Guardados"],
@@ -1016,7 +1021,21 @@ const storyMusicLibrary = [
 
 const storyBackgrounds = ["Neon pastel", "Idol stage", "Seoul night", "Lightstick glow", "Photocard wall", "Cute comeback"];
 const storyMusicCategories = ["Viral", "Cute", "Dark", "Dance", "Chill"];
-const storyStickerPalette = ["💜", "✨", "🫰", "🎀", "📸", "🪩", "🎤", "🔥", "💿", "⭐", "🌙", "👑"];
+const storyStickerGroups = {
+  Cute: ["🎀", "✨", "🫰", "🌸", "🧸", "🍭"],
+  Idol: ["🎤", "👑", "📸", "🎬", "⭐", "💫"],
+  Neon: ["🪩", "⚡", "💿", "💎", "🌙", "🔥"],
+  Hearts: ["💜", "🩷", "💖", "💕", "🫶", "🖤"],
+  Fans: ["📣", "🎫", "🛍️", "📷", "💌", "🧡"],
+  Lightsticks: ["🔮", "💡", "🪄", "🌟", "💫", "✨"],
+  "Korean aesthetic": ["🌙", "☁️", "🍡", "🌸", "🧋", "🎐"],
+  Funny: ["😂", "🤭", "😎", "🤯", "🥹", "🙌"],
+  Music: ["🎵", "🎶", "🎧", "💿", "🎹", "🥁"],
+};
+const storyStickerPalette = Object.values(storyStickerGroups).flat();
+const storyFonts = ["Inter", "Poppins", "Arial", "Georgia"];
+const storyTextColors = ["#ffffff", "#fbbcdb", "#65e4ff", "#77f4c7", "#ffb86b", "#a855f7"];
+const storyTextStyles = ["bold", "glow", "neon", "soft pastel", "dark aesthetic"];
 
 const profileAchievements = [
   ["Lightstick virtual", "BTS · Purple glow"],
@@ -1120,7 +1139,7 @@ function scheduleStoryAutoplay() {
     state.storyDirection = 1;
     state.activeStory = state.ownStory ? next - 1 : next;
     render();
-  }, 5600);
+  }, 4200);
 }
 
 function bindDynamicActions() {
@@ -1401,6 +1420,7 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-story-draft]").forEach((input) => {
     input.addEventListener("input", () => {
       state.storyDraft[input.dataset.storyDraft] = input.value;
+      syncStoryDraftElement(input.dataset.storyDraft, input.value);
     });
   });
 
@@ -1417,6 +1437,27 @@ function bindDynamicActions() {
       addStoryElement(button.dataset.storySticker);
       state.storyToolPanel = null;
       render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-sticker-category]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.storyDraft.stickerCategory = button.dataset.storyStickerCategory;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-custom-sticker]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        addStoryElement(file.name.replace(/\.[^.]+$/, "") || "Sticker", { imageUrl: reader.result || "", type: "custom-sticker" });
+        state.storyToolPanel = null;
+        render();
+      };
+      reader.readAsDataURL(file);
     });
   });
 
@@ -1454,6 +1495,68 @@ function bindDynamicActions() {
       updateSelectedStoryElement(input.dataset.storyControl, Number(input.value));
       render();
     });
+  });
+
+  document.querySelectorAll("[data-story-font]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.storyDraft.font = button.dataset.storyFont;
+      updateSelectedTextElement("font", button.dataset.storyFont);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-text-color]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.storyDraft.textColor = button.dataset.storyTextColor;
+      updateSelectedTextElement("color", button.dataset.storyTextColor);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-text-style]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.storyDraft.textStyle = button.dataset.storyTextStyle;
+      updateSelectedTextElement("textStyle", button.dataset.storyTextStyle);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-drop-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.dropFeedFilter = button.dataset.dropFilter;
+      showToast(`Drops: ${button.textContent.trim()}`);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-create-drop]").forEach((button) => {
+    button.addEventListener("click", () => setView("publish"));
+  });
+
+  document.querySelectorAll("[data-search-drops]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedHashtag = "#Drops";
+      setView("search");
+    });
+  });
+
+  document.querySelectorAll("[data-drop-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const [action, index] = button.dataset.dropAction.split(":");
+      const messages = {
+        like: "Drop marcado con estrella",
+        comment: "Comentarios abiertos en modo demo",
+        share: "Drop listo para compartir",
+        save: "Drop guardado",
+      };
+      state.sharedPosts[`drop-${index}-${action}`] = true;
+      showToast(messages[action] || "Accion aplicada");
+      button.classList.add("active");
+    });
+  });
+
+  document.querySelectorAll("[data-demo-action]").forEach((button) => {
+    button.addEventListener("click", () => showToast(button.dataset.demoAction));
   });
 
   document.querySelectorAll("[data-story-delete-element]").forEach((button) => {
@@ -2078,7 +2181,7 @@ async function createPost() {
 function getPostCategoryLabel(category) {
   const labels = {
     posts: "Publicacion",
-    trends: "Hallyu Drop",
+    trends: "Drop",
     outfits: "Outfit",
     photocards: "Photocard",
     saved: "Guardado",
@@ -2390,20 +2493,50 @@ function getStoryDraftElements() {
   return state.storyDraft.elements;
 }
 
-function addStoryElement(content) {
+function addStoryElement(content, options = {}) {
   const id = `layer-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
   state.storyDraft.elements = [
     ...getStoryDraftElements(),
     {
       id,
-      type: "sticker",
+      type: options.type || "sticker",
       content,
       x: 36 + Math.round(Math.random() * 28),
       y: 28 + Math.round(Math.random() * 28),
-      size: 34,
+      size: options.size || 34,
       rotation: 0,
+      color: options.color || state.storyDraft.textColor,
+      font: options.font || state.storyDraft.font,
+      textStyle: options.textStyle || state.storyDraft.textStyle,
+      imageUrl: options.imageUrl || "",
+      animated: Boolean(options.animated),
     },
   ];
+  state.storyDraft.selectedElementId = id;
+}
+
+function syncStoryDraftElement(field, value) {
+  if (field !== "text" && field !== "mention") return;
+  const id = field === "text" ? "text-layer" : "mention-layer";
+  const clean = String(value || "").trim();
+  state.storyDraft.elements = getStoryDraftElements().filter((element) => element.id !== id || clean);
+  if (!clean) return;
+  const existing = state.storyDraft.elements.find((element) => element.id === id);
+  const nextElement = {
+    id,
+    type: "text",
+    content: field === "mention" && !clean.startsWith("@") ? `@${clean}` : clean,
+    x: field === "text" ? 50 : 50,
+    y: field === "text" ? 62 : 72,
+    size: field === "text" ? 24 : 16,
+    rotation: 0,
+    color: state.storyDraft.textColor,
+    font: state.storyDraft.font,
+    textStyle: state.storyDraft.textStyle,
+  };
+  state.storyDraft.elements = existing
+    ? state.storyDraft.elements.map((element) => (element.id === id ? { ...element, content: nextElement.content } : element))
+    : [...state.storyDraft.elements, nextElement];
   state.storyDraft.selectedElementId = id;
 }
 
@@ -2415,6 +2548,13 @@ function updateSelectedStoryElement(key, value) {
   const selectedId = state.storyDraft.selectedElementId;
   state.storyDraft.elements = getStoryDraftElements().map((element) =>
     element.id === selectedId ? { ...element, [key]: value } : element,
+  );
+}
+
+function updateSelectedTextElement(key, value) {
+  const selectedId = state.storyDraft.selectedElementId;
+  state.storyDraft.elements = getStoryDraftElements().map((element) =>
+    element.id === selectedId || element.type === "text" ? { ...element, [key]: value } : element,
   );
 }
 
@@ -2468,8 +2608,8 @@ function createOwnStory(style = "Neon pastel") {
     label: "mi historia",
     time: "Ahora",
     music: draft.music || "HallyuHub · fan upload",
-    title: draft.text || "",
-    detail: [draft.mention || "", draft.location || ""].filter(Boolean).join(" · "),
+    title: "",
+    detail: draft.location || "",
     stars: 0,
     views: 37,
     colors: getStoryBackground(style),
@@ -2627,7 +2767,7 @@ function getHomeFilterLabel(filter) {
   const labels = {
     all: "Feed vivo",
     viral: "Lo más viral",
-    trends: "Hallyu Drops populares",
+    trends: "Drops populares",
     outfits: "Outfits K-pop",
     challenges: "Challenges",
     events: "Eventos destacados",
@@ -2739,7 +2879,12 @@ function renderStoryLayers(elements) {
 function renderStoryLayer(element, editable = false) {
   const Tag = editable ? "button" : "span";
   const data = editable ? `type="button" data-story-layer="${element.id}"` : "";
-  return `<${Tag} class="story-layer ${editable && state.storyDraft.selectedElementId === element.id ? "selected" : ""}" ${data} style="left:${element.x}%; top:${element.y}%; font-size:${element.size}px; transform:translate(-50%, -50%) rotate(${element.rotation || 0}deg);">${escapeHtml(element.content)}</${Tag}>`;
+  const typeClass = element.type === "text" ? `text-layer ${element.textStyle || "glow"}` : element.type === "custom-sticker" ? "custom-sticker-layer" : "";
+  const animated = element.animated || ["🪩", "✨", "💫", "🔥", "⭐", "💜"].includes(element.content) ? "animated-sticker" : "";
+  const content = element.imageUrl
+    ? `<img src="${escapeAttr(element.imageUrl)}" alt="${escapeAttr(element.content)}" />`
+    : escapeHtml(element.content);
+  return `<${Tag} class="story-layer ${typeClass} ${animated} ${editable && state.storyDraft.selectedElementId === element.id ? "selected" : ""}" ${data} style="left:${element.x}%; top:${element.y}%; font-size:${element.size}px; color:${element.color || "#fff"}; font-family:${escapeAttr(element.font || "Inter")}, system-ui, sans-serif; transform:translate(-50%, -50%) rotate(${element.rotation || 0}deg);">${content}</${Tag}>`;
 }
 
 function renderSocialPost(post, index, options = {}) {
@@ -2994,8 +3139,6 @@ function renderStoryEditor() {
               : ""
           }
           <div class="story-layer-stage editable-stage">${elements.map((element) => renderStoryLayer(element, true)).join("")}</div>
-          ${draft.text ? `<h2>${escapeHtml(draft.text)}</h2>` : ""}
-          ${draft.mention ? `<p>${renderMentionedText(draft.mention)}</p>` : ""}
           ${draft.location ? `<small>${escapeHtml(draft.location)}</small>` : ""}
           <div class="story-music-pill story-music-edit"><span>♪</span>${escapeHtml(draft.music)}</div>
           ${draft.mediaName ? `<em>${escapeHtml(draft.mediaName)}</em>` : ""}
@@ -3027,8 +3170,13 @@ function renderStoryToolPanel(draft, userLevel, visibleTracks) {
     gallery: "Galería",
   }[tool];
   const body = {
-    text: `<div class="story-editor-fields compact-fields"><input data-story-draft="text" value="${escapeAttr(draft.text)}" placeholder="Texto de la historia" /></div>`,
-    stickers: `<div class="story-chip-row">${storyStickerPalette.map((item) => `<button class="${draft.sticker === item ? "active" : ""}" data-story-sticker="${item}">${item}</button>`).join("")}</div>`,
+    text: `<div class="story-editor-fields compact-fields"><input data-story-draft="text" value="${escapeAttr(draft.text)}" placeholder="Texto de la historia" /></div>
+      <div class="story-chip-row font-row">${storyFonts.map((font) => `<button class="${draft.font === font ? "active" : ""}" data-story-font="${font}">${font}</button>`).join("")}</div>
+      <div class="story-chip-row color-row">${storyTextColors.map((color) => `<button class="${draft.textColor === color ? "active" : ""}" style="--swatch:${color}" data-story-text-color="${color}" aria-label="Color ${color}"></button>`).join("")}</div>
+      <div class="story-chip-row">${storyTextStyles.map((style) => `<button class="${draft.textStyle === style ? "active" : ""}" data-story-text-style="${style}">${style}</button>`).join("")}</div>`,
+    stickers: `<div class="story-chip-row sticker-category-row">${Object.keys(storyStickerGroups).map((category) => `<button class="${draft.stickerCategory === category ? "active" : ""}" data-story-sticker-category="${category}">${category}</button>`).join("")}</div>
+      <div class="story-chip-row sticker-palette-row">${(storyStickerGroups[draft.stickerCategory] || storyStickerPalette).map((item) => `<button class="${draft.sticker === item ? "active" : ""}" data-story-sticker="${item}">${item}</button>`).join("")}</div>
+      <label class="custom-sticker-upload">Sticker propio<input type="file" accept="image/png,image/gif,image/webp" data-story-custom-sticker /></label>`,
     music: `<div class="story-chip-row music-category-row">
         ${storyMusicCategories.map((category) => `<button class="${draft.musicCategory === category ? "active" : ""}" data-story-music-category="${category}">${category}</button>`).join("")}
       </div>
@@ -3049,7 +3197,8 @@ function renderStoryToolPanel(draft, userLevel, visibleTracks) {
     mention: `<div class="story-editor-fields compact-fields">
         <input data-story-draft="mention" value="${escapeAttr(draft.mention)}" placeholder="Mencionar @usuario" />
         <input data-story-draft="location" value="${escapeAttr(draft.location)}" placeholder="Ubicación opcional" />
-      </div>`,
+      </div>
+      <div class="story-chip-row color-row">${storyTextColors.map((color) => `<button class="${draft.textColor === color ? "active" : ""}" style="--swatch:${color}" data-story-text-color="${color}" aria-label="Color ${color}"></button>`).join("")}</div>`,
     gallery: `<div class="story-upload-grid compact-upload">
         <label>Foto<input type="file" accept="image/*" data-story-media="foto" /></label>
         <label>Video<input type="file" accept="video/*" data-story-media="video" /></label>
@@ -3297,7 +3446,7 @@ function renderSearch() {
       <button data-go-view="market"><span class="nav-icon bag-icon"></span><strong>Shop</strong><small>Merch y fotocards</small></button>
       <button data-go-view="community"><span class="nav-icon chat-icon"></span><strong>Comunidad</strong><small>Chats por zona</small></button>
       <button data-go-view="rookie"><span class="nav-icon spark-icon"></span><strong>K-pop 101</strong><small>Para fans nuevos</small></button>
-      <button data-go-view="trends"><span class="nav-icon play-icon"></span><strong>Hallyu Drops</strong><small>Clips y challenges</small></button>
+      <button data-go-view="trends"><span class="nav-icon play-icon"></span><strong>Drops</strong><small>Clips y challenges</small></button>
     </div>
     <div class="section-heading"><h2>Tendencias</h2><span>Explorar</span></div>
     <div class="group-story-row">
@@ -3351,11 +3500,11 @@ function getEngagementNumber(value) {
 function renderTrends() {
   return `
     <div class="trend-tabs">
-      <button class="active">Mas virales</button>
-      <button>Crear Drop</button>
-      <button>Buscar Drop</button>
+      <button class="${state.dropFeedFilter === "viral" ? "active" : ""}" data-drop-filter="viral">Mas virales</button>
+      <button data-create-drop>Crear Drop</button>
+      <button data-search-drops>Buscar Drop</button>
     </div>
-    <section class="trends-feed" aria-label="Hallyu Drops estilo reels">
+    <section class="trends-feed" aria-label="Drops estilo reels">
       ${trendVideos
         .map(
           (trend, index) => `
@@ -3370,10 +3519,10 @@ function renderTrends() {
                 <p>${trend.description}</p>
               </div>
               <div class="trend-actions">
-                <button><span class="nav-icon heart-icon"></span><small>Like</small></button>
-                <button><span class="nav-icon chat-icon"></span><small>Comentar</small></button>
-                <button><span class="share-dot"></span><small>Compartir</small></button>
-                <button><span class="save-mark"></span><small>Guardar</small></button>
+                <button data-drop-action="like:${index}"><span class="nav-icon heart-icon"></span><small>Like</small></button>
+                <button data-drop-action="comment:${index}"><span class="nav-icon chat-icon"></span><small>Comentar</small></button>
+                <button data-drop-action="share:${index}"><span class="share-dot"></span><small>Compartir</small></button>
+                <button data-drop-action="save:${index}"><span class="save-mark"></span><small>Guardar</small></button>
               </div>
             </div>
           </article>`,
@@ -3394,7 +3543,7 @@ function renderPublish() {
       <label>Tipo de contenido
         <select id="post-category">
           <option value="posts">Publicacion</option>
-          <option value="trends">Hallyu Drop</option>
+          <option value="trends">Drop</option>
           <option value="outfits">Outfit</option>
           <option value="photocards">Photocard</option>
           <option value="favorites">Favorito</option>
@@ -3417,10 +3566,10 @@ function renderPublish() {
         </div>
       </details>
       <div class="filter-row">
-        <button class="filter-chip active">Post</button>
-        <button class="filter-chip">Historia</button>
-        <button class="filter-chip">Trade</button>
-        <button class="filter-chip">Noticia</button>
+        <button class="filter-chip active" data-demo-action="Filtro Post activo">Post</button>
+        <button class="filter-chip" data-story-editor-open>Historia</button>
+        <button class="filter-chip" data-demo-action="Filtro Trade activo">Trade</button>
+        <button class="filter-chip" data-go-view="news">Noticia</button>
       </div>
       <button class="primary-button" data-create-post>Publicar</button>
     </section>
@@ -3524,10 +3673,10 @@ function renderProfileBackgroundPicker() {
 function renderEvents() {
   return `
     <div class="filter-row">
-      <button class="filter-chip active">Cerca de mi</button>
-      <button class="filter-chip">Conciertos</button>
-      <button class="filter-chip">Fan meetings</button>
-      <button class="filter-chip">Random dance</button>
+      <button class="filter-chip active" data-demo-action="Eventos cerca de mi">Cerca de mi</button>
+      <button class="filter-chip" data-demo-action="Filtro Conciertos aplicado">Conciertos</button>
+      <button class="filter-chip" data-demo-action="Filtro Fan meetings aplicado">Fan meetings</button>
+      <button class="filter-chip" data-demo-action="Filtro Random dance aplicado">Random dance</button>
     </div>
     <article class="hero-card">
       <div class="pill">Agenda fandom</div>
@@ -3570,7 +3719,7 @@ function renderMarket() {
             <div class="product-body">
               <span class="tag">${product.group}</span>
               <h3 class="card-title">${product.name}</h3>
-              <div class="price-row"><strong>${product.price}</strong><button class="tiny-plus" aria-label="Agregar">+</button></div>
+              <div class="price-row"><strong>${product.price}</strong><button class="tiny-plus" aria-label="Agregar" data-demo-action="Producto agregado a wishlist">+</button></div>
             </div>
           </article>`,
         )
@@ -3587,7 +3736,7 @@ function renderMarket() {
               <p class="muted">${store.detail}</p>
               <div class="meta-row"><span>${store.city}</span><span class="tag">${store.trust} confianza</span></div>
             </div>
-            <button class="ghost-button">Agregar a carpeta</button>
+            <button class="ghost-button" data-demo-action="Local guardado en carpeta">Agregar a carpeta</button>
           </article>`,
         )
         .join("")}
@@ -3614,7 +3763,7 @@ function renderGroups() {
       <h2>${activeGroup.name}</h2>
       <p>${activeGroup.style}</p>
     </article>
-    <button class="primary-button follow-group-button">Seguir ${activeGroup.name}</button>
+    <button class="primary-button follow-group-button" data-demo-action="Ahora seguís a ${activeGroup.name}">Seguir ${activeGroup.name}</button>
     <section class="group-info-grid">
       <div class="info-tile"><span>Empresa</span><strong>${activeGroup.company}</strong></div>
       <div class="info-tile"><span>Debut</span><strong>${activeGroup.debut}</strong></div>
@@ -3689,9 +3838,9 @@ function renderCommunity() {
             </div>
             <p class="muted">${community.detail}</p>
             <div class="community-actions">
-              <button class="ghost-button">Ver chat</button>
-              <button class="ghost-button">Eventos</button>
-              <button class="ghost-button">Moderadores</button>
+              <button class="ghost-button" data-go-view="messages">Ver chat</button>
+              <button class="ghost-button" data-go-view="events">Eventos</button>
+              <button class="ghost-button" data-demo-action="Moderadores visibles en modo demo">Moderadores</button>
             </div>
           </article>`,
         )
@@ -3718,7 +3867,7 @@ function renderCommunity() {
           .join("")}
       </div>
     </section>
-    <button class="primary-button">Solicitar grupo de mi ciudad</button>
+    <button class="primary-button" data-demo-action="Solicitud enviada para crear grupo local">Solicitar grupo de mi ciudad</button>
   `;
 }
 
@@ -3742,8 +3891,8 @@ function renderMessages() {
               <span class="tag">${request.shared}</span>
             </div>
             <div class="request-actions">
-              <button class="ghost-button">Rechazar</button>
-              <button class="ghost-button accept">Aceptar</button>
+              <button class="ghost-button" data-demo-action="Solicitud rechazada">Rechazar</button>
+              <button class="ghost-button accept" data-demo-action="Solicitud aceptada">Aceptar</button>
             </div>
           </article>`,
         )
@@ -3844,7 +3993,7 @@ function getSettingsGroups() {
         { key: "notif-stars", label: "Estrellas", detail: "Likes y reacciones", icon: "★" },
         { key: "notif-comments", label: "Comentarios", detail: "Respuestas y menciones", icon: "··" },
         { key: "notif-followers", label: "Seguidores", detail: "Nuevos fans", icon: "+" },
-        { key: "notif-trends", label: "Hallyu Drops", detail: "Challenges y eventos", icon: "▶" },
+        { key: "notif-trends", label: "Drops", detail: "Challenges y eventos", icon: "▶" },
       ],
     },
     {
@@ -3997,8 +4146,8 @@ function renderSettingsPanelBody(panel, activeAvatar, activeAmbience, premiumLab
     `;
   }
   if (panel === "logout") return `<p class="muted">Cierra la sesion actual en este dispositivo.</p><button class="ghost-button danger-button" data-logout>Cerrar sesion</button>`;
-  if (panel === "delete-account") return `<p class="muted">Esta pantalla demo muestra la opcion visible para eliminar cuenta, requerida para apps con usuarios.</p><button class="ghost-button danger-button">Solicitar eliminacion de cuenta</button>`;
-  if (panel === "report-problem") return `<div class="form-stack"><label>Describe el problema<textarea>Quiero reportar contenido o usuario...</textarea></label></div><button class="primary-button">Enviar reporte demo</button>`;
+  if (panel === "delete-account") return `<p class="muted">Esta pantalla demo muestra la opcion visible para eliminar cuenta, requerida para apps con usuarios.</p><button class="ghost-button danger-button" data-demo-action="Solicitud de eliminacion enviada">Solicitar eliminacion de cuenta</button>`;
+  if (panel === "report-problem") return `<div class="form-stack"><label>Describe el problema<textarea>Quiero reportar contenido o usuario...</textarea></label></div><button class="primary-button" data-demo-action="Reporte enviado">Enviar reporte demo</button>`;
   const legalText = {
     "privacy-policy": "Explicamos que HallyuHub protege datos personales, usa localStorage en modo demo y luego Supabase para sesiones reales.",
     terms: "Reglas demo de uso: respeto, seguridad, nada de acoso, spam, suplantacion ni contenido ilegal.",
@@ -4068,7 +4217,7 @@ function renderRookie() {
               <h3>${mentor.name}</h3>
               <p class="muted">${mentor.role}</p>
               <p>${mentor.help}</p>
-              <button class="ghost-button">Pedir consejo</button>
+              <button class="ghost-button" data-demo-action="Solicitud enviada al mentor">Pedir consejo</button>
             </div>
           </article>`,
         )
@@ -4127,7 +4276,7 @@ function renderProfile() {
           isOwnProfile
             ? `<button class="primary-button profile-main-action" data-profile-edit-open>Editar perfil</button>`
             : `<button class="primary-button profile-main-action" data-profile-follow="${profileUser.id || profileUser.username}">${isFollowing ? "Siguiendo" : "Seguir"}</button>
-               <button class="ghost-button profile-share-action">Compartir perfil</button>`
+               <button class="ghost-button profile-share-action" data-demo-action="Perfil listo para compartir">Compartir perfil</button>`
         }
       </div>
     </section>
@@ -4135,7 +4284,7 @@ function renderProfile() {
       ${profileHighlights
         .map(
           (item, index) => `
-          <button>
+          <button data-demo-action="Historia destacada abierta">
             <span class="highlight-orb" style="--art:${art[index % art.length]}"></span>
             <strong>${item}</strong>
           </button>`,
@@ -4229,8 +4378,8 @@ function getProfileDemoPosts(tab, profileUser) {
       { ...common, id: "profile-post-2", category: "posts", group: "Publicacion", time: "ayer", caption: "Fotos del encuentro fandom con luces pastel y photocards protegidas.", hashtags: ["#KpopLatam", "#fandom"] },
     ],
     trends: [
-      { ...common, id: "profile-trend-1", category: "trends", group: "Hallyu Drop", time: "hace 1 h", caption: "Paso corto para un random play dance con transicion de luz neon.", hashtags: ["#DanceChallenge", "#HallyuDrop"], taggedPeople: "@mika, @vale" },
-      { ...common, id: "profile-trend-2", category: "trends", group: "Hallyu Drop", time: "hace 3 h", caption: "Mini cover inspirado en stage idol, pensado para grabar vertical.", hashtags: ["#cover", "#fancam"] },
+      { ...common, id: "profile-trend-1", category: "trends", group: "Drop", time: "hace 1 h", caption: "Paso corto para un random play dance con transicion de luz neon.", hashtags: ["#DanceChallenge", "#Drops"], taggedPeople: "@mika, @vale" },
+      { ...common, id: "profile-trend-2", category: "trends", group: "Drop", time: "hace 3 h", caption: "Mini cover inspirado en stage idol, pensado para grabar vertical.", hashtags: ["#cover", "#fancam"] },
     ],
     outfits: [
       { ...common, id: "profile-outfit-1", category: "outfits", group: "Outfit", time: "hoy", caption: "Look pastel/neon para evento K-pop: denim, brillos suaves y accesorios cute.", hashtags: ["#outfit", "#KpopStyle"], location: "Evento fandom" },
