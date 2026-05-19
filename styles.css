@@ -1813,28 +1813,26 @@ video.post-media.real-media {
 }
 
 .story-viewer {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: 20;
+  z-index: 130;
   background:
-    linear-gradient(180deg, rgba(3, 2, 8, 0.38), rgba(3, 2, 8, 0.92)),
-    var(--story-art),
-    radial-gradient(circle at 50% 20%, rgba(251, 188, 219, 0.14), transparent 36%),
-    rgba(3, 2, 8, 0.9);
+    linear-gradient(180deg, rgba(1, 1, 6, 0.98), rgba(1, 1, 6, 0.98)),
+    var(--story-art);
   background-size: cover;
-  backdrop-filter: blur(22px) saturate(1.18);
+  backdrop-filter: blur(8px) saturate(1.08);
   display: grid;
   place-items: center;
-  padding: 18px;
+  padding: 0;
   animation: storyViewerIn 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 .story-progress {
   position: absolute;
-  top: 16px;
-  left: 18px;
-  right: 58px;
-  height: 5px;
+  top: max(10px, env(safe-area-inset-top));
+  left: max(10px, env(safe-area-inset-left));
+  right: 54px;
+  height: 3px;
   border-radius: 999px;
   display: flex;
   gap: 5px;
@@ -1889,22 +1887,23 @@ video.post-media.real-media {
 
 .story-close {
   position: absolute;
-  top: 8px;
-  right: 14px;
-  width: 38px;
-  height: 38px;
+  top: max(17px, calc(env(safe-area-inset-top) + 7px));
+  right: max(12px, env(safe-area-inset-right));
+  width: 34px;
+  height: 34px;
   border: 0;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.26);
   color: white;
   font-weight: 1000;
   z-index: 7;
+  backdrop-filter: blur(14px);
 }
 
 .story-tap-zone {
   position: absolute;
-  top: 54px;
-  bottom: 92px;
+  top: 0;
+  bottom: 0;
   width: 50%;
   border: 0;
   background: transparent;
@@ -1922,19 +1921,18 @@ video.post-media.real-media {
 .story-full-card {
   position: relative;
   z-index: 2;
-  width: 100%;
-  height: calc(100% - 38px);
-  border-radius: 30px;
+  width: min(100vw, 430px);
+  height: 100dvh;
+  border-radius: 0;
   overflow: hidden;
   background:
-    radial-gradient(circle at 30% 18%, rgba(255, 255, 255, 0.12), transparent 9rem),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.7)),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.42), transparent 20%, transparent 60%, rgba(0, 0, 0, 0.7)),
     var(--art);
-  padding: 18px;
+  padding: max(42px, calc(env(safe-area-inset-top) + 34px)) 14px max(22px, env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.48);
+  box-shadow: 0 0 90px rgba(0, 0, 0, 0.54);
   animation: storySlideIn 340ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
@@ -1943,13 +1941,7 @@ video.post-media.real-media {
 }
 
 .story-full-card::before {
-  content: "";
-  position: absolute;
-  inset: 82px 34px 210px;
-  border-radius: 30px;
-  background: rgba(255, 255, 255, 0.18);
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.2);
-  transform: rotate(-4deg);
+  display: none;
 }
 
 .story-full-card::after {
@@ -1957,13 +1949,8 @@ video.post-media.real-media {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background-image:
-    radial-gradient(circle, rgba(255, 255, 255, 0.34) 0 1px, transparent 2px),
-    radial-gradient(circle, rgba(251, 188, 219, 0.28) 0 1px, transparent 2px);
-  background-size: 88px 118px, 134px 164px;
-  background-position: 14px 28px, 72px 104px;
-  opacity: 0.26;
-  animation: storySparkle 8s linear infinite;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.46), transparent 22%, transparent 64%, rgba(0, 0, 0, 0.68));
+  z-index: 0;
 }
 
 .story-full-head,
@@ -1971,43 +1958,34 @@ video.post-media.real-media {
 .story-interactions,
 .story-composer-sheet {
   position: relative;
-  z-index: 1;
+  z-index: 4;
 }
 
 .story-full-head {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  max-width: calc(100% - 44px);
 }
 
 .story-music-pill {
   position: relative;
-  z-index: 1;
+  z-index: 4;
   width: fit-content;
   max-width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.22);
   color: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(14px);
-  padding: 7px 10px;
-  font-size: 11px;
+  padding: 6px 9px;
+  font-size: 10.5px;
   font-weight: 900;
   box-shadow: 0 0 18px rgba(251, 188, 219, 0.15);
 }
 
 .live-fandom-pill {
-  position: relative;
-  z-index: 1;
-  width: fit-content;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 999px;
-  background: rgba(8, 3, 17, 0.28);
-  color: rgba(255, 255, 255, 0.86);
-  padding: 7px 10px;
-  font-size: 11px;
-  font-weight: 900;
-  backdrop-filter: blur(14px);
+  display: none;
 }
 
 .live-fandom-pill span {
@@ -2027,15 +2005,15 @@ video.post-media.real-media {
 }
 
 .small-ring {
-  width: 46px;
-  height: 46px;
+  width: 38px;
+  height: 38px;
   margin: 0;
 }
 
 .story-avatar.small {
-  width: 39px;
-  height: 39px;
-  border-radius: 15px;
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
 }
 
 .story-full-head h3,
@@ -2045,18 +2023,35 @@ video.post-media.real-media {
 
 .story-full-head p {
   color: rgba(255, 255, 255, 0.76);
-  font-size: 12px;
+  font-size: 11px;
+}
+
+.story-full-head h3 {
+  font-size: 13px;
+}
+
+.story-full-copy {
+  width: fit-content;
+  max-width: min(84%, 320px);
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(12px);
+  padding: 10px 12px;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
 }
 
 .story-full-copy h2 {
-  margin-bottom: 8px;
+  margin: 0 0 5px;
   color: white;
-  font-size: 29px;
-  line-height: 1;
+  font-size: 18px;
+  line-height: 1.08;
 }
 
 .story-full-copy p {
   color: rgba(255, 255, 255, 0.82);
+  font-size: 12px;
+  line-height: 1.3;
+  margin: 0;
 }
 
 .story-interactions {
@@ -2068,6 +2063,15 @@ video.post-media.real-media {
   background: transparent;
   backdrop-filter: none;
   padding: 0;
+  position: relative;
+  z-index: 4;
+}
+
+@media (min-width: 520px) {
+  .story-full-card {
+    height: min(100dvh, 780px);
+    border-radius: 28px;
+  }
 }
 
 .story-like-line {
@@ -2497,6 +2501,7 @@ video.post-media.real-media {
 
 .story-full-media {
   border-radius: inherit;
+  opacity: 1;
 }
 
 .story-layer-stage {
@@ -2548,16 +2553,16 @@ button.story-layer:active {
 
 .story-music-sticker {
   position: absolute;
-  right: 18px;
-  top: 74px;
+  right: 12px;
+  top: max(56px, calc(env(safe-area-inset-top) + 46px));
   z-index: 4;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 999px;
   background: rgba(10, 5, 18, 0.44);
   color: white;
   backdrop-filter: blur(14px);
-  padding: 7px 10px;
-  font-size: 11px;
+  padding: 6px 9px;
+  font-size: 10px;
   font-weight: 950;
   box-shadow: 0 0 18px rgba(101, 228, 255, 0.14);
 }

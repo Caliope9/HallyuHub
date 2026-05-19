@@ -35,14 +35,14 @@ const state = {
   storyToolPanel: null,
   storyDraft: {
     type: "text",
-    text: "Mi momento K-pop",
+    text: "",
     sticker: "✨",
     elements: [{ id: "sticker-1", type: "sticker", content: "✨", x: 72, y: 18, size: 38, rotation: 0 }],
     selectedElementId: "sticker-1",
     mention: "",
     location: "",
     music: "Basic beat · safe loop",
-    musicCategory: "Trending",
+    musicCategory: "Viral",
     background: "Neon pastel",
     mediaName: "",
     mediaUrl: "",
@@ -75,7 +75,7 @@ let storyAutoTimer = null;
 const titleByView = {
   home: "Tu universo K-pop latino",
   search: "Buscar",
-  trends: "Trends K-pop",
+  trends: "Hallyu Drops",
   publish: "Crear publicacion",
   notifications: "Actividad e inbox",
   settings: "Ajustes",
@@ -224,7 +224,7 @@ const news = [
   {
     id: "demo-news-bp",
     artist: "BLACKPINK",
-    title: "BLACKPINK impulsa nuevo trend de dance challenge",
+    title: "BLACKPINK impulsa nuevo Hallyu Drop de dance challenge",
     source: "Google News demo",
     date: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
     summary: "El challenge aparece entre los clips mas compartidos por creadores de K-pop en Latinoamerica.",
@@ -405,7 +405,7 @@ const followingStories = [
 
 const homeBanners = [
   { title: "Noticias destacadas", meta: "K-pop al minuto", colors: "linear-gradient(135deg, #1d1024, #fbbcdb 45%, #65e4ff)" },
-  { title: "Nuevo trend BLACKPINK", meta: "Trends virales", colors: "linear-gradient(135deg, #09060a, #ff3ea5 52%, #ff8ac8)" },
+  { title: "Nuevo Hallyu Drop BLACKPINK", meta: "Clips virales", colors: "linear-gradient(135deg, #09060a, #ff3ea5 52%, #ff8ac8)" },
   { title: "Dance challenge BTS", meta: "Challenge semanal", colors: "linear-gradient(135deg, #0d0718, #8b5cf6 52%, #d9b4ff)" },
   { title: "Evento K-pop Santiago", meta: "Agenda fandom", colors: "linear-gradient(135deg, #ffb703, #ff2d55 48%, #111827)" },
   { title: "Publicidad fan sponsor", meta: "Marcas K-pop", colors: "linear-gradient(135deg, #04131d, #77f4c7 48%, #ffd166)" },
@@ -415,7 +415,7 @@ const homeBanners = [
 
 const homeHighlightStories = [
   { label: "Viral", detail: "Top posts", avatar: "neon", filter: "viral", colors: "linear-gradient(160deg, #65e4ff, #d946ef)" },
-  { label: "Trends", detail: "Resumen", avatar: "idol", filter: "trends", colors: "linear-gradient(160deg, #ffd166, #ff2d55)" },
+  { label: "Hallyu Drops", detail: "Clips", avatar: "idol", filter: "trends", colors: "linear-gradient(160deg, #ffd166, #ff2d55)" },
   { label: "Outfit", detail: "K-style", avatar: "anime", filter: "outfits", colors: "linear-gradient(160deg, #fff1f9, #ff8ac8)" },
   { label: "Challenges", detail: "Dance", avatar: "cyber", filter: "challenges", colors: "linear-gradient(160deg, #77f4c7, #263d72)" },
   { label: "Eventos", detail: "Latam", avatar: "star", filter: "events", colors: "linear-gradient(160deg, #ffb703, #65e4ff)" },
@@ -461,7 +461,7 @@ const trendVideos = [
   },
   {
     user: "Vale Multi",
-    challenge: "Trend NewJeans",
+    challenge: "Hallyu Drop NewJeans",
     song: "NewJeans · Y2K pop",
     description: "Movimiento suave con outfit pastel y transicion rapida.",
     colors: "linear-gradient(160deg, #06131a, #65e4ff 46%, #77f4c7)",
@@ -477,7 +477,7 @@ const trendVideos = [
     user: "Hallyu Chile",
     challenge: "Challenge K-pop Chile",
     song: "LATAM fandom · stage",
-    description: "Trend local para mostrar pasos, light sticks y comunidad.",
+    description: "Drop local para mostrar pasos, light sticks y comunidad.",
     colors: "linear-gradient(160deg, #fbbcdb, #65e4ff 52%, #ffb86b)",
   },
 ];
@@ -866,10 +866,10 @@ const avatars = [
   {
     id: "cyber",
     name: "Cyber Hallyu",
-    mood: "Cyber, futurista y listo para trends verticales.",
+    mood: "Cyber, futurista y listo para Hallyu Drops verticales.",
     rarity: "Rare",
     minLevel: 9,
-    reward: "Participar en trends",
+    reward: "Participar en Hallyu Drops",
     gradient: "linear-gradient(145deg, #77f4c7, #65e4ff 38%, #1f1147)",
   },
   {
@@ -918,7 +918,7 @@ const profileRewards = [
   ["Comentar", "+5 estrellas", "Ayuda a otros fans"],
   ["Publicar", "+25 estrellas", "Sube posts, outfits o photocards"],
   ["Recibir likes", "+10 estrellas", "Cada fan que reacciona suma"],
-  ["Participar en trends", "+40 estrellas", "Challenges y dance covers"],
+  ["Participar en Hallyu Drops", "+40 estrellas", "Challenges y dance covers"],
   ["Completar eventos", "+120 estrellas", "Eventos fandom y misiones"],
 ];
 
@@ -993,7 +993,7 @@ const profileHighlights = ["Conciertos", "Fancams", "Bias", "Photocards", "Dance
 
 const profileTabs = [
   ["posts", "Publicaciones"],
-  ["trends", "Trends"],
+  ["trends", "Hallyu Drops"],
   ["outfits", "Outfit"],
   ["photocards", "Photocards"],
   ["saved", "Guardados"],
@@ -1005,17 +1005,17 @@ const fandomBadges = ["Army 💜", "Blink 🖤💖", "Once 🍭", "Stay ⭐", "T
 const reportReasons = ["Spam", "Acoso", "Contenido ofensivo", "Derechos de autor", "Otro"];
 
 const storyMusicLibrary = [
-  { level: 1, category: "Trending", name: "Basic beat · safe loop", detail: "Sonido corto libre para historias nuevas", tone: 523 },
+  { level: 1, category: "Viral", name: "Basic beat · safe loop", detail: "Sonido corto libre para historias nuevas", tone: 523 },
   { level: 1, category: "Cute", name: "Idol sparkle · demo", detail: "Preview original HallyuHub", tone: 659 },
   { level: 3, category: "Dance", name: "Comeback pulse · safe preview", detail: "Desbloqueo por estrellas nivel 3", tone: 784 },
-  { level: 5, category: "Dance", name: "Trend dance · demo loop", detail: "Sonido para challenges cortos", tone: 880 },
+  { level: 5, category: "Dance", name: "Drop dance · demo loop", detail: "Sonido para challenges cortos", tone: 880 },
   { level: 5, category: "Dark", name: "Dark stage · synth hit", detail: "Preview oscuro para concepts intensos", tone: 392 },
   { level: 3, category: "Chill", name: "Seoul chill · soft loop", detail: "Preview suave para historias tranquilas", tone: 440 },
-  { level: 10, category: "Trending", name: "Premium stage · event sound", detail: "Sonido especial para eventos premium", tone: 988 },
+  { level: 10, category: "Viral", name: "Premium stage · event sound", detail: "Sonido especial para eventos premium", tone: 988 },
 ];
 
 const storyBackgrounds = ["Neon pastel", "Idol stage", "Seoul night", "Lightstick glow", "Photocard wall", "Cute comeback"];
-const storyMusicCategories = ["Trending", "Cute", "Dark", "Dance", "Chill"];
+const storyMusicCategories = ["Viral", "Cute", "Dark", "Dance", "Chill"];
 const storyStickerPalette = ["💜", "✨", "🫰", "🎀", "📸", "🪩", "🎤", "🔥", "💿", "⭐", "🌙", "👑"];
 
 const profileAchievements = [
@@ -1068,8 +1068,8 @@ function render() {
   appScreen.classList.toggle("home-mode", state.view === "home");
   appScreen.classList.toggle("light-mode", state.user?.mode === "light");
   appScreen.style.setProperty("--user-accent", state.user?.accent || "#fbbcdb");
-  document.querySelector(".bottom-nav").classList.toggle("hidden", !state.isAuthenticated || state.storyEditorOpen);
-  document.querySelector(".topbar").classList.toggle("hidden", !state.isAuthenticated || state.view === "profile" || state.storyEditorOpen);
+  document.querySelector(".bottom-nav").classList.toggle("hidden", !state.isAuthenticated || state.storyEditorOpen || state.activeStory !== null);
+  document.querySelector(".topbar").classList.toggle("hidden", !state.isAuthenticated || state.view === "profile" || state.storyEditorOpen || state.activeStory !== null);
   if (!state.isAuthenticated) {
     view.innerHTML = renderAuth();
     bindDynamicActions();
@@ -1470,7 +1470,7 @@ function bindDynamicActions() {
       const file = input.files?.[0];
       state.storyDraft.type = input.dataset.storyMedia;
       state.storyDraft.mediaName = file?.name || "";
-      state.storyDraft.text = file?.name ? `Subido: ${file.name}` : state.storyDraft.text;
+      state.storyDraft.text = state.storyDraft.text || "";
       state.storyDraft.mediaType = file?.type?.startsWith("video") ? "video" : file ? "image" : "";
       if (!file) {
         render();
@@ -2078,7 +2078,7 @@ async function createPost() {
 function getPostCategoryLabel(category) {
   const labels = {
     posts: "Publicacion",
-    trends: "Trend",
+    trends: "Hallyu Drop",
     outfits: "Outfit",
     photocards: "Photocard",
     saved: "Guardado",
@@ -2468,8 +2468,8 @@ function createOwnStory(style = "Neon pastel") {
     label: "mi historia",
     time: "Ahora",
     music: draft.music || "HallyuHub · fan upload",
-    title: draft.text || "Mi momento K-pop",
-    detail: `Historia con ${style}, ${draft.sticker || "✨"} ${draft.mention || ""} ${draft.location ? `· ${draft.location}` : ""}`.trim(),
+    title: draft.text || "",
+    detail: [draft.mention || "", draft.location || ""].filter(Boolean).join(" · "),
     stars: 0,
     views: 37,
     colors: getStoryBackground(style),
@@ -2478,7 +2478,7 @@ function createOwnStory(style = "Neon pastel") {
     mediaUrl: draft.mediaUrl || "",
     mediaType: draft.mediaType || "",
     type: draft.type || "text",
-    musicCategory: draft.musicCategory || "Trending",
+    musicCategory: draft.musicCategory || "Viral",
     elements,
   };
   storage.set("hallyuHubOwnStory", state.ownStory);
@@ -2578,7 +2578,7 @@ function renderHome() {
               <span>${banner.meta}</span>
               <strong>${banner.title}</strong>
               <div class="banner-actions">
-                <button type="button" ${index % 3 === 0 ? `data-go-view="news"` : index % 3 === 1 ? `data-home-filter="viral"` : `data-home-filter="challenges"`}>${index % 3 === 0 ? "Ver noticia" : index % 3 === 1 ? "Ver trend" : "Explorar"}</button>
+                <button type="button" ${index % 3 === 0 ? `data-go-view="news"` : index % 3 === 1 ? `data-home-filter="viral"` : `data-home-filter="challenges"`}>${index % 3 === 0 ? "Ver noticia" : index % 3 === 1 ? "Ver Drop" : "Explorar"}</button>
                 <button type="button" data-save-post="banner-${index}">Guardar</button>
               </div>
             </article>`,
@@ -2627,7 +2627,7 @@ function getHomeFilterLabel(filter) {
   const labels = {
     all: "Feed vivo",
     viral: "Lo más viral",
-    trends: "Trends populares",
+    trends: "Hallyu Drops populares",
     outfits: "Outfits K-pop",
     challenges: "Challenges",
     events: "Eventos destacados",
@@ -2695,10 +2695,14 @@ function renderStoryViewer() {
         <div class="live-fandom-pill"><span></span>Live fandom activo</div>
         ${renderStoryMedia(story)}
         ${renderStoryLayers(story.elements || [])}
-        <div class="story-full-copy">
-          <h2>${story.title}</h2>
-          <p>${story.detail}</p>
-        </div>
+        ${
+          story.title || story.detail
+            ? `<div class="story-full-copy">
+                ${story.title ? `<h2>${escapeHtml(story.title)}</h2>` : ""}
+                ${story.detail ? `<p>${escapeHtml(story.detail)}</p>` : ""}
+              </div>`
+            : "<span></span>"
+        }
         ${
           isOwnStory
             ? `<div class="story-interactions own-story-actions">
@@ -2972,7 +2976,7 @@ function renderStoryEditor() {
   const userLevel = Number(state.user?.level || 1);
   const elements = getStoryDraftElements();
   const selected = getSelectedStoryElement();
-  const visibleTracks = storyMusicLibrary.filter((track) => track.category === (draft.musicCategory || "Trending"));
+  const visibleTracks = storyMusicLibrary.filter((track) => track.category === (draft.musicCategory || "Viral"));
   return `
     <section class="story-editor-overlay" aria-label="Crear historia">
       <div class="story-editor-card fullscreen-editor">
@@ -2990,7 +2994,7 @@ function renderStoryEditor() {
               : ""
           }
           <div class="story-layer-stage editable-stage">${elements.map((element) => renderStoryLayer(element, true)).join("")}</div>
-          <h2>${escapeHtml(draft.text || "Mi momento K-pop")}</h2>
+          ${draft.text ? `<h2>${escapeHtml(draft.text)}</h2>` : ""}
           ${draft.mention ? `<p>${renderMentionedText(draft.mention)}</p>` : ""}
           ${draft.location ? `<small>${escapeHtml(draft.location)}</small>` : ""}
           <div class="story-music-pill story-music-edit"><span>♪</span>${escapeHtml(draft.music)}</div>
@@ -3107,7 +3111,7 @@ function renderNewsFilters() {
       <div class="filter-row">
         ${[
           ["recent", "Recientes"],
-          ["trending", "Trending"],
+          ["trending", "En alza"],
           ["all", "Todo"],
         ].map(([value, label]) => `<button class="filter-chip ${state.newsFilter.topic === value ? "active" : ""}" data-news-filter="topic:${value}">${label}</button>`).join("")}
       </div>
@@ -3141,7 +3145,7 @@ function renderNewsCard(item, index) {
       }
       <div class="news-copy">
         <div class="news-card-top">
-          <span class="tag">${item.trending ? "Trending" : "Reciente"}</span>
+          <span class="tag">${item.trending ? "En alza" : "Reciente"}</span>
           <span class="news-status ${item.status}">${getNewsStatusLabel(item.status)}</span>
         </div>
         <h3 class="card-title">${item.title}</h3>
@@ -3173,7 +3177,7 @@ function getFilteredNews() {
 }
 
 function getNewsHeading() {
-  if (state.newsFilter.topic === "trending") return "Trending K-pop";
+  if (state.newsFilter.topic === "trending") return "K-pop en alza";
   if (state.newsFilter.artist !== "all") return `Noticias de ${state.newsFilter.artist}`;
   return "Noticias recientes";
 }
@@ -3293,7 +3297,7 @@ function renderSearch() {
       <button data-go-view="market"><span class="nav-icon bag-icon"></span><strong>Shop</strong><small>Merch y fotocards</small></button>
       <button data-go-view="community"><span class="nav-icon chat-icon"></span><strong>Comunidad</strong><small>Chats por zona</small></button>
       <button data-go-view="rookie"><span class="nav-icon spark-icon"></span><strong>K-pop 101</strong><small>Para fans nuevos</small></button>
-      <button data-go-view="trends"><span class="nav-icon play-icon"></span><strong>Trends</strong><small>Challenges y videos</small></button>
+      <button data-go-view="trends"><span class="nav-icon play-icon"></span><strong>Hallyu Drops</strong><small>Clips y challenges</small></button>
     </div>
     <div class="section-heading"><h2>Tendencias</h2><span>Explorar</span></div>
     <div class="group-story-row">
@@ -3348,10 +3352,10 @@ function renderTrends() {
   return `
     <div class="trend-tabs">
       <button class="active">Mas virales</button>
-      <button>Hacer mi trend</button>
-      <button>Buscar trend</button>
+      <button>Crear Drop</button>
+      <button>Buscar Drop</button>
     </div>
-    <section class="trends-feed" aria-label="Trends estilo reels">
+    <section class="trends-feed" aria-label="Hallyu Drops estilo reels">
       ${trendVideos
         .map(
           (trend, index) => `
@@ -3390,7 +3394,7 @@ function renderPublish() {
       <label>Tipo de contenido
         <select id="post-category">
           <option value="posts">Publicacion</option>
-          <option value="trends">Trend</option>
+          <option value="trends">Hallyu Drop</option>
           <option value="outfits">Outfit</option>
           <option value="photocards">Photocard</option>
           <option value="favorites">Favorito</option>
@@ -3840,7 +3844,7 @@ function getSettingsGroups() {
         { key: "notif-stars", label: "Estrellas", detail: "Likes y reacciones", icon: "★" },
         { key: "notif-comments", label: "Comentarios", detail: "Respuestas y menciones", icon: "··" },
         { key: "notif-followers", label: "Seguidores", detail: "Nuevos fans", icon: "+" },
-        { key: "notif-trends", label: "Trends", detail: "Challenges y eventos", icon: "▶" },
+        { key: "notif-trends", label: "Hallyu Drops", detail: "Challenges y eventos", icon: "▶" },
       ],
     },
     {
@@ -4225,8 +4229,8 @@ function getProfileDemoPosts(tab, profileUser) {
       { ...common, id: "profile-post-2", category: "posts", group: "Publicacion", time: "ayer", caption: "Fotos del encuentro fandom con luces pastel y photocards protegidas.", hashtags: ["#KpopLatam", "#fandom"] },
     ],
     trends: [
-      { ...common, id: "profile-trend-1", category: "trends", group: "Trend", time: "hace 1 h", caption: "Paso corto para un random play dance con transicion de luz neon.", hashtags: ["#DanceChallenge", "#TrendKpop"], taggedPeople: "@mika, @vale" },
-      { ...common, id: "profile-trend-2", category: "trends", group: "Trend", time: "hace 3 h", caption: "Mini cover inspirado en stage idol, pensado para grabar vertical.", hashtags: ["#cover", "#fancam"] },
+      { ...common, id: "profile-trend-1", category: "trends", group: "Hallyu Drop", time: "hace 1 h", caption: "Paso corto para un random play dance con transicion de luz neon.", hashtags: ["#DanceChallenge", "#HallyuDrop"], taggedPeople: "@mika, @vale" },
+      { ...common, id: "profile-trend-2", category: "trends", group: "Hallyu Drop", time: "hace 3 h", caption: "Mini cover inspirado en stage idol, pensado para grabar vertical.", hashtags: ["#cover", "#fancam"] },
     ],
     outfits: [
       { ...common, id: "profile-outfit-1", category: "outfits", group: "Outfit", time: "hoy", caption: "Look pastel/neon para evento K-pop: denim, brillos suaves y accesorios cute.", hashtags: ["#outfit", "#KpopStyle"], location: "Evento fandom" },
