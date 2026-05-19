@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" role="img" aria-label="HallyuHub premium group cover placeholder">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#090615"/>
+      <stop offset=".32" stop-color="#2b1247"/>
+      <stop offset=".62" stop-color="#0e4b63"/>
+      <stop offset="1" stop-color="#fbbcdb"/>
+    </linearGradient>
+    <radialGradient id="pink" cx=".74" cy=".18" r=".42">
+      <stop offset="0" stop-color="#ff8ac8" stop-opacity=".92"/>
+      <stop offset=".52" stop-color="#a855f7" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#a855f7" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="blue" cx=".16" cy=".78" r=".48">
+      <stop offset="0" stop-color="#65e4ff" stop-opacity=".86"/>
+      <stop offset=".5" stop-color="#77f4c7" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#77f4c7" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="1200" height="700" fill="url(#bg)"/>
+  <rect width="1200" height="700" fill="url(#pink)"/>
+  <rect width="1200" height="700" fill="url(#blue)"/>
+  <g opacity=".22">
+    <circle cx="178" cy="126" r="3" fill="#fff"/>
+    <circle cx="270" cy="238" r="2" fill="#fff"/>
+    <circle cx="982" cy="154" r="3" fill="#fff"/>
+    <circle cx="1060" cy="482" r="2" fill="#fff"/>
+    <circle cx="690" cy="96" r="2" fill="#fff"/>
+    <circle cx="520" cy="586" r="3" fill="#fff"/>
+  </g>
+  <g filter="url(#glow)" opacity=".82">
+    <path d="M190 476c120-116 216-158 324-126 102 30 175-20 270-86 91-63 180-81 282-20" fill="none" stroke="#fbbcdb" stroke-width="9" stroke-linecap="round"/>
+    <path d="M156 526c112-78 210-104 326-70 132 39 262 26 396-94 55-49 110-76 168-82" fill="none" stroke="#65e4ff" stroke-width="6" stroke-linecap="round" opacity=".72"/>
+  </g>
+  <g transform="translate(472 188)" opacity=".78">
+    <rect x="0" y="0" width="256" height="256" rx="72" fill="#ffffff" opacity=".08"/>
+    <path d="M78 68v120M178 68v120M78 128h100" stroke="#fff" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M56 210c46 28 98 42 148 0" fill="none" stroke="#fbbcdb" stroke-width="10" stroke-linecap="round"/>
+  </g>
+</svg>

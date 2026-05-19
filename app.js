@@ -1030,26 +1030,41 @@ const groupOfficialLinks = {
   aespa: [["Sitio oficial", "https://www.smtown.com/"], ["YouTube", "https://www.youtube.com/@aespa"], ["Instagram", "https://www.instagram.com/aespa_official/"], ["Weverse", "https://weverse.io/aespa"]],
 };
 
-function commonsImage(fileName, width = 900) {
-  return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(fileName)}?width=${width}`;
-}
-
 const groupVisualAssets = {
   bts: {
-    imageUrl: commonsImage('BTS at "Map of the Soul - Persona" global press conference, 17 April 2019 01.jpg', 640),
-    coverUrl: commonsImage('BTS at "Map of the Soul - Persona" global press conference, 17 April 2019 01.jpg', 1200),
+    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/7/74/BTS_at_%22Map_of_the_Soul_-_Persona%22_global_press_conference%2C_17_April_2019_01.jpg",
+    coverUrl: "https://upload.wikimedia.org/wikipedia/commons/7/74/BTS_at_%22Map_of_the_Soul_-_Persona%22_global_press_conference%2C_17_April_2019_01.jpg",
     sourceCredit: "TV Ten / Wikimedia Commons · CC BY 3.0",
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:BTS_at_%22Map_of_the_Soul_-_Persona%22_global_press_conference,_17_April_2019_01.jpg',
+    license: "CC BY 3.0",
+    author: "TV Ten",
+    attributionText: 'TV Ten, "BTS at Map of the Soul: Persona global press conference", CC BY 3.0, via Wikimedia Commons',
   },
 };
 
 const artistVisualAssets = {
   "bts-jungkook": {
-    imageUrl: commonsImage("Jeon Jungkook at the White House, 31 May 2022.jpg", 640),
-    coverUrl: commonsImage("Jeon Jungkook at the White House, 31 May 2022.jpg", 900),
+    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/9/9f/Jeon_Jungkook_at_the_White_House%2C_31_May_2022.jpg",
+    coverUrl: "https://upload.wikimedia.org/wikipedia/commons/9/9f/Jeon_Jungkook_at_the_White_House%2C_31_May_2022.jpg",
     sourceCredit: "The White House / Wikimedia Commons · Public domain",
     sourceUrl: "https://commons.wikimedia.org/wiki/File:Jeon_Jungkook_at_the_White_House,_31_May_2022.jpg",
+    license: "Public domain",
+    author: "The White House",
+    attributionText: "The White House, Jeon Jungkook at the White House, public domain, via Wikimedia Commons",
   },
+};
+
+const localVisuals = {
+  groupCover: "assets/visuals/hallyu-group-cover.svg",
+  idolCard: "assets/visuals/hallyu-idol-card.svg",
+};
+
+const placeholderCredit = {
+  sourceCredit: "Placeholder premium HallyuHub · temporal",
+  sourceUrl: "",
+  license: "Asset propio demo",
+  author: "HallyuHub",
+  attributionText: "Imagen temporal creada para HallyuHub. Reemplazar por foto autorizada cuando esté disponible.",
 };
 
 function enrichGroupCatalog() {
@@ -1059,10 +1074,13 @@ function enrichGroupCatalog() {
     group.country ||= "Corea del Sur";
     group.status ||= "Activo";
     group.officialLinks ||= groupOfficialLinks[group.id] || [["Buscar noticias", `https://news.google.com/search?q=${encodeURIComponent(group.name + " K-pop")}`]];
-    group.imageUrl ||= visual.imageUrl || "";
-    group.coverUrl ||= visual.coverUrl || group.imageUrl || "";
-    group.sourceCredit ||= visual.sourceCredit || "Placeholder premium HallyuHub · reemplazar por foto autorizada";
+    group.imageUrl ||= visual.imageUrl || localVisuals.idolCard;
+    group.coverUrl ||= visual.coverUrl || localVisuals.groupCover;
+    group.sourceCredit ||= visual.sourceCredit || placeholderCredit.sourceCredit;
     group.sourceUrl ||= visual.sourceUrl || "";
+    group.license ||= visual.license || placeholderCredit.license;
+    group.author ||= visual.author || placeholderCredit.author;
+    group.attributionText ||= visual.attributionText || placeholderCredit.attributionText;
     group.instagramUrl ||= getOfficialLink(group, "Instagram");
     group.youtubeUrl ||= getOfficialLink(group, "YouTube");
     group.weverseUrl ||= getOfficialLink(group, "Weverse");
@@ -1076,10 +1094,13 @@ function enrichGroupCatalog() {
       return {
         bio: `${artist.name} forma parte de ${group.name}. En Hallyu Hub su perfil reune rol, actividad fandom, publicaciones relacionadas y enlaces del grupo para descubrir contenido sin copiar biografias externas.`,
         socials: group.officialLinks,
-        imageUrl: artistVisual.imageUrl || artist.imageUrl || "",
-        coverUrl: artistVisual.coverUrl || artist.coverUrl || artist.imageUrl || "",
-        sourceCredit: artistVisual.sourceCredit || artist.sourceCredit || "Placeholder premium HallyuHub · reemplazar por foto autorizada",
+        imageUrl: artistVisual.imageUrl || artist.imageUrl || localVisuals.idolCard,
+        coverUrl: artistVisual.coverUrl || artist.coverUrl || artist.imageUrl || localVisuals.groupCover,
+        sourceCredit: artistVisual.sourceCredit || artist.sourceCredit || placeholderCredit.sourceCredit,
         sourceUrl: artistVisual.sourceUrl || artist.sourceUrl || "",
+        license: artistVisual.license || artist.license || placeholderCredit.license,
+        author: artistVisual.author || artist.author || placeholderCredit.author,
+        attributionText: artistVisual.attributionText || artist.attributionText || placeholderCredit.attributionText,
         instagramUrl: artist.instagramUrl || group.instagramUrl,
         youtubeUrl: artist.youtubeUrl || group.youtubeUrl,
         weverseUrl: artist.weverseUrl || group.weverseUrl,
@@ -4200,7 +4221,9 @@ function renderMarket() {
 
 function renderGroups() {
   const filteredGroups = getFilteredGroups();
-  const activeGroup = filteredGroups.find((group) => group.id === state.selectedGroup) || kpopGroups.find((group) => group.id === state.selectedGroup) || filteredGroups[0] || kpopGroups[0];
+  const artistResults = getFilteredArtists();
+  const hasGroupQuery = Boolean(normalizeProfileKey(state.groupSearch));
+  const activeGroup = filteredGroups.find((group) => group.id === state.selectedGroup) || (hasGroupQuery ? filteredGroups[0] : null) || kpopGroups.find((group) => group.id === state.selectedGroup) || filteredGroups[0] || kpopGroups[0];
   const selectedArtist = activeGroup.artists.find((artist) => artist.id === state.selectedArtist);
   if (selectedArtist) return renderArtistProfile(selectedArtist, activeGroup);
   const relatedNews = getRelatedNewsForGroup(activeGroup);
@@ -4227,7 +4250,7 @@ function renderGroups() {
               .map(
                 (group) => `
           <button class="group-story ${activeGroup.id === group.id ? "active" : ""}" data-group="${group.id}">
-            <span class="group-story-photo ${group.imageUrl ? "has-photo" : "is-placeholder"}" style="${getVisualStyle(group, group.colors, "image")}">${group.imageUrl ? "" : getInitials(group.name)}</span>
+            <span class="group-story-photo ${getVisualClass(group, "image")}" style="${getVisualStyle(group, group.colors, "image")}">${shouldShowInitials(group, "image") ? getInitials(group.name) : ""}</span>
             <strong>${group.name}</strong>
             <small>${group.fandom}</small>
           </button>`,
@@ -4236,21 +4259,7 @@ function renderGroups() {
           : `<article class="empty-group-result">No encontramos ese grupo todavia. Probá buscar por integrante, fandom o empresa.</article>`
       }
     </div>
-    <div class="section-heading"><h2>Todos los grupos</h2><span>${filteredGroups.length} resultados</span></div>
-    <div class="group-directory-grid">
-      ${filteredGroups
-        .map(
-          (group) => `
-          <button class="group-directory-card ${activeGroup.id === group.id ? "active" : ""}" data-group="${group.id}">
-            <span class="group-directory-art ${group.imageUrl ? "has-photo" : "is-placeholder"}" style="${getVisualStyle(group, group.colors, "image")}">${group.imageUrl ? "" : getInitials(group.name)}</span>
-            <span>
-              <strong>${group.name}</strong>
-              <small>${group.company} · ${group.fandom}</small>
-            </span>
-          </button>`,
-        )
-        .join("")}
-    </div>
+    ${artistResults.length ? renderArtistSearchResults(artistResults) : ""}
     <article class="group-hero ${activeGroup.coverUrl ? "has-cover" : "is-placeholder"}" style="${getVisualStyle(activeGroup, activeGroup.colors, "cover")}">
       <span class="tag">${activeGroup.type === "soloist" ? "Solista" : "Grupo"} · ${activeGroup.status}</span>
       <h2>${activeGroup.name}</h2>
@@ -4268,6 +4277,7 @@ function renderGroups() {
       <strong>Links oficiales</strong>
       <div>${activeGroup.officialLinks.map(([label, url]) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`).join("")}</div>
     </section>
+    ${renderImageCredits(activeGroup)}
     <div class="group-photo-strip">
       <div class="${activeGroup.coverUrl ? "has-photo" : "is-placeholder"}" style="${getVisualStyle(activeGroup, activeGroup.colors, "cover")}">Portada</div>
       <div class="${activeGroup.imageUrl ? "has-photo" : "is-placeholder"}" style="${getVisualStyle(activeGroup, activeGroup.colors, "image")}">Grupo</div>
@@ -4297,7 +4307,7 @@ function renderGroups() {
         .map(
           (artist, index) => `
           <article class="artist-card ${state.selectedArtist === artist.id ? "active" : ""}">
-            <div class="artist-photo ${artist.imageUrl ? "has-photo" : "is-placeholder"}" style="${getVisualStyle(artist, art[index % art.length], "image")}"><span>${artist.imageUrl ? "" : getInitials(artist.name)}</span></div>
+            <div class="artist-photo ${getVisualClass(artist, "image")}" style="${getVisualStyle(artist, art[index % art.length], "image")}"><span>${shouldShowInitials(artist, "image") ? getInitials(artist.name) : ""}</span></div>
             <div>
               <h3>${artist.name}</h3>
               <p class="muted">${artist.role}</p>
@@ -4339,6 +4349,49 @@ function getFilteredGroups() {
   });
 }
 
+function getFilteredArtists() {
+  const query = normalizeProfileKey(state.groupSearch);
+  if (!query) return [];
+  const filter = state.groupFilter || "all";
+  if (!["all", "artist"].includes(filter)) return [];
+  return kpopGroups
+    .flatMap((group) =>
+      (group.artists || []).map((artist) => ({
+        artist,
+        group,
+        haystack: normalizeProfileKey([artist.name, artist.realName, artist.role, artist.country, artist.nationality, group.name, group.fandom, group.company].join(" ")),
+      })),
+    )
+    .filter((item) => item.haystack.includes(query))
+    .slice(0, 8);
+}
+
+function renderArtistSearchResults(results) {
+  return `
+    <section class="artist-search-results">
+      <div class="section-heading small"><h2>Artistas encontrados</h2><span>${results.length}</span></div>
+      <div class="artist-result-grid">
+        ${results
+          .map(
+            ({ artist, group }, index) => `
+            <article class="artist-result-card">
+              <div class="artist-result-photo ${getVisualClass(artist, "image")}" style="${getVisualStyle(artist, group.colors || art[index % art.length], "image")}">
+                <span>${shouldShowInitials(artist, "image") ? getInitials(artist.name) : ""}</span>
+              </div>
+              <div>
+                <strong>${artist.name}</strong>
+                <small>${artist.realName ? `${artist.realName} · ` : ""}${group.name}</small>
+                <p>${artist.role}</p>
+                <button class="tag" data-artist-profile="${artist.id}">Ver perfil</button>
+              </div>
+            </article>`,
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
 function getRelatedNewsForGroup(group) {
   return (state.newsItems.length ? state.newsItems : news)
     .filter((item) => [item.artist, item.title, item.summary].join(" ").toLowerCase().includes(group.name.toLowerCase()))
@@ -4359,13 +4412,48 @@ function getInitials(name) {
 function getVisualStyle(entity, fallbackArt, variant = "image") {
   const url = variant === "cover" ? entity.coverUrl || entity.imageUrl : entity.imageUrl || entity.coverUrl;
   const artValue = fallbackArt || entity.colors || art[0];
-  return `--art:${artValue};${url ? `--photo:url("${escapeAttr(url)}");--cover:url("${escapeAttr(url)}");` : ""}`;
+  return `--art:${artValue};${url ? `--photo:url('${escapeAttr(url)}');--cover:url('${escapeAttr(url)}');` : ""}`;
+}
+
+function isLocalPlaceholderVisual(url) {
+  return String(url || "").includes("assets/visuals/");
+}
+
+function shouldShowInitials(entity, variant = "image") {
+  const url = variant === "cover" ? entity.coverUrl || entity.imageUrl : entity.imageUrl || entity.coverUrl;
+  return !url || isLocalPlaceholderVisual(url);
+}
+
+function getVisualClass(entity, variant = "image") {
+  const url = variant === "cover" ? entity.coverUrl || entity.imageUrl : entity.imageUrl || entity.coverUrl;
+  return `${url ? "has-photo" : "is-placeholder"} ${isLocalPlaceholderVisual(url) ? "local-placeholder" : ""}`;
 }
 
 function renderSourceCredit(entity) {
   if (!entity.sourceCredit) return "Imagen pendiente";
   if (!entity.sourceUrl) return entity.sourceCredit;
   return `<a href="${entity.sourceUrl}" target="_blank" rel="noopener noreferrer">${entity.sourceCredit}</a>`;
+}
+
+function renderImageCredits(entity) {
+  const creditRows = [
+    ["Autor", entity.author],
+    ["Licencia", entity.license],
+    ["Atribucion", entity.attributionText],
+  ].filter(([, value]) => value);
+  return `
+    <section class="image-credit-card">
+      <strong>Créditos de imagen</strong>
+      <div>
+        ${creditRows.map(([label, value]) => `<p><span>${label}</span>${value}</p>`).join("")}
+        ${
+          entity.sourceUrl
+            ? `<a href="${entity.sourceUrl}" target="_blank" rel="noopener noreferrer">Ver fuente</a>`
+            : `<small>Placeholder temporal listo para reemplazar por foto legal autorizada.</small>`
+        }
+      </div>
+    </section>
+  `;
 }
 
 function renderArtistProfile(artist, group) {
@@ -4386,7 +4474,7 @@ function renderArtistProfile(artist, group) {
         <span class="source-credit">${renderSourceCredit(artist)}</span>
       </div>
       <div class="artist-profile-head">
-        <div class="artist-photo large ${artist.imageUrl ? "has-photo" : "is-placeholder"}" style="${getVisualStyle(artist, group.colors, "image")}"><span>${artist.imageUrl ? "" : getInitials(artist.name)}</span></div>
+        <div class="artist-photo large ${getVisualClass(artist, "image")}" style="${getVisualStyle(artist, group.colors, "image")}"><span>${shouldShowInitials(artist, "image") ? getInitials(artist.name) : ""}</span></div>
         <div>
           <span class="tag">${group.name}</span>
           <h2>${artist.name}</h2>
@@ -4402,6 +4490,7 @@ function renderArtistProfile(artist, group) {
         <strong>Redes oficiales del artista/grupo</strong>
         <div>${(artist.socials || group.officialLinks).map(([label, url]) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`).join("")}</div>
       </div>
+      ${renderImageCredits(artist)}
       <div class="artist-related-card">
         <strong>Noticias y publicaciones relacionadas</strong>
         <div class="group-news-list">

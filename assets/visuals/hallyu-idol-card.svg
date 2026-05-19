@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 900" role="img" aria-label="HallyuHub premium idol placeholder">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#12071d"/>
+      <stop offset=".45" stop-color="#4c1d95"/>
+      <stop offset=".72" stop-color="#0e7490"/>
+      <stop offset="1" stop-color="#fbbcdb"/>
+    </linearGradient>
+    <radialGradient id="halo" cx=".5" cy=".24" r=".42">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".62"/>
+      <stop offset=".38" stop-color="#fbbcdb" stop-opacity=".34"/>
+      <stop offset="1" stop-color="#fbbcdb" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+  </defs>
+  <rect width="700" height="900" fill="url(#bg)"/>
+  <rect width="700" height="900" fill="url(#halo)"/>
+  <circle cx="350" cy="286" r="128" fill="#fff" opacity=".32"/>
+  <path d="M164 760c34-184 124-280 186-280s152 96 186 280" fill="#fff" opacity=".24"/>
+  <path d="M210 694c44-82 89-118 140-118s96 36 140 118" fill="#111827" opacity=".22" filter="url(#soft)"/>
+  <g opacity=".72">
+    <path d="M160 128l28 56 62 9-45 44 11 61-56-29-55 29 10-61-45-44 63-9z" fill="#fbbcdb" opacity=".7"/>
+    <path d="M538 170l18 36 40 6-29 28 7 40-36-19-36 19 7-40-29-28 40-6z" fill="#65e4ff" opacity=".75"/>
+    <circle cx="118" cy="562" r="7" fill="#fff" opacity=".56"/>
+    <circle cx="592" cy="610" r="5" fill="#fff" opacity=".48"/>
+    <circle cx="496" cy="88" r="4" fill="#fff" opacity=".46"/>
+  </g>
+</svg>
