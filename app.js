@@ -8,7 +8,7 @@ const state = {
   profileTab: "posts",
   profileEditorOpen: false,
   homeFilter: "all",
-  activePost: null,
+  expandedPosts: {},
   savedPosts: {},
   sharedPosts: {},
   settingsPanel: null,
@@ -970,7 +970,6 @@ function setView(nextView) {
   }
   if (nextView !== "home") {
     state.activeStory = null;
-    state.activePost = null;
     state.storyComposerOpen = false;
     clearStoryAutoplay();
   }
@@ -1126,21 +1125,14 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-home-filter]").forEach((button) => {
     button.addEventListener("click", () => {
       state.homeFilter = button.dataset.homeFilter;
-      state.activePost = null;
       render();
     });
   });
 
   document.querySelectorAll("[data-open-post]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.activePost = button.dataset.openPost;
-      render();
-    });
-  });
-
-  document.querySelectorAll("[data-close-post]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.activePost = null;
+      const id = button.dataset.openPost;
+      state.expandedPosts[id] = !state.expandedPosts[id];
       render();
     });
   });
@@ -2045,7 +2037,6 @@ function renderHome() {
       </div>
     </div>
     ${renderStoryViewer()}
-    ${renderPostModal()}
   `;
 }
 
@@ -2108,21 +2099,6 @@ function renderHomeHighlights() {
     </section>`;
 }
 
-function renderPostModal() {
-  if (!state.activePost) return "";
-  const posts = buildHomeFeed(userPosts);
-  const post = posts.find((item) => item.id === state.activePost) || userPosts.find((item) => String(state.activePost).startsWith(item.id));
-  if (!post) return "";
-  return `
-    <section class="post-modal" aria-label="Publicacion abierta">
-      <button class="post-modal-backdrop" data-close-post aria-label="Cerrar publicacion"></button>
-      <article class="post-modal-card">
-        <button class="story-close post-modal-close" data-close-post aria-label="Cerrar">X</button>
-        ${renderSocialPost(post, 0, { compact: true, featured: true, expanded: true })}
-      </article>
-    </section>`;
-}
-
 function renderStoryViewer() {
   if (state.activeStory === null) return "";
   const story = getActiveStory();
@@ -2170,7 +2146,7 @@ function renderStoryViewer() {
 }
 
 function renderSocialPost(post, index, options = {}) {
-  const expanded = Boolean(options.expanded);
+  const expanded = Boolean(options.expanded || state.expandedPosts[post.id]);
   const isFeatured = options.featured || post.type === "trending" || post.type === "event";
   return `
     <article class="post-card ${options.compact ? "profile-feed-post" : ""} ${isFeatured ? "featured-post" : ""} ${expanded ? "expanded-post" : ""}">
@@ -2187,23 +2163,26 @@ function renderSocialPost(post, index, options = {}) {
         </button>
         <button class="post-menu-button" data-open-post="${post.id}" aria-label="Mas opciones">•••</button>
       </div>
-      <button class="post-open-button" data-open-post="${post.id}" aria-label="Abrir publicacion">
-      ${
-        post.mediaUrl
-          ? post.mediaType === "video"
-            ? `<video class="post-media real-media" src="${post.mediaUrl}" controls playsinline></video>`
-            : `<img class="post-media real-media" src="${post.mediaUrl}" alt="Publicacion de ${post.user}" />`
-          : `<div class="post-media" style="--art:${post.art || art[index % art.length]}"></div>`
-      }
-      </button>
-      <p class="post-caption ${expanded ? "expanded" : ""}">${post.caption}</p>
-      ${expanded ? renderPostOptionalMeta(post) : ""}
-      ${expanded ? `<div class="post-hashtags">${(post.hashtags || ["#KpopLatam", "#HallyuHub"]).map((tag) => `<button type="button" data-home-filter="${tag}">${tag}</button>`).join("")}</div>` : `<button class="post-more-button" data-open-post="${post.id}">Ver más</button>`}
-      <div class="post-actions premium-actions">
-        <button class="post-action-star" ${post.id ? `data-like-post="${post.id}"` : ""}><span>★</span><strong>${post.likes || "0"}</strong></button>
-        <button class="post-action-comment" ${post.id ? `data-comment-post="${post.id}"` : ""}><span></span><strong>${post.comments || "0"}</strong></button>
-        <button class="post-action-share" data-share-post="${post.id}"><span></span><strong>${post.shares || index + 24}</strong></button>
-        <button class="post-action-save ${state.savedPosts[post.id] ? "active" : ""}" data-save-post="${post.id}"><span></span><strong>${post.saves || index + 12}</strong></button>
+      <div class="post-body-card">
+        <button class="post-open-button" data-open-post="${post.id}" aria-label="${expanded ? "Contraer publicacion" : "Expandir publicacion"}">
+        ${
+          post.mediaUrl
+            ? post.mediaType === "video"
+              ? `<video class="post-media real-media" src="${post.mediaUrl}" controls playsinline></video>`
+              : `<img class="post-media real-media" src="${post.mediaUrl}" alt="Publicacion de ${post.user}" />`
+            : `<div class="post-media" style="--art:${post.art || art[index % art.length]}"></div>`
+        }
+        </button>
+        <p class="post-caption ${expanded ? "expanded" : ""}">${post.caption}</p>
+        ${expanded ? renderPostOptionalMeta(post) : ""}
+        ${expanded ? `<div class="post-hashtags">${(post.hashtags || ["#KpopLatam", "#HallyuHub"]).map((tag) => `<button type="button" data-home-filter="${tag}">${tag}</button>`).join("")}</div>` : ""}
+        <button class="post-more-button" data-open-post="${post.id}">${expanded ? "Ver menos" : "Ver más"}</button>
+        <div class="post-actions premium-actions">
+          <button class="post-action-star" ${post.id ? `data-like-post="${post.id}"` : ""}><span>★</span><strong>${post.likes || "0"}</strong></button>
+          <button class="post-action-comment" ${post.id ? `data-comment-post="${post.id}"` : ""}><span></span><strong>${post.comments || "0"}</strong></button>
+          <button class="post-action-share" data-share-post="${post.id}"><span></span><strong>${post.shares || index + 24}</strong></button>
+          <button class="post-action-save ${state.savedPosts[post.id] ? "active" : ""}" data-save-post="${post.id}"><span></span><strong>${post.saves || index + 12}</strong></button>
+        </div>
       </div>
     </article>`;
 }
