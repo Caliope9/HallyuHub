@@ -7,6 +7,10 @@ const state = {
   activityTab: "activity",
   profileTab: "posts",
   profileEditorOpen: false,
+  homeFilter: "all",
+  activePost: null,
+  savedPosts: {},
+  sharedPosts: {},
   settingsPanel: null,
   viewedProfile: null,
   followedProfiles: {},
@@ -26,6 +30,15 @@ const state = {
   backendMode: "local",
   livePosts: [],
   liveProfiles: [],
+  newsItems: [],
+  newsLoading: false,
+  newsLastUpdated: null,
+  newsFilter: {
+    artist: "all",
+    topic: "recent",
+    status: "all",
+    language: "all",
+  },
 };
 
 let storyAutoTimer = null;
@@ -167,24 +180,48 @@ const ambiences = [
 
 const news = [
   {
-    group: "Stray Kids",
-    title: "Nueva era visual: comeback con teaser cinematografico",
-    meta: "12.8K likes · 846 comentarios",
-    tag: "Trending",
+    id: "demo-news-skz",
+    artist: "Stray Kids",
+    title: "Stray Kids prepara nueva etapa con teaser cinematografico",
+    source: "HallyuHub demo",
+    date: new Date(Date.now() - 1000 * 60 * 42).toISOString(),
+    summary: "Fanbases latinas reunen guias, horarios y links oficiales para seguir la proxima era del grupo.",
+    link: "https://news.google.com/search?q=Stray%20Kids%20K-pop",
+    status: "approved",
+    language: "es",
+    country: "LATAM",
+    trending: true,
   },
   {
-    group: "NewJeans",
-    title: "Fans latinas organizan streaming party nocturna",
-    meta: "8.4K likes · LATAM",
-    tag: "Fandom",
+    id: "demo-news-bp",
+    artist: "BLACKPINK",
+    title: "BLACKPINK impulsa nuevo trend de dance challenge",
+    source: "Google News demo",
+    date: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
+    summary: "El challenge aparece entre los clips mas compartidos por creadores de K-pop en Latinoamerica.",
+    link: "https://news.google.com/search?q=BLACKPINK%20K-pop",
+    status: "pending",
+    language: "es",
+    country: "AR",
+    trending: true,
   },
   {
-    group: "SEVENTEEN",
-    title: "Guia rapida para votar en premios semanales",
-    meta: "4.1K guardados · Tutorial",
-    tag: "Guia",
+    id: "demo-news-nj",
+    artist: "NewJeans",
+    title: "NewJeans vuelve a ser tema central en foros de estilo K-pop",
+    source: "HallyuHub demo",
+    date: new Date(Date.now() - 1000 * 60 * 140).toISOString(),
+    summary: "Outfits Y2K, fancams y edits mantienen al grupo entre las conversaciones destacadas.",
+    link: "https://news.google.com/search?q=NewJeans%20K-pop",
+    status: "approved",
+    language: "es",
+    country: "LATAM",
+    trending: false,
   },
 ];
+
+const NEWS_REFRESH_MS = 3 * 60 * 60 * 1000;
+const newsArtists = ["BTS", "BLACKPINK", "Stray Kids", "NewJeans", "TWICE", "SEVENTEEN", "ATEEZ", "IVE", "TXT"];
 
 const userPosts = [
   {
@@ -329,12 +366,12 @@ const homeBanners = [
 ];
 
 const homeHighlightStories = [
-  { label: "Stories", detail: "Siguiendo", avatar: "berry", colors: "linear-gradient(160deg, #fbbcdb, #a855f7)" },
-  { label: "Trends", detail: "Virales", avatar: "neon", colors: "linear-gradient(160deg, #65e4ff, #d946ef)" },
-  { label: "Idols", detail: "Bias", avatar: "idol", colors: "linear-gradient(160deg, #ffd166, #ff2d55)" },
-  { label: "Eventos", detail: "Latam", avatar: "star", colors: "linear-gradient(160deg, #ffb703, #65e4ff)" },
-  { label: "Challenges", detail: "Dance", avatar: "cyber", colors: "linear-gradient(160deg, #77f4c7, #263d72)" },
-  { label: "Fancams", detail: "Top", avatar: "anime", colors: "linear-gradient(160deg, #fff1f9, #ff8ac8)" },
+  { label: "Viral", detail: "Top posts", avatar: "neon", filter: "viral", colors: "linear-gradient(160deg, #65e4ff, #d946ef)" },
+  { label: "Trends", detail: "Resumen", avatar: "idol", filter: "trends", colors: "linear-gradient(160deg, #ffd166, #ff2d55)" },
+  { label: "Outfit", detail: "K-style", avatar: "anime", filter: "outfits", colors: "linear-gradient(160deg, #fff1f9, #ff8ac8)" },
+  { label: "Challenges", detail: "Dance", avatar: "cyber", filter: "challenges", colors: "linear-gradient(160deg, #77f4c7, #263d72)" },
+  { label: "Eventos", detail: "Latam", avatar: "star", filter: "events", colors: "linear-gradient(160deg, #ffb703, #65e4ff)" },
+  { label: "Idols", detail: "Grupos", avatar: "berry", view: "groups", colors: "linear-gradient(160deg, #fbbcdb, #a855f7)" },
 ];
 
 const storyReactions = [
@@ -933,6 +970,7 @@ function setView(nextView) {
   }
   if (nextView !== "home") {
     state.activeStory = null;
+    state.activePost = null;
     state.storyComposerOpen = false;
     clearStoryAutoplay();
   }
@@ -954,6 +992,7 @@ function setView(nextView) {
   appScreen.dataset.ambience = state.ambience;
   document.getElementById("screen-title").textContent = titleByView[nextView];
   render();
+  if (nextView === "news") loadKpopNews(false);
 }
 
 function render() {
@@ -1063,6 +1102,68 @@ function bindDynamicActions() {
 
   document.querySelectorAll("[data-create-post]").forEach((button) => {
     button.addEventListener("click", createPost);
+  });
+
+  document.querySelectorAll("[data-news-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const [key, value] = button.dataset.newsFilter.split(":");
+      state.newsFilter = { ...state.newsFilter, [key]: value };
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-news-refresh]").forEach((button) => {
+    button.addEventListener("click", () => loadKpopNews(true));
+  });
+
+  document.querySelectorAll("[data-news-status]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const [id, status] = button.dataset.newsStatus.split(":");
+      updateNewsStatus(id, status);
+    });
+  });
+
+  document.querySelectorAll("[data-home-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.homeFilter = button.dataset.homeFilter;
+      state.activePost = null;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-open-post]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.activePost = button.dataset.openPost;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-close-post]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.activePost = null;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-save-post]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.savePost;
+      state.savedPosts[id] = !state.savedPosts[id];
+      button.classList.toggle("active", state.savedPosts[id]);
+    });
+  });
+
+  document.querySelectorAll("[data-share-post]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.sharePost;
+      state.sharedPosts[id] = true;
+      button.classList.add("active");
+      alert("Publicacion lista para compartir en modo demo.");
+    });
+  });
+
+  document.querySelectorAll("[data-open-feed-profile]").forEach((button) => {
+    button.addEventListener("click", () => openFeedProfile(button.dataset.openFeedProfile));
   });
 
   document.querySelectorAll("[data-story-index]").forEach((button) => {
@@ -1370,6 +1471,9 @@ async function initApp() {
   if (Array.isArray(savedLocalPosts) && savedLocalPosts.length) {
     userPosts.unshift(...savedLocalPosts.filter((post) => !userPosts.some((item) => item.id === post.id)));
   }
+  const savedNews = storage.get("hallyuHubNewsCache", null);
+  state.newsItems = savedNews?.items?.length ? mergeNewsStatuses(savedNews.items, news) : news;
+  state.newsLastUpdated = savedNews?.updatedAt || null;
   state.ownStory = storage.get("hallyuHubOwnStory", null);
   state.storyInbox = storage.get("hallyuHubStoryInbox", []);
   state.isAuthenticated = Boolean(savedSession);
@@ -1691,13 +1795,59 @@ function getPostCategoryLabel(category) {
 }
 
 async function toggleLike(postId) {
-  if (state.backendMode !== "supabase" || !state.session?.user) return;
+  if (state.backendMode !== "supabase" || !state.session?.user) {
+    const baseId = String(postId).replace(/-\d+$/, "");
+    const post = userPosts.find((item) => item.id === baseId);
+    if (post) post.likes = bumpEngagement(post.likes);
+    render();
+    return;
+  }
   await state.supabase.from("likes").upsert({ post_id: postId, user_id: state.session.user.id });
 }
 
 async function addComment(postId, body) {
-  if (state.backendMode !== "supabase" || !state.session?.user) return;
+  if (state.backendMode !== "supabase" || !state.session?.user) {
+    const baseId = String(postId).replace(/-\d+$/, "");
+    const post = userPosts.find((item) => item.id === baseId);
+    if (post) post.comments = bumpEngagement(post.comments);
+    render();
+    return;
+  }
   await state.supabase.from("comments").insert({ post_id: postId, user_id: state.session.user.id, body });
+}
+
+function bumpEngagement(value) {
+  const text = String(value || "0");
+  const number = Number.parseFloat(text.replace(/[^0-9.]/g, "")) || 0;
+  if (text.toLowerCase().includes("k")) return `${(number + 0.1).toFixed(1)}K`;
+  return String(Math.round(number + 1));
+}
+
+function openFeedProfile(name) {
+  const post = userPosts.find((item) => item.user === name);
+  if (!post) return;
+  if (post.user === state.user?.name) {
+    state.viewedProfile = null;
+  } else {
+    state.viewedProfile = {
+      id: post.user.toLowerCase().replace(/\s+/g, "-"),
+      name: post.user,
+      username: post.user.toLowerCase().replace(/[^a-z0-9]+/g, ""),
+      avatar: post.avatar || "star",
+      bio: post.caption,
+      country: post.location || "Latam",
+      fandom: post.badge || "Army 💜",
+      bias: "Bias secreto",
+      favoriteGroup: post.group || "K-pop",
+      phrase: "Compartiendo momentos fandom en HallyuHub.",
+      followers: "2.8K",
+      following: "210",
+      posts: "32",
+      starsReceived: post.likes || "1.2K",
+      profileBg: post.type === "trending" ? "stage" : "pastel",
+    };
+  }
+  setView("profile");
 }
 
 async function followUser(userId) {
@@ -1834,7 +1984,9 @@ function renderHome() {
           mediaType: post.media_type,
         }))
       : userPosts;
-  const infiniteFeedPosts = buildHomeFeed(feedPosts);
+  const filteredFeedPosts = filterHomeFeed(feedPosts);
+  const infiniteFeedPosts = buildHomeFeed(filteredFeedPosts);
+  const filterLabel = getHomeFilterLabel(state.homeFilter);
   return `
     ${renderHomeHighlights()}
     <div class="stories-row" aria-label="Historias de personas que sigo">
@@ -1866,8 +2018,8 @@ function renderHome() {
               <span>${banner.meta}</span>
               <strong>${banner.title}</strong>
               <div class="banner-actions">
-                <button type="button">${index % 3 === 0 ? "Ver noticia" : index % 3 === 1 ? "Ver trend" : "Explorar"}</button>
-                <button type="button">Guardar</button>
+                <button type="button" ${index % 3 === 0 ? `data-go-view="news"` : index % 3 === 1 ? `data-home-filter="viral"` : `data-home-filter="challenges"`}>${index % 3 === 0 ? "Ver noticia" : index % 3 === 1 ? "Ver trend" : "Explorar"}</button>
+                <button type="button" data-save-post="banner-${index}">Guardar</button>
               </div>
             </article>`,
           )
@@ -1878,11 +2030,11 @@ function renderHome() {
       </div>
     </section>
     <div class="home-metric-pills" aria-label="Datos de comunidad">
-      <div class="metric-pill"><span class="metric-dot event"></span><strong>42</strong><small>eventos</small></div>
-      <div class="metric-pill"><span class="metric-dot fans"></span><strong>128K</strong><small>conectados</small></div>
-      <div class="metric-pill"><span class="metric-dot drops"></span><strong>24h</strong><small>drops</small></div>
+      <button class="metric-pill" data-home-filter="events"><span class="metric-dot event"></span><strong>42</strong><small>eventos</small></button>
+      <button class="metric-pill" data-go-view="community"><span class="metric-dot fans"></span><strong>128K</strong><small>conectados</small></button>
+      <button class="metric-pill" data-go-view="market"><span class="metric-dot drops"></span><strong>24h</strong><small>drops</small></button>
     </div>
-    <div class="section-heading feed-heading"><h2>Feed vivo</h2><span>Actualizado ahora</span></div>
+    <div class="section-heading feed-heading"><h2>${filterLabel}</h2><button class="feed-reset ${state.homeFilter === "all" ? "hidden" : ""}" data-home-filter="all">Ver todo</button></div>
     <div class="social-feed infinite-social-feed">
       ${infiniteFeedPosts
         .map((post, index) => renderSocialPost(post, index, { featured: index === 0 || index % 7 === 3 }))
@@ -1893,7 +2045,31 @@ function renderHome() {
       </div>
     </div>
     ${renderStoryViewer()}
+    ${renderPostModal()}
   `;
+}
+
+function filterHomeFeed(posts) {
+  const filter = state.homeFilter || "all";
+  if (filter === "all") return posts;
+  if (filter === "viral" || filter === "trends") return posts.filter((post) => post.type === "trending" || post.category === "trends");
+  if (filter === "outfits") return posts.filter((post) => post.category === "outfits" || post.type === "outfit");
+  if (filter === "challenges") return posts.filter((post) => post.category === "trends" || (post.hashtags || []).some((tag) => tag.toLowerCase().includes("challenge")));
+  if (filter === "events") return posts.filter((post) => post.type === "event" || (post.hashtags || []).some((tag) => tag.toLowerCase().includes("evento")));
+  if (filter.startsWith("#")) return posts.filter((post) => (post.hashtags || []).some((tag) => tag.toLowerCase() === filter.toLowerCase()));
+  return posts;
+}
+
+function getHomeFilterLabel(filter) {
+  const labels = {
+    all: "Feed vivo",
+    viral: "Lo más viral",
+    trends: "Trends populares",
+    outfits: "Outfits K-pop",
+    challenges: "Challenges",
+    events: "Eventos destacados",
+  };
+  return labels[filter] || `Hashtag ${filter}`;
 }
 
 function buildHomeFeed(posts) {
@@ -1903,25 +2079,47 @@ function buildHomeFeed(posts) {
       ...post,
       id: `${post.id || "post"}-${round}`,
       time: round === 0 ? post.time : cycles[(index + round) % cycles.length],
-      likes: round === 0 ? post.likes : `${Number.parseFloat(String(post.likes || "1").replace("K", "")) + round}.${index + 1}K`,
-      comments: round === 0 ? post.comments : `${Number.parseInt(String(post.comments || "40"), 10) + round * 37}`,
+      likes: round === 0 ? post.likes : bumpFeedEngagement(post.likes, round + index),
+      comments: round === 0 ? post.comments : bumpFeedEngagement(post.comments, round),
     })),
   ).flat();
 }
 
+function bumpFeedEngagement(value, amount) {
+  const text = String(value || "0");
+  const number = Number.parseFloat(text.replace(/[^0-9.]/g, "")) || 0;
+  if (text.toLowerCase().includes("k")) return `${(number + amount * 0.2).toFixed(1)}K`;
+  return String(Math.round(number + amount * 17));
+}
+
 function renderHomeHighlights() {
   return `
-    <section class="home-highlights" aria-label="Highlights del inicio">
+    <section class="home-highlights" aria-label="Categorias rapidas del inicio">
       ${homeHighlightStories
         .map(
           (item, index) => `
-          <button type="button" class="highlight-story-card" style="--art:${item.colors}">
+          <button type="button" class="highlight-story-card ${state.homeFilter === item.filter ? "active" : ""}" style="--art:${item.colors}" ${item.view ? `data-go-view="${item.view}"` : `data-home-filter="${item.filter}"`}>
             <span class="highlight-story-orb">${renderAvatarElement("mini", item.avatar)}</span>
             <strong>${item.label}</strong>
             <small>${item.detail}</small>
           </button>`,
         )
         .join("")}
+    </section>`;
+}
+
+function renderPostModal() {
+  if (!state.activePost) return "";
+  const posts = buildHomeFeed(userPosts);
+  const post = posts.find((item) => item.id === state.activePost) || userPosts.find((item) => String(state.activePost).startsWith(item.id));
+  if (!post) return "";
+  return `
+    <section class="post-modal" aria-label="Publicacion abierta">
+      <button class="post-modal-backdrop" data-close-post aria-label="Cerrar publicacion"></button>
+      <article class="post-modal-card">
+        <button class="story-close post-modal-close" data-close-post aria-label="Cerrar">X</button>
+        ${renderSocialPost(post, 0, { compact: true, featured: true })}
+      </article>
     </section>`;
 }
 
@@ -1975,18 +2173,21 @@ function renderSocialPost(post, index, options = {}) {
   return `
     <article class="post-card ${options.compact ? "profile-feed-post" : ""} ${options.featured || post.type === "trending" || post.type === "event" ? "featured-post" : ""}">
       <div class="post-head modern-post-head">
-        ${renderAvatarElement("mini post-author-avatar", post.avatar || "berry", post.avatarUrl)}
-        <div>
+        <button class="post-profile-button" data-open-feed-profile="${post.user}">
+          ${renderAvatarElement("mini post-author-avatar", post.avatar || "berry", post.avatarUrl)}
+        </button>
+        <button class="post-author-copy" data-open-feed-profile="${post.user}">
           <div class="post-user-line">
             <span class="online-dot ${post.online ? "active" : ""}"></span>
             <h3>${post.user}</h3>
             <span class="fandom-badge">${post.badge || "Army 💜"}</span>
           </div>
           <p class="muted">${post.group || getPostCategoryLabel(post.category)}${post.time ? ` · ${post.time}` : ""}${post.location ? ` · ${post.location}` : ""}</p>
-        </div>
-        <button class="post-menu-button" aria-label="Mas opciones">•••</button>
+        </button>
+        <button class="post-menu-button" data-open-post="${post.id}" aria-label="Mas opciones">•••</button>
       </div>
       ${options.featured || post.type === "trending" || post.type === "event" ? `<div class="post-feature-label">${post.type === "event" ? "Evento destacado" : post.type === "trending" ? "Trend popular" : "Destacado"}</div>` : ""}
+      <button class="post-open-button" data-open-post="${post.id}" aria-label="Abrir publicacion">
       ${
         post.mediaUrl
           ? post.mediaType === "video"
@@ -1994,16 +2195,17 @@ function renderSocialPost(post, index, options = {}) {
             : `<img class="post-media real-media" src="${post.mediaUrl}" alt="Publicacion de ${post.user}" />`
           : `<div class="post-media" style="--art:${post.art || art[index % art.length]}"></div>`
       }
+      </button>
       <p class="post-caption">${post.caption}</p>
       ${renderPostOptionalMeta(post)}
       <div class="post-hashtags">
-        ${(post.hashtags || ["#KpopLatam", "#HallyuHub"]).map((tag) => `<button type="button">${tag}</button>`).join("")}
+        ${(post.hashtags || ["#KpopLatam", "#HallyuHub"]).map((tag) => `<button type="button" data-home-filter="${tag}">${tag}</button>`).join("")}
       </div>
       <div class="post-actions premium-actions">
         <button class="post-action-star" ${post.id ? `data-like-post="${post.id}"` : ""}><span>★</span><strong>${post.likes || "0"}</strong></button>
         <button class="post-action-comment" ${post.id ? `data-comment-post="${post.id}"` : ""}><span></span><strong>${post.comments || "0"}</strong></button>
-        <button class="post-action-share"><span></span><strong>${post.shares || index + 24}</strong></button>
-        <button class="post-action-save"><span></span><strong>${post.saves || index + 12}</strong></button>
+        <button class="post-action-share" data-share-post="${post.id}"><span></span><strong>${post.shares || index + 24}</strong></button>
+        <button class="post-action-save ${state.savedPosts[post.id] ? "active" : ""}" data-save-post="${post.id}"><span></span><strong>${post.saves || index + 12}</strong></button>
       </div>
     </article>`;
 }
@@ -2075,30 +2277,189 @@ function renderStoryComposer(story) {
 }
 
 function renderNews() {
+  const items = getFilteredNews();
+  const updatedLabel = state.newsLastUpdated ? `Actualizado ${formatNewsDate(state.newsLastUpdated)}` : "Modo demo local";
   return `
     <button class="ghost-button back-button" data-go-view="home">Volver al inicio</button>
-    <article class="hero-card">
-      <div class="pill">Actualidad</div>
-      <h2>Noticias destacadas de hoy</h2>
-      <p>Un espacio pensado para conectarse despues a fuentes oficiales, agencias y fanbases verificadas.</p>
+    <article class="news-hero-card">
+      <div>
+        <div class="pill">RSS Google News</div>
+        <h2>Noticias K-pop actualizadas</h2>
+        <p>Se consultan fuentes RSS por artista/grupo, se evitan duplicados y cada noticia queda con estado de moderacion.</p>
+      </div>
+      <button class="primary-button" data-news-refresh>${state.newsLoading ? "Actualizando..." : "Actualizar"}</button>
     </article>
-    <div class="section-heading"><h2>Trending ahora</h2><span>En vivo</span></div>
+    <section class="news-sync-card">
+      <div><strong>${state.newsItems.length}</strong><span>noticias cacheadas</span></div>
+      <div><strong>${state.newsItems.filter((item) => item.status === "pending").length}</strong><span>pendientes</span></div>
+      <div><strong>3h</strong><span>auto refresh</span></div>
+      <p>${updatedLabel}</p>
+    </section>
+    ${renderNewsFilters()}
+    <div class="section-heading"><h2>${getNewsHeading()}</h2><span>${items.length}</span></div>
     <div class="news-list">
-      ${news
-        .map(
-          (item, index) => `
-          <article class="glass-card news-card">
-            <div class="cover-art" style="--art:${art[index]}"></div>
-            <div>
-              <span class="tag">${item.tag}</span>
-              <h3 class="card-title">${item.title}</h3>
-              <div class="meta-row"><strong>${item.group}</strong><span>${item.meta}</span></div>
-            </div>
-          </article>`,
-        )
-        .join("")}
+      ${items.length ? items.map((item, index) => renderNewsCard(item, index)).join("") : `<article class="settings-demo-box">No hay noticias para este filtro. Prueba con otro artista o estado.</article>`}
     </div>
   `;
+}
+
+function renderNewsFilters() {
+  return `
+    <section class="news-filter-panel">
+      <div class="filter-row">
+        ${["all", ...newsArtists].map((artist) => `<button class="filter-chip ${state.newsFilter.artist === artist ? "active" : ""}" data-news-filter="artist:${artist}">${artist === "all" ? "Todos" : artist}</button>`).join("")}
+      </div>
+      <div class="filter-row">
+        ${[
+          ["recent", "Recientes"],
+          ["trending", "Trending"],
+          ["all", "Todo"],
+        ].map(([value, label]) => `<button class="filter-chip ${state.newsFilter.topic === value ? "active" : ""}" data-news-filter="topic:${value}">${label}</button>`).join("")}
+      </div>
+      <div class="filter-row">
+        ${[
+          ["all", "Todos los estados"],
+          ["pending", "Pendientes"],
+          ["approved", "Aprobadas"],
+          ["rejected", "Rechazadas"],
+        ].map(([value, label]) => `<button class="filter-chip ${state.newsFilter.status === value ? "active" : ""}" data-news-filter="status:${value}">${label}</button>`).join("")}
+      </div>
+      <div class="filter-row">
+        ${[
+          ["all", "Todos los idiomas"],
+          ["es", "Español"],
+          ["en", "Inglés"],
+          ["LATAM", "LATAM"],
+          ["AR", "Argentina"],
+        ].map(([value, label]) => `<button class="filter-chip ${state.newsFilter.language === value ? "active" : ""}" data-news-filter="language:${value}">${label}</button>`).join("")}
+      </div>
+    </section>`;
+}
+
+function renderNewsCard(item, index) {
+  return `
+    <article class="glass-card news-card modern-news-card ${item.status}">
+      ${
+        item.image
+          ? `<img class="news-image" src="${item.image}" alt="Imagen de ${item.artist}" />`
+          : `<div class="cover-art" style="--art:${art[index % art.length]}"></div>`
+      }
+      <div class="news-copy">
+        <div class="news-card-top">
+          <span class="tag">${item.trending ? "Trending" : "Reciente"}</span>
+          <span class="news-status ${item.status}">${getNewsStatusLabel(item.status)}</span>
+        </div>
+        <h3 class="card-title">${item.title}</h3>
+        <p>${item.summary || "Resumen pendiente de completar desde la fuente RSS."}</p>
+        <div class="meta-row"><strong>${item.artist}</strong><span>${item.source}</span><span>${formatNewsDate(item.date)}</span></div>
+        <div class="news-actions">
+          <a class="ghost-button" href="${item.link}" target="_blank" rel="noreferrer">Leer más</a>
+          <button class="ghost-button" data-news-status="${item.id}:approved">Aprobar</button>
+          <button class="ghost-button danger-button" data-news-status="${item.id}:rejected">Rechazar</button>
+        </div>
+      </div>
+    </article>`;
+}
+
+function getFilteredNews() {
+  const filter = state.newsFilter;
+  return dedupeNews(state.newsItems.length ? state.newsItems : news)
+    .filter((item) => filter.artist === "all" || item.artist === filter.artist)
+    .filter((item) => filter.status === "all" || item.status === filter.status)
+    .filter((item) => {
+      if (filter.language === "all") return true;
+      return item.language === filter.language || item.country === filter.language;
+    })
+    .filter((item) => {
+      if (filter.topic === "trending") return item.trending;
+      return true;
+    })
+    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+}
+
+function getNewsHeading() {
+  if (state.newsFilter.topic === "trending") return "Trending K-pop";
+  if (state.newsFilter.artist !== "all") return `Noticias de ${state.newsFilter.artist}`;
+  return "Noticias recientes";
+}
+
+function getNewsStatusLabel(status) {
+  return {
+    pending: "Pendiente",
+    approved: "Aprobada",
+    rejected: "Rechazada",
+  }[status] || "Pendiente";
+}
+
+function formatNewsDate(date) {
+  if (!date) return "Sin fecha";
+  try {
+    return new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(date));
+  } catch {
+    return "Sin fecha";
+  }
+}
+
+async function loadKpopNews(force = false) {
+  if (state.newsLoading) return;
+  const cached = storage.get("hallyuHubNewsCache", null);
+  const isFresh = cached?.updatedAt && Date.now() - new Date(cached.updatedAt).getTime() < NEWS_REFRESH_MS;
+  if (!force && isFresh && cached.items?.length) {
+    state.newsItems = mergeNewsStatuses(cached.items, news);
+    state.newsLastUpdated = cached.updatedAt;
+    if (state.view === "news") render();
+    return;
+  }
+
+  state.newsLoading = true;
+  if (state.view === "news") render();
+  try {
+    const response = await fetch(`/api/news?artists=${encodeURIComponent(newsArtists.join(","))}&lang=es&country=AR`);
+    if (!response.ok) throw new Error("No se pudo leer RSS");
+    const payload = await response.json();
+    const fetched = Array.isArray(payload.items) ? payload.items : [];
+    const merged = mergeNewsStatuses(dedupeNews([...fetched, ...state.newsItems, ...news]), state.newsItems);
+    state.newsItems = merged;
+    state.newsLastUpdated = payload.updatedAt || new Date().toISOString();
+    storage.set("hallyuHubNewsCache", { updatedAt: state.newsLastUpdated, items: state.newsItems });
+  } catch (error) {
+    console.warn("Noticias RSS no disponibles, usando modo demo.", error);
+    state.newsItems = mergeNewsStatuses(state.newsItems.length ? state.newsItems : news, news);
+    state.newsLastUpdated = state.newsLastUpdated || new Date().toISOString();
+    storage.set("hallyuHubNewsCache", { updatedAt: state.newsLastUpdated, items: state.newsItems });
+  } finally {
+    state.newsLoading = false;
+    if (state.view === "news") render();
+  }
+}
+
+function updateNewsStatus(id, status) {
+  state.newsItems = state.newsItems.map((item) => (item.id === id ? { ...item, status } : item));
+  state.newsLastUpdated = state.newsLastUpdated || new Date().toISOString();
+  storage.set("hallyuHubNewsCache", { updatedAt: state.newsLastUpdated, items: state.newsItems });
+  render();
+}
+
+function mergeNewsStatuses(incoming, previous) {
+  const statusByKey = new Map((previous || []).map((item) => [getNewsKey(item), item.status || "pending"]));
+  return dedupeNews(incoming).map((item) => ({
+    ...item,
+    status: statusByKey.get(getNewsKey(item)) || item.status || "pending",
+  }));
+}
+
+function dedupeNews(items) {
+  const seen = new Set();
+  return (items || []).filter((item) => {
+    const key = getNewsKey(item);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function getNewsKey(item) {
+  return String(item?.link || item?.title || "").toLowerCase().replace(/\s+/g, " ").trim();
 }
 
 function renderSearch() {
