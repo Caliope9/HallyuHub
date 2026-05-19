@@ -2997,16 +2997,12 @@ function renderStoryEditor() {
           ${draft.mediaName ? `<em>${escapeHtml(draft.mediaName)}</em>` : ""}
         </div>
         <div class="story-tool-rail" aria-label="Herramientas de historia">
-          <button type="button" data-story-tool="text"><span>T</span><small>Texto</small></button>
-          <button type="button" data-story-tool="stickers"><span>✦</span><small>Stickers</small></button>
-          <button type="button" data-story-tool="music"><span>♪</span><small>Música</small></button>
-          <button type="button" data-story-tool="background"><span>◎</span><small>Fondo</small></button>
-          <button type="button" data-story-tool="mention"><span>@</span><small>Info</small></button>
-          <button type="button" data-story-tool="gallery"><span>▣</span><small>Galería</small></button>
-        </div>
-        <div class="story-editor-status">
-          <button type="button" data-story-tool="music"><span>♪</span>${escapeHtml(draft.music)}</button>
-          <button type="button" data-story-tool="gallery">${draft.mediaName ? escapeHtml(draft.mediaName) : "Agregar foto o video"}</button>
+          <button type="button" data-story-tool="text" aria-label="Texto"><span>T</span></button>
+          <button type="button" data-story-tool="stickers" aria-label="Stickers"><span>✦</span></button>
+          <button type="button" data-story-tool="music" aria-label="Musica"><span>♪</span></button>
+          <button type="button" data-story-tool="background" aria-label="Fondo"><span>◎</span></button>
+          <button type="button" data-story-tool="mention" aria-label="Menciones y ubicacion"><span>@</span></button>
+          <button type="button" data-story-tool="gallery" aria-label="Foto o video"><span>▣</span></button>
         </div>
         ${state.storyToolPanel === "adjust" && selected ? renderStoryAdjustPanel(selected) : ""}
         ${state.storyToolPanel ? renderStoryToolPanel(draft, userLevel, visibleTracks) : ""}
