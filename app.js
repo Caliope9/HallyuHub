@@ -24,6 +24,7 @@ const state = {
   commentDrafts: {},
   replyTo: {},
   likedComments: {},
+  likedPosts: {},
   savedPosts: {},
   sharedPosts: {},
   settingsPanel: null,
@@ -81,7 +82,7 @@ const state = {
   ownStoryStatsOpen: false,
   ownStory: null,
   storyInbox: [],
-  authMode: "login",
+  authMode: "start",
   isAuthenticated: false,
   user: null,
   session: null,
@@ -1778,6 +1779,10 @@ function bindDynamicActions() {
     button.addEventListener("click", () => unfollowFeedUser(button.dataset.unfollowFeedUser));
   });
 
+  document.querySelectorAll("[data-follow-feed-user]").forEach((button) => {
+    button.addEventListener("click", () => followFeedUser(button.dataset.followFeedUser));
+  });
+
   document.querySelectorAll("[data-edit-post]").forEach((button) => {
     button.addEventListener("click", () => {
       state.expandedPosts[button.dataset.editPost] = true;
@@ -1856,16 +1861,18 @@ function bindDynamicActions() {
     button.addEventListener("click", () => {
       const id = button.dataset.savePost;
       state.savedPosts[id] = !state.savedPosts[id];
-      button.classList.toggle("active", state.savedPosts[id]);
+      storage.set("hallyuHubSavedPosts", state.savedPosts);
+      showToast(state.savedPosts[id] ? "Publicacion guardada" : "Publicacion quitada de guardados");
+      render();
     });
   });
 
   document.querySelectorAll("[data-share-post]").forEach((button) => {
     button.addEventListener("click", () => {
       const id = button.dataset.sharePost;
-      state.sharedPosts[id] = true;
-      button.classList.add("active");
-      alert("Publicacion lista para compartir en modo demo.");
+      state.sharedPosts[id] = !state.sharedPosts[id];
+      storage.set("hallyuHubSharedPosts", state.sharedPosts);
+      render();
     });
   });
 
@@ -2600,6 +2607,9 @@ async function initApp() {
   state.hiddenPosts = storage.get("hallyuHubHiddenPosts", {});
   state.mutedUsers = storage.get("hallyuHubMutedUsers", {});
   state.socialReports = storage.get("hallyuHubReports", []);
+  state.likedPosts = storage.get("hallyuHubLikedPosts", {});
+  state.savedPosts = storage.get("hallyuHubSavedPosts", {});
+  state.sharedPosts = storage.get("hallyuHubSharedPosts", {});
   state.isAuthenticated = Boolean(savedSession);
   state.selectedAvatar = state.user.avatar || "berry";
   state.selectedProfileBg = state.user.profileBg || "army";
@@ -2611,9 +2621,24 @@ async function initApp() {
 async function submitAuth(mode) {
   const email = document.getElementById("auth-email")?.value.trim() || defaultUser.email;
   const password = document.getElementById("auth-password")?.value || defaultUser.password;
+  const confirmPassword = document.getElementById("auth-password-confirm")?.value || "";
+  const acceptedTerms = document.getElementById("auth-terms")?.checked ?? mode !== "register";
   const name = document.getElementById("auth-name")?.value.trim() || defaultUser.name;
   const username = document.getElementById("auth-username")?.value.trim() || defaultUser.username;
   const avatar = document.querySelector("[data-auth-avatar].active")?.dataset.authAvatar || state.selectedAvatar;
+
+  if (mode === "register" && !confirmPassword) {
+    alert("Confirma tu contraseña para crear la cuenta.");
+    return;
+  }
+  if (mode === "register" && confirmPassword !== password) {
+    alert("Las contraseñas no coinciden.");
+    return;
+  }
+  if (mode === "register" && !acceptedTerms) {
+    alert("Para crear cuenta debes aceptar términos y política de privacidad.");
+    return;
+  }
 
   if (state.backendMode === "supabase") {
     const authCall =
@@ -2984,10 +3009,22 @@ function hidePost(postId, message = "Publicacion ocultada") {
 }
 
 function unfollowFeedUser(userName) {
-  state.mutedUsers[normalizeProfileKey(userName)] = true;
+  const key = normalizeProfileKey(userName);
+  state.mutedUsers[key] = true;
+  state.followedProfiles[key] = false;
   state.openPostMenu = null;
   storage.set("hallyuHubMutedUsers", state.mutedUsers);
   showToast(`Dejaste de seguir a ${userName}`);
+  render();
+}
+
+function followFeedUser(userName) {
+  const key = normalizeProfileKey(userName);
+  state.mutedUsers[key] = false;
+  state.followedProfiles[key] = true;
+  state.openPostMenu = null;
+  storage.set("hallyuHubMutedUsers", state.mutedUsers);
+  showToast(`Ahora seguís a ${userName}`);
   render();
 }
 
@@ -3001,7 +3038,10 @@ function openHashtagExplore(tag) {
 async function toggleLike(postId) {
   if (state.backendMode !== "supabase" || !state.session?.user) {
     const post = findPostById(postId);
-    if (post) post.likes = bumpEngagement(post.likes);
+    const baseId = getBasePostId(postId);
+    state.likedPosts[baseId] = !state.likedPosts[baseId];
+    storage.set("hallyuHubLikedPosts", state.likedPosts);
+    if (post) post.likes = state.likedPosts[baseId] ? bumpEngagement(post.likes) : reduceEngagement(post.likes);
     render();
     return;
   }
@@ -3088,6 +3128,13 @@ function bumpEngagement(value) {
   const number = Number.parseFloat(text.replace(/[^0-9.]/g, "")) || 0;
   if (text.toLowerCase().includes("k")) return `${(number + 0.1).toFixed(1)}K`;
   return String(Math.round(number + 1));
+}
+
+function reduceEngagement(value) {
+  const text = String(value || "0");
+  const number = Number.parseFloat(text.replace(/[^0-9.]/g, "")) || 0;
+  if (text.toLowerCase().includes("k")) return `${Math.max(0, number - 0.1).toFixed(1)}K`;
+  return String(Math.max(0, Math.round(number - 1)));
 }
 
 function normalizeProfileKey(value) {
@@ -3328,44 +3375,59 @@ function hydrateDemoComments(comments, offset = 0) {
 
 function renderAuth() {
   const isRegister = state.authMode === "register";
-  const activeAvatar = avatars.find((avatar) => avatar.id === state.selectedAvatar) || avatars[0];
+  const isLogin = state.authMode === "login";
   return `
     <section class="auth-screen">
+      <div class="auth-glow auth-glow-one"></div>
+      <div class="auth-glow auth-glow-two"></div>
       <div class="auth-brand">
-        <div class="plush-avatar hero" style="--avatar:${activeAvatar.gradient}"><span></span></div>
+        <span class="auth-logo app-logo" aria-hidden="true"><span class="hallyu-mark"></span></span>
         <p class="eyebrow">HallyuHub</p>
-        <h1>${isRegister ? "Crear cuenta fan" : "Entrar a tu mundo K-pop"}</h1>
-        <p class="muted">Prototipo con datos guardados en este dispositivo. Preparado para migrar a ${futureBackend.next}.</p>
+        <h1>Tu universo K-pop latino</h1>
+        <p class="muted">Comunidad, Drops, Fancams y fandoms latinos en una app social premium.</p>
       </div>
-      <div class="auth-tabs">
-        <button class="${!isRegister ? "active" : ""}" data-auth-mode="login">Entrar</button>
-        <button class="${isRegister ? "active" : ""}" data-auth-mode="register">Crear cuenta</button>
-      </div>
-      <div class="form-stack">
-        <label>Email<input id="auth-email" type="email" value="${state.user?.email || ""}" placeholder="fan@hallyuhub.app" /></label>
-        <label>Contraseña<input id="auth-password" type="password" value="${state.user?.password || ""}" placeholder="********" /></label>
-        ${
-          isRegister
-            ? `<label>Nombre<input id="auth-name" value="${state.user?.name || ""}" placeholder="Luna Hallyu" /></label>
-               <label>Usuario<input id="auth-username" value="${state.user?.username || ""}" placeholder="lunahallyu" /></label>`
-            : ""
-        }
-      </div>
-      <div class="section-heading small"><h2>Avatar</h2><span>${activeAvatar.name}</span></div>
-      <div class="avatar-picker">
-        ${avatars
-          .map(
-            (avatar) => `
-            <button class="avatar-choice ${state.selectedAvatar === avatar.id ? "active" : ""}" data-auth-avatar="${avatar.id}">
-              <div class="plush-avatar pick" style="--avatar:${avatar.gradient}"><span></span></div>
-              <strong>${avatar.name}</strong>
-            </button>`,
-          )
-          .join("")}
-      </div>
-      <button class="primary-button auth-submit" data-auth-submit="${isRegister ? "register" : "login"}">
-        ${isRegister ? "Crear cuenta" : "Entrar"}
-      </button>
+      ${
+        !isLogin && !isRegister
+          ? `<div class="auth-card auth-choice-card">
+              <button class="primary-button auth-main-action" data-auth-mode="login">Iniciar sesión</button>
+              <button class="ghost-button auth-secondary-action" data-auth-mode="register">Crear cuenta</button>
+            </div>`
+          : `<div class="auth-card">
+              <button class="auth-back-button" data-auth-mode="start" aria-label="Volver">←</button>
+              <div class="auth-card-head">
+                <span>${isRegister ? "Nueva cuenta" : "Bienvenido/a"}</span>
+                <h2>${isRegister ? "Crear cuenta" : "Iniciar sesión"}</h2>
+              </div>
+              <div class="form-stack auth-form-stack">
+                ${
+                  isRegister
+                    ? `<label>Nombre<input id="auth-name" value="${state.user?.name || ""}" placeholder="Luna Hallyu" /></label>
+                       <label>Usuario<input id="auth-username" value="${state.user?.username || ""}" placeholder="lunahallyu" /></label>`
+                    : ""
+                }
+                <label>Email o usuario<input id="auth-email" type="text" value="${state.user?.email || ""}" placeholder="fan@hallyuhub.app" /></label>
+                <label>Contraseña<input id="auth-password" type="password" value="${state.user?.password || ""}" placeholder="••••••••" /></label>
+                ${
+                  isRegister
+                    ? `<label>Confirmar contraseña<input id="auth-password-confirm" type="password" placeholder="••••••••" /></label>
+                       <label class="auth-terms-row"><input id="auth-terms" type="checkbox" /> Acepto términos y política de privacidad</label>`
+                    : ""
+                }
+              </div>
+              <button class="primary-button auth-submit" data-auth-submit="${isRegister ? "register" : "login"}">${isRegister ? "Crear cuenta" : "Entrar"}</button>
+              ${
+                isLogin
+                  ? `<button class="auth-link-button" data-demo-action="Recuperación de contraseña disponible próximamente">Olvidé mi contraseña</button>
+                     <div class="auth-divider"><span>o continuar con</span></div>
+                     <div class="auth-social-grid">
+                       <button data-demo-action="Login con Google disponible próximamente">Google</button>
+                       <button data-demo-action="Login con Apple disponible próximamente">Apple</button>
+                     </div>
+                     <button class="auth-face-button" data-demo-action="Disponible próximamente">Face ID / reconocimiento facial</button>`
+                  : `<p class="auth-after-copy">Después podrás elegir avatar/foto, fandom, grupos favoritos, país y bio.</p>`
+              }
+            </div>`
+      }
     </section>
   `;
 }
@@ -3620,9 +3682,9 @@ function renderHome() {
       <button class="metric-pill" data-go-view="market"><span class="metric-dot drops"></span><strong>24h</strong><small>drops</small></button>
     </div>
     <div class="section-heading feed-heading"><h2>${filterLabel}</h2><button class="feed-reset ${state.homeFilter === "all" ? "hidden" : ""}" data-home-filter="all">Ver todo</button></div>
-    <div class="social-feed infinite-social-feed">
+      <div class="social-feed infinite-social-feed">
       ${infiniteFeedPosts
-        .map((post, index) => renderSocialPost(post, index, { featured: index === 0 || index % 7 === 3 }))
+        .map((post, index) => renderSocialPost(post, index, { compactHome: true }))
         .join("")}
       <div class="feed-loader">
         <span></span><span></span><span></span>
@@ -3774,8 +3836,15 @@ function renderStoryLayer(element, editable = false) {
 
 function renderSocialPost(post, index, options = {}) {
   const expanded = Boolean(options.expanded || state.expandedPosts[post.id]);
-  const isFeatured = options.featured || post.type === "trending" || post.type === "event";
+  const isFeatured = !options.compactHome && (options.featured || post.type === "trending" || post.type === "event");
   const postMediaUrl = post.mediaUrl || post.imageUrl;
+  const caption = post.caption || "";
+  const hasLongCaption = caption.length > 112;
+  const hasExtraMeta = Boolean(post.location || post.date || post.hour || post.taggedPeople || post.taggedPlace || (post.hashtags || []).length > 2);
+  const canExpand = hasLongCaption || hasExtraMeta;
+  const liked = Boolean(state.likedPosts[getBasePostId(post.id)]);
+  const shared = Boolean(state.sharedPosts[post.id]);
+  const saved = Boolean(state.savedPosts[post.id]);
   return `
     <article class="post-card ${options.compact ? "profile-feed-post" : ""} ${isFeatured ? "featured-post" : ""} ${expanded ? "expanded-post" : ""}">
       <div class="post-head modern-post-head">
@@ -3804,22 +3873,25 @@ function renderSocialPost(post, index, options = {}) {
             : `<div class="post-media" style="--art:${post.art || art[index % art.length]}"></div>`
         }
         </button>
-        <p class="post-caption ${expanded ? "expanded" : ""}">${post.caption}</p>
+        <p class="post-caption ${expanded ? "expanded" : ""}">${escapeHtml(caption)}</p>
         ${expanded ? renderPostOptionalMeta(post) : ""}
         ${expanded ? `<div class="post-hashtags">${(post.hashtags || ["#KpopLatam", "#HallyuHub"]).map((tag) => `<button type="button" data-home-filter="${tag}">${tag}</button>`).join("")}</div>` : ""}
-        <button class="post-more-button" data-toggle-post-more="${post.id}">${expanded ? "Ver menos" : "Ver más"}</button>
+        ${canExpand ? `<button class="post-more-button" data-toggle-post-more="${post.id}">${expanded ? "Ver menos" : "Ver más"}</button>` : ""}
         <div class="post-actions premium-actions">
-          <button class="post-action-star" ${post.id ? `data-like-post="${post.id}"` : ""}><span>★</span><strong>${post.likes || "0"}</strong></button>
+          <button class="post-action-star ${liked ? "active" : ""}" ${post.id ? `data-like-post="${post.id}"` : ""}><span>★</span><strong>${post.likes || "0"}</strong></button>
           <button class="post-action-comment" ${post.id ? `data-comment-post="${post.id}"` : ""}><span></span><strong>${post.comments || "0"}</strong></button>
-          <button class="post-action-share" data-share-post="${post.id}"><span></span><strong>${post.shares || index + 24}</strong></button>
-          <button class="post-action-save ${state.savedPosts[post.id] ? "active" : ""}" data-save-post="${post.id}"><span></span><strong>${post.saves || index + 12}</strong></button>
+          <button class="post-action-share ${shared ? "active" : ""}" data-share-post="${post.id}"><span></span><strong>${post.shares || index + 24}</strong></button>
+          <button class="post-action-save ${saved ? "active" : ""}" data-save-post="${post.id}"><span></span><strong>${post.saves || index + 12}</strong></button>
         </div>
+        ${shared ? renderPostShareSheet(post) : ""}
         ${state.openComments[post.id] ? renderCommentsPanel(post) : ""}
       </div>
     </article>`;
 }
 
 function renderPostMenu(post) {
+  const key = normalizeProfileKey(post.user);
+  const isFollowing = Boolean(state.followedProfiles[key]) && !state.mutedUsers[key];
   return isOwnPost(post)
     ? `<div class="post-menu-popover">
         <button type="button" data-edit-post="${post.id}">Editar publicacion</button>
@@ -3828,8 +3900,22 @@ function renderPostMenu(post) {
     : `<div class="post-menu-popover">
         <button type="button" data-report-post="${post.id}">Reportar publicacion</button>
         <button type="button" data-hide-post="${post.id}">Ocultar publicacion</button>
-        <button type="button" data-unfollow-feed-user="${escapeAttr(post.user)}">Dejar de seguir usuario</button>
+        ${
+          isFollowing
+            ? `<button type="button" data-unfollow-feed-user="${escapeAttr(post.user)}">Dejar de seguir usuario</button>`
+            : `<button type="button" data-follow-feed-user="${escapeAttr(post.user)}">Seguir usuario</button>`
+        }
       </div>`;
+}
+
+function renderPostShareSheet(post) {
+  return `
+    <div class="post-share-sheet">
+      <button type="button" data-demo-action="Enlace copiado de ${escapeAttr(post.user)}">Copiar enlace</button>
+      <button type="button" data-demo-action="Compartido por mensaje en modo demo">Mensaje</button>
+      <button type="button" data-demo-action="Compartido en historia demo">Historia</button>
+    </div>
+  `;
 }
 
 function renderReportSheet() {
