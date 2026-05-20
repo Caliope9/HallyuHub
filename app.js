@@ -44,13 +44,18 @@ const state = {
   dropMusicOpen: {},
   dropPaused: {},
   dropFeedback: {},
+  videoProfileOverlay: null,
   fancamGroupFilter: "all",
   fancamArtistFilter: "all",
-  fancamSort: "trending",
+  fancamSort: "recommended",
+  fancamSearchQuery: "",
+  fancamFilterOpen: false,
   likedFancams: {},
   savedFancams: {},
   followedArtists: {},
   fancamCommentsOpen: {},
+  fancamShareOpen: {},
+  fancamMusicOpen: {},
   fancamPaused: {},
   fancamFeedback: {},
   selectedProfileBg: "army",
@@ -1602,7 +1607,7 @@ function render() {
   appScreen.classList.toggle("home-mode", state.view === "home");
   appScreen.classList.toggle("light-mode", state.user?.mode === "light");
   appScreen.style.setProperty("--user-accent", state.user?.accent || "#fbbcdb");
-  document.querySelector(".bottom-nav").classList.toggle("hidden", !state.isAuthenticated || state.storyEditorOpen || state.activeStory !== null || state.dropSearchOpen || state.dropCreatorOpen);
+  document.querySelector(".bottom-nav").classList.toggle("hidden", !state.isAuthenticated || state.storyEditorOpen || state.activeStory !== null || state.dropSearchOpen || state.dropCreatorOpen || state.videoProfileOverlay);
   document.querySelector(".topbar").classList.toggle("hidden", !state.isAuthenticated || state.view === "profile" || state.storyEditorOpen || state.activeStory !== null);
   if (!state.isAuthenticated) {
     view.innerHTML = renderAuth();
@@ -2174,6 +2179,50 @@ function bindDynamicActions() {
     });
   });
 
+  document.querySelectorAll("[data-open-video-profile]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.videoProfileOverlay = button.dataset.openVideoProfile;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-close-video-profile]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.videoProfileOverlay = null;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-fancam-search-input]").forEach((input) => {
+    input.addEventListener("input", () => {
+      state.fancamSearchQuery = input.value;
+      render();
+      setTimeout(() => {
+        const nextInput = document.querySelector("[data-fancam-search-input]");
+        if (!nextInput) return;
+        nextInput.focus();
+        nextInput.setSelectionRange(state.fancamSearchQuery.length, state.fancamSearchQuery.length);
+      }, 0);
+    });
+  });
+
+  document.querySelectorAll("[data-toggle-fancam-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.fancamFilterOpen = !state.fancamFilterOpen;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-clear-fancam-search]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.fancamSearchQuery = "";
+      state.fancamGroupFilter = "all";
+      state.fancamArtistFilter = "all";
+      state.fancamSort = "recommended";
+      render();
+    });
+  });
+
   document.querySelectorAll("[data-fancam-group]").forEach((button) => {
     button.addEventListener("click", () => {
       state.fancamGroupFilter = button.dataset.fancamGroup;
@@ -2227,8 +2276,9 @@ function bindDynamicActions() {
 
   document.querySelectorAll("[data-open-fancam-artist]").forEach((button) => {
     button.addEventListener("click", () => {
-      openArtistProfile(button.dataset.openFancamArtist);
-      setView("groups");
+      const fancam = fancamVideos.find((item) => item.artistId === button.dataset.openFancamArtist);
+      state.videoProfileOverlay = `fancam:${fancam?.id || button.dataset.openFancamArtist}`;
+      render();
     });
   });
 
@@ -3658,14 +3708,14 @@ function renderHome() {
     </div>
     <section class="home-banner-shell" aria-label="Banners destacados">
       <div class="home-banner-track">
-        ${homeBanners
+        ${[...homeBanners, ...homeBanners]
           .map(
             (banner, index) => `
             <article class="home-banner" style="--art:${banner.colors}">
               <span>${banner.meta}</span>
               <strong>${banner.title}</strong>
               <div class="banner-actions">
-                <button type="button" ${index % 3 === 0 ? `data-go-view="news"` : index % 3 === 1 ? `data-home-filter="viral"` : `data-home-filter="challenges"`}>${index % 3 === 0 ? "Ver noticia" : index % 3 === 1 ? "Ver Drop" : "Explorar"}</button>
+                <button type="button" ${index % 3 === 0 ? `data-go-view="news"` : index % 3 === 1 ? `data-home-filter="viral"` : `data-home-filter="events"`}>${index % 3 === 0 ? "Ver noticia" : index % 3 === 1 ? "Ver viral" : "Explorar"}</button>
                 <button type="button" data-save-post="banner-${index}">Guardar</button>
               </div>
             </article>`,
@@ -3743,9 +3793,10 @@ function bumpFeedEngagement(value, amount) {
 }
 
 function renderHomeHighlights() {
+  const cleanHighlights = homeHighlightStories.filter((item) => !["Drops", "Challenges"].includes(item.label));
   return `
     <section class="home-highlights" aria-label="Categorias rapidas del inicio">
-      ${homeHighlightStories
+      ${cleanHighlights
         .map(
           (item, index) => `
           <button type="button" class="highlight-story-card ${state.homeFilter === item.filter ? "active" : ""}" style="--art:${item.colors}" ${item.view ? `data-go-view="${item.view}"` : `data-home-filter="${item.filter}"`}>
@@ -4555,6 +4606,7 @@ function renderTrends() {
     </section>
     ${state.dropSearchOpen ? renderDropSearchOverlay() : ""}
     ${state.dropCreatorOpen ? renderDropCreator() : ""}
+    ${state.videoProfileOverlay?.startsWith("drop:") ? renderVideoProfileOverlay() : ""}
   `;
 }
 
@@ -4579,7 +4631,7 @@ function renderDropCard(trend, index) {
                   <div class="drop-author-row">
                     ${renderAvatarElement("mini drop-avatar", demoUser.avatar || "berry", demoUser.avatarUrl)}
                     <div>
-                      <button type="button" data-open-feed-profile="${escapeAttr(demoUser.username || trend.user)}">${escapeHtml(trend.user)}</button>
+                      <button type="button" data-open-video-profile="drop:${id}">${escapeHtml(trend.user)}</button>
                       <span>♪ ${escapeHtml(trend.song)}</span>
                     </div>
                   </div>
@@ -4810,11 +4862,46 @@ function getFancamArtistOptions() {
 
 function getFilteredFancams(artistId = null) {
   const targetArtist = artistId || state.fancamArtistFilter;
-  return fancamVideos.filter((fancam) => {
+  const query = normalizeProfileKey(state.fancamSearchQuery);
+  const filtered = fancamVideos.filter((fancam) => {
     const groupOk = state.fancamGroupFilter === "all" || fancam.groupId === state.fancamGroupFilter || artistId;
     const artistOk = !targetArtist || targetArtist === "all" || fancam.artistId === targetArtist;
-    const sortOk = state.fancamSort === "all" || fancam.sort === state.fancamSort || artistId;
-    return groupOk && artistOk && sortOk;
+    const sortOk = state.fancamSort === "recommended" || state.fancamSort === "all" || fancam.sort === state.fancamSort || artistId;
+    const queryOk = !query || getFancamSearchText(fancam).includes(query);
+    return groupOk && artistOk && sortOk && queryOk;
+  });
+  const base = filtered.length || query || artistId ? filtered : fancamVideos;
+  return sortFancamsForFeed(base);
+}
+
+function getFancamSearchText(fancam) {
+  const group = kpopGroups.find((item) => item.id === fancam.groupId);
+  return normalizeProfileKey([
+    fancam.artist,
+    fancam.group,
+    fancam.groupId,
+    fancam.artistId,
+    fancam.show,
+    fancam.era,
+    fancam.date,
+    fancam.description,
+    fancam.sort === "recent" ? "recientes reciente nuevo" : "popular populares trending virales",
+    group?.fandom,
+    group?.company,
+  ].join(" "));
+}
+
+function sortFancamsForFeed(items) {
+  const favorite = normalizeProfileKey(state.user?.favoriteGroup || "");
+  return [...items].sort((a, b) => {
+    if (state.fancamSort === "recent") return Number(b.sort === "recent") - Number(a.sort === "recent");
+    if (state.fancamSort === "trending") return Number(b.sort === "trending") - Number(a.sort === "trending");
+    const score = (item) =>
+      Number(Boolean(state.followedArtists[item.artistId])) * 8 +
+      Number(normalizeProfileKey(item.group).includes(favorite) || favorite.includes(normalizeProfileKey(item.group))) * 5 +
+      Number(item.sort === "trending") * 3 +
+      (getEngagementNumber(item.views) % 7);
+    return score(b) - score(a);
   });
 }
 
@@ -4823,30 +4910,38 @@ function renderFancams() {
   const groupOptions = [["all", "Todos"], ...kpopGroups.filter((group) => fancamVideos.some((fancam) => fancam.groupId === group.id)).map((group) => [group.id, group.name])];
   const artistOptions = [["all", "Integrantes"], ...getFancamArtistOptions()];
   return `
-    <section class="fancam-intro">
-      <div>
-        <p class="eyebrow">Focus idol</p>
-        <h2>Fancams</h2>
-        <p>Videos centrados en idols, stages, conciertos, focus member y performances verticales.</p>
+    <section class="fancam-control-bar" aria-label="Buscar y filtrar Fancams">
+      <div class="fancam-search-input">
+        <span class="nav-icon search-icon"></span>
+        <input data-fancam-search-input value="${escapeAttr(state.fancamSearchQuery)}" placeholder="Grupo, artista, show, era..." />
       </div>
-      <span class="fancam-live-badge">Idol focus</span>
+      <button class="${state.fancamFilterOpen ? "active" : ""}" data-toggle-fancam-filter>Filtros</button>
     </section>
-    <div class="fancam-filter-row">
-      ${groupOptions.map(([id, label]) => `<button class="${state.fancamGroupFilter === id ? "active" : ""}" data-fancam-group="${id}">${label}</button>`).join("")}
-    </div>
-    <div class="fancam-filter-row compact">
-      ${artistOptions.slice(0, 8).map(([id, label]) => `<button class="${state.fancamArtistFilter === id ? "active" : ""}" data-fancam-artist="${id}">${label}</button>`).join("")}
-    </div>
-    <div class="fancam-filter-row compact">
-      ${[
-        ["trending", "Trending"],
-        ["recent", "Recientes"],
-        ["all", "Todas"],
-      ].map(([id, label]) => `<button class="${state.fancamSort === id ? "active" : ""}" data-fancam-sort="${id}">${label}</button>`).join("")}
-    </div>
+    ${
+      state.fancamFilterOpen
+        ? `<section class="fancam-filter-panel">
+            <div class="fancam-filter-row">
+              ${groupOptions.map(([id, label]) => `<button class="${state.fancamGroupFilter === id ? "active" : ""}" data-fancam-group="${id}">${label}</button>`).join("")}
+            </div>
+            <div class="fancam-filter-row compact">
+              ${artistOptions.slice(0, 10).map(([id, label]) => `<button class="${state.fancamArtistFilter === id ? "active" : ""}" data-fancam-artist="${id}">${label}</button>`).join("")}
+            </div>
+            <div class="fancam-filter-row compact">
+              ${[
+                ["recommended", "Para ti"],
+                ["trending", "Populares"],
+                ["recent", "Recientes"],
+                ["all", "Todas"],
+              ].map(([id, label]) => `<button class="${state.fancamSort === id ? "active" : ""}" data-fancam-sort="${id}">${label}</button>`).join("")}
+            </div>
+          </section>`
+        : ""
+    }
+    ${state.fancamSearchQuery || state.fancamGroupFilter !== "all" || state.fancamArtistFilter !== "all" || state.fancamSort !== "recommended" ? `<div class="fancam-search-chip"><span>${fancams.length} fancams encontradas</span><button data-clear-fancam-search>Limpiar</button></div>` : `<p class="fancam-feed-note">Fancams de artistas que seguís, favoritos y recomendaciones para descubrir.</p>`}
     <section class="fancam-feed" aria-label="Feed vertical de fancams">
       ${fancams.length ? fancams.map((fancam, index) => renderFancamCard(fancam, index, { fullscreen: true })).join("") : `<article class="settings-demo-box">No hay fancams con estos filtros.</article>`}
     </section>
+    ${state.videoProfileOverlay?.startsWith("fancam:") ? renderVideoProfileOverlay() : ""}
   `;
 }
 
@@ -4863,7 +4958,7 @@ function renderFancamCard(fancam, index = 0, options = {}) {
       ${fancam.mediaUrl ? `<img class="fancam-media" src="${escapeAttr(fancam.mediaUrl)}" alt="Fancam de ${escapeAttr(fancam.artist)}" />` : ""}
       <div class="fancam-shade"></div>
       <div class="fancam-info">
-        <button class="fancam-artist-link" data-open-fancam-artist="${fancam.artistId}">
+        <button class="fancam-artist-link" data-open-video-profile="fancam:${fancam.id}">
           <span class="fancam-avatar">${getInitials(fancam.artist)}</span>
           <div>
             <strong>${escapeHtml(fancam.artist)}</strong>
@@ -4874,13 +4969,17 @@ function renderFancamCard(fancam, index = 0, options = {}) {
         <div class="fancam-meta-line"><span>${escapeHtml(fancam.era)}</span><span>${escapeHtml(fancam.date)}</span><span>${escapeHtml(fancam.views)} vistas</span></div>
       </div>
       <div class="fancam-actions">
+        <button data-fancam-action="profile:${fancam.id}" aria-label="Abrir perfil"><span>@</span><small>Perfil</small></button>
         <button class="${followed ? "active" : ""}" data-fancam-action="follow:${fancam.id}" aria-label="Seguir artista"><span>${followed ? "✓" : "+"}</span><small>Seguir</small></button>
         <button class="${liked ? "active" : ""}" data-fancam-action="like:${fancam.id}" aria-label="Like"><span>★</span><small>${fancam.likes}</small></button>
         <button class="${commentsOpen ? "active" : ""}" data-fancam-action="comment:${fancam.id}" aria-label="Comentar"><span class="nav-icon chat-icon"></span><small>Comentar</small></button>
-        <button data-fancam-action="share:${fancam.id}" aria-label="Compartir"><span class="share-dot"></span><small>Compartir</small></button>
+        <button class="${state.fancamShareOpen[fancam.id] ? "active" : ""}" data-fancam-action="share:${fancam.id}" aria-label="Compartir"><span class="share-dot"></span><small>Compartir</small></button>
         <button class="${saved ? "active" : ""}" data-fancam-action="save:${fancam.id}" aria-label="Guardar"><span class="save-mark"></span><small>Guardar</small></button>
+        <button class="${state.fancamMusicOpen[fancam.id] ? "active" : ""}" data-fancam-action="music:${fancam.id}" aria-label="Audio"><span>♪</span><small>Audio</small></button>
       </div>
       ${commentsOpen ? renderFancamComments(fancam) : ""}
+      ${state.fancamShareOpen[fancam.id] ? renderFancamSharePanel(fancam) : ""}
+      ${state.fancamMusicOpen[fancam.id] ? renderFancamMusicPanel(fancam) : ""}
     </article>
   `;
 }
@@ -4899,9 +4998,35 @@ function renderFancamComments(fancam) {
   `;
 }
 
+function renderFancamSharePanel(fancam) {
+  return `
+    <div class="fancam-comments-panel fancam-mini-panel">
+      <strong>Compartir fancam</strong>
+      <button data-demo-action="Enlace de ${escapeAttr(fancam.artist)} copiado">Copiar enlace demo</button>
+      <button data-demo-action="Fancam enviada por mensaje demo">Enviar por mensaje</button>
+    </div>
+  `;
+}
+
+function renderFancamMusicPanel(fancam) {
+  return `
+    <div class="fancam-comments-panel fancam-mini-panel">
+      <strong>Audio / show</strong>
+      <p>${escapeHtml(fancam.show)} · ${escapeHtml(fancam.era)}</p>
+      <button data-demo-action="Audio guardado en favoritos">Guardar audio</button>
+    </div>
+  `;
+}
+
 function handleFancamAction(action, fancamId) {
   const fancam = fancamVideos.find((item) => item.id === fancamId);
   if (!fancam) return;
+  state.fancamShareOpen[fancamId] = action === "share" ? !state.fancamShareOpen[fancamId] : false;
+  state.fancamMusicOpen[fancamId] = action === "music" ? !state.fancamMusicOpen[fancamId] : false;
+  if (action === "profile") {
+    state.videoProfileOverlay = `fancam:${fancamId}`;
+    return;
+  }
   if (action === "follow") {
     state.followedArtists[fancam.artistId] = !state.followedArtists[fancam.artistId];
     showToast(state.followedArtists[fancam.artistId] ? `Seguís a ${fancam.artist}` : `Dejaste de seguir a ${fancam.artist}`);
@@ -4922,8 +5047,86 @@ function handleFancamAction(action, fancamId) {
     return;
   }
   if (action === "share") {
-    showToast("Enlace de fancam listo para compartir en modo demo");
+    state.fancamCommentsOpen[fancamId] = false;
+    return;
   }
+  if (action === "music") {
+    state.fancamCommentsOpen[fancamId] = false;
+  }
+}
+
+function renderVideoProfileOverlay() {
+  if (!state.videoProfileOverlay) return "";
+  const [type, id] = state.videoProfileOverlay.split(":");
+  if (type === "drop") {
+    const trend = trendVideos.find((item, index) => getDropId(item, index) === id);
+    if (!trend) return "";
+    const demoUser = getDemoUser(trend.user);
+    const followed = Boolean(state.dropFollowed[id]);
+    return `
+      <section class="video-profile-overlay" aria-label="Perfil del creador del Drop">
+        <button class="story-close video-profile-close" data-close-video-profile aria-label="Cerrar">X</button>
+        <article class="video-profile-card" style="--art:${trend.colors}">
+          <div class="video-profile-hero">
+            ${renderAvatarElement("video-profile-avatar", demoUser.avatar || "berry", demoUser.avatarUrl)}
+            <div>
+              <span class="eyebrow">Creador Drop</span>
+              <h2>${escapeHtml(trend.user)}</h2>
+              <p>${escapeHtml(demoUser.city || "Latam")} · ${escapeHtml(demoUser.fandom || "Hallyu fan")}</p>
+            </div>
+          </div>
+          <div class="video-profile-stats">
+            <span><strong>${escapeHtml(demoUser.followers || "8.2K")}</strong> seguidores</span>
+            <span><strong>${escapeHtml(demoUser.posts || "42")}</strong> posts</span>
+            <span><strong>${escapeHtml(demoUser.starsReceived || "18K")}</strong> estrellas</span>
+          </div>
+          <div class="video-profile-preview">
+            <strong>${escapeHtml(trend.challenge)}</strong>
+            <p>${escapeHtml(trend.description)}</p>
+            <small>♪ ${escapeHtml(trend.song)}</small>
+          </div>
+          <div class="video-profile-actions">
+            <button class="primary-button" data-drop-action="follow:${id}">${followed ? "Siguiendo" : "Seguir creador"}</button>
+            <button class="ghost-button" data-drop-action="music:${id}">Audio</button>
+            <button class="ghost-button" data-close-video-profile>Volver al Drop</button>
+          </div>
+        </article>
+      </section>
+    `;
+  }
+  const fancam = fancamVideos.find((item) => item.id === id || item.artistId === id);
+  if (!fancam) return "";
+  const followed = Boolean(state.followedArtists[fancam.artistId]);
+  return `
+    <section class="video-profile-overlay" aria-label="Perfil del artista de la fancam">
+      <button class="story-close video-profile-close" data-close-video-profile aria-label="Cerrar">X</button>
+      <article class="video-profile-card fancam-profile-card" style="--art:${fancam.colors}">
+        <div class="video-profile-hero">
+          <span class="video-profile-avatar text-avatar">${getInitials(fancam.artist)}</span>
+          <div>
+            <span class="eyebrow">Focus idol</span>
+            <h2>${escapeHtml(fancam.artist)}</h2>
+            <p>${escapeHtml(fancam.group)} · ${escapeHtml(fancam.era)}</p>
+          </div>
+        </div>
+        <div class="video-profile-stats">
+          <span><strong>${escapeHtml(fancam.views)}</strong> vistas</span>
+          <span><strong>${escapeHtml(fancam.likes)}</strong> estrellas</span>
+          <span><strong>${escapeHtml(fancam.show)}</strong> show</span>
+        </div>
+        <div class="video-profile-preview">
+          ${fancam.mediaUrl ? `<img src="${escapeAttr(fancam.mediaUrl)}" alt="Preview de ${escapeAttr(fancam.artist)}" />` : ""}
+          <strong>${escapeHtml(fancam.artist)} fancam</strong>
+          <p>${escapeHtml(fancam.description)}</p>
+        </div>
+        <div class="video-profile-actions">
+          <button class="primary-button" data-fancam-action="follow:${fancam.id}">${followed ? "Siguiendo" : "Seguir artista"}</button>
+          <button class="ghost-button" data-fancam-action="music:${fancam.id}">Audio/show</button>
+          <button class="ghost-button" data-close-video-profile>Volver a Fancams</button>
+        </div>
+      </article>
+    </section>
+  `;
 }
 
 function renderPublish() {

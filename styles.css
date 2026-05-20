@@ -1097,7 +1097,7 @@ h1 {
 .home-banner-track {
   display: flex;
   width: max-content;
-  animation: bannerSlide 28s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  animation: bannerSlide 34s linear infinite;
 }
 
 .home-banner {
@@ -1194,36 +1194,11 @@ h1 {
 }
 
 @keyframes bannerSlide {
-  0%,
-  10% {
+  0% {
     transform: translateX(0);
-  }
-  14%,
-  24% {
-    transform: translateX(calc(-1 * (min(100vw, 430px) - 52px)));
-  }
-  28%,
-  38% {
-    transform: translateX(calc(-2 * (min(100vw, 430px) - 52px)));
-  }
-  42%,
-  52% {
-    transform: translateX(calc(-3 * (min(100vw, 430px) - 52px)));
-  }
-  56%,
-  66% {
-    transform: translateX(calc(-4 * (min(100vw, 430px) - 52px)));
-  }
-  70%,
-  80% {
-    transform: translateX(calc(-5 * (min(100vw, 430px) - 52px)));
-  }
-  84%,
-  94% {
-    transform: translateX(calc(-6 * (min(100vw, 430px) - 52px)));
   }
   100% {
-    transform: translateX(0);
+    transform: translateX(-50%);
   }
 }
 
@@ -2070,8 +2045,8 @@ video.post-media.real-media {
 
 @keyframes storyViewerIn {
   from {
-    opacity: 0;
-    transform: scale(1.02);
+    opacity: 1;
+    transform: scale(1);
   }
   to {
     opacity: 1;
@@ -3261,8 +3236,8 @@ button.story-layer:active {
 
 @keyframes storySlideIn {
   from {
-    opacity: 0;
-    transform: translateX(26px) scale(0.98);
+    opacity: 1;
+    transform: translateX(18px) scale(1);
   }
   to {
     opacity: 1;
@@ -3292,8 +3267,8 @@ button.story-layer:active {
 
 @keyframes storySlideInPrev {
   from {
-    opacity: 0;
-    transform: translateX(-26px) scale(0.98);
+    opacity: 1;
+    transform: translateX(-18px) scale(1);
   }
   to {
     opacity: 1;
@@ -3909,7 +3884,7 @@ button.story-layer:active {
 
 .trends-feed {
   display: grid;
-  gap: 14px;
+  gap: 10px;
   scroll-snap-type: y mandatory;
 }
 
@@ -4019,7 +3994,7 @@ button.story-layer:active {
   background: rgba(255, 255, 255, 0.055);
   color: rgba(255, 255, 255, 0.82);
   padding: 8px 10px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   backdrop-filter: blur(16px);
 }
 
@@ -4035,14 +4010,14 @@ button.story-layer:active {
 }
 
 .trend-card {
-  min-height: calc(100vh - 176px);
-  max-height: 680px;
-  border-radius: 24px;
+  min-height: calc(100dvh - 128px);
+  max-height: 760px;
+  border-radius: 18px;
   overflow: hidden;
   background:
     linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.76)),
     var(--art);
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255, 255, 255, 0.075);
   scroll-snap-align: start;
   position: relative;
 }
@@ -4050,9 +4025,9 @@ button.story-layer:active {
 .trend-card::before {
   content: "";
   position: absolute;
-  inset: 34px 58px 126px 30px;
-  border-radius: 34px;
-  background: rgba(255, 255, 255, 0.13);
+  inset: 18px 46px 94px 18px;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.1);
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.2);
   transform: rotate(-5deg);
   transition: opacity 0.18s ease, transform 0.18s ease;
@@ -4144,15 +4119,15 @@ button.story-layer:active {
 
 .drop-filter-tag {
   position: absolute;
-  left: 14px;
-  top: 14px;
+  left: 11px;
+  top: 11px;
   z-index: 2;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 999px;
   background: rgba(8, 3, 18, 0.38);
   color: rgba(255, 255, 255, 0.84);
-  padding: 6px 9px;
-  font-size: 10px;
+  padding: 5px 8px;
+  font-size: 9.5px;
   font-weight: 950;
   backdrop-filter: blur(14px);
 }
@@ -4161,10 +4136,10 @@ button.story-layer:active {
   position: absolute;
   inset: 0;
   display: grid;
-  grid-template-columns: 1fr 46px;
+  grid-template-columns: 1fr 38px;
   align-items: end;
-  gap: 10px;
-  padding: 14px;
+  gap: 8px;
+  padding: 11px;
 }
 
 .trend-copy {
@@ -4174,20 +4149,20 @@ button.story-layer:active {
 }
 
 .drop-info-card {
-  width: min(100%, 330px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  background: linear-gradient(180deg, rgba(5, 2, 12, 0.24), rgba(5, 2, 12, 0.5));
-  padding: 10px;
-  backdrop-filter: blur(14px);
-  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.22);
+  width: min(100%, 314px);
+  border: 0;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(5, 2, 12, 0.08), rgba(5, 2, 12, 0.34));
+  padding: 8px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
 }
 
 .drop-author-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .drop-author-row .drop-avatar {
@@ -4221,8 +4196,8 @@ button.story-layer:active {
 }
 
 .drop-info-card h2 {
-  margin: 0 0 5px;
-  font-size: 18px;
+  margin: 0 0 4px;
+  font-size: 16px;
   line-height: 1.08;
   letter-spacing: 0;
 }
@@ -4231,7 +4206,7 @@ button.story-layer:active {
   display: -webkit-box;
   margin: 0;
   color: rgba(255, 255, 255, 0.82);
-  font-size: 12px;
+  font-size: 11.5px;
   line-height: 1.34;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -4257,13 +4232,13 @@ button.story-layer:active {
   position: relative;
   z-index: 1;
   display: grid;
-  gap: 7px;
+  gap: 6px;
   justify-items: end;
 }
 
 .trend-actions button {
-  width: 42px;
-  min-height: 42px;
+  width: 36px;
+  min-height: 36px;
   border: 0;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.24);
@@ -4288,7 +4263,7 @@ button.story-layer:active {
 
 .trend-actions button small {
   position: absolute;
-  right: 48px;
+  right: 41px;
   top: 50%;
   transform: translateY(-50%) translateX(6px);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -4311,11 +4286,11 @@ button.story-layer:active {
 
 .drop-action-symbol {
   display: grid;
-  width: 20px;
-  height: 20px;
+  width: 17px;
+  height: 17px;
   place-items: center;
   border-radius: 50%;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1;
 }
 
@@ -4844,45 +4819,79 @@ button.story-layer:active {
   color: rgba(255, 255, 255, 0.45);
 }
 
-.fancam-intro {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 22px;
-  background:
-    radial-gradient(circle at 78% 10%, rgba(101, 228, 255, 0.16), transparent 9rem),
-    rgba(255, 255, 255, 0.06);
-  padding: 13px;
-  margin-bottom: 10px;
-  backdrop-filter: blur(18px);
+.fancam-control-bar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
-.fancam-intro h2,
-.fancam-intro p {
-  margin: 0;
+.fancam-search-input {
+  min-height: 38px;
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  color: white;
+  padding: 0 11px;
+  backdrop-filter: blur(16px);
 }
 
-.fancam-intro h2 {
-  font-size: 24px;
-}
-
-.fancam-intro p {
-  margin-top: 4px;
-  color: var(--muted);
+.fancam-search-input input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: white;
   font-size: 12px;
-  line-height: 1.35;
+  outline: none;
 }
 
-.fancam-live-badge {
-  flex: 0 0 auto;
-  border-radius: 999px;
-  background: linear-gradient(135deg, rgba(251, 188, 219, 0.9), rgba(101, 228, 255, 0.72));
-  color: #16071d;
-  padding: 7px 10px;
-  font-size: 10px;
+.fancam-control-bar > button,
+.fancam-search-chip button {
+  min-height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.07);
+  color: white;
+  padding: 0 11px;
+  font-size: 11px;
   font-weight: 950;
+  backdrop-filter: blur(16px);
+}
+
+.fancam-control-bar > button.active {
+  color: #16071d;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--pink), var(--cyan));
+}
+
+.fancam-filter-panel {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 8px;
+  backdrop-filter: blur(16px);
+}
+
+.fancam-search-chip,
+.fancam-feed-note {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.fancam-search-chip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
 }
 
 .fancam-filter-row {
@@ -4923,17 +4932,17 @@ button.story-layer:active {
 
 .fancam-feed {
   display: grid;
-  gap: 14px;
+  gap: 10px;
   scroll-snap-type: y mandatory;
 }
 
 .fancam-card {
   position: relative;
-  min-height: calc(100vh - 204px);
-  max-height: 680px;
+  min-height: calc(100dvh - 132px);
+  max-height: 760px;
   overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 18px;
   background:
     linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.72)),
     var(--art);
@@ -4975,12 +4984,12 @@ button.story-layer:active {
 
 .fancam-info {
   position: absolute;
-  left: 14px;
-  right: 66px;
-  bottom: 15px;
+  left: 11px;
+  right: 56px;
+  bottom: 12px;
   z-index: 2;
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .fancam-artist-link {
@@ -4996,8 +5005,8 @@ button.story-layer:active {
 
 .fancam-avatar {
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   place-items: center;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.16);
@@ -5012,14 +5021,14 @@ button.story-layer:active {
 }
 
 .fancam-artist-link strong {
-  font-size: 13px;
+  font-size: 12.5px;
 }
 
 .fancam-artist-link small,
 .fancam-info p,
 .fancam-meta-line {
   color: rgba(255, 255, 255, 0.78);
-  font-size: 11px;
+  font-size: 10.5px;
 }
 
 .fancam-info p {
@@ -5041,24 +5050,24 @@ button.story-layer:active {
 .fancam-meta-line span {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.1);
-  padding: 4px 7px;
+  padding: 3px 6px;
   font-weight: 850;
 }
 
 .fancam-actions {
   position: absolute;
-  right: 13px;
-  bottom: 18px;
+  right: 10px;
+  bottom: 13px;
   z-index: 3;
   display: grid;
-  gap: 7px;
+  gap: 6px;
 }
 
 .fancam-actions button {
   position: relative;
   display: grid;
-  width: 42px;
-  min-height: 42px;
+  width: 35px;
+  min-height: 35px;
   place-items: center;
   border: 0;
   border-radius: 50%;
@@ -5075,7 +5084,7 @@ button.story-layer:active {
 
 .fancam-actions button small {
   position: absolute;
-  right: 48px;
+  right: 40px;
   top: 50%;
   transform: translateY(-50%);
   border-radius: 999px;
@@ -5096,9 +5105,9 @@ button.story-layer:active {
 
 .fancam-comments-panel {
   position: absolute;
-  left: 14px;
-  right: 66px;
-  bottom: 138px;
+  left: 11px;
+  right: 56px;
+  bottom: 118px;
   z-index: 4;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 20px;
@@ -5107,6 +5116,155 @@ button.story-layer:active {
   padding: 11px;
   backdrop-filter: blur(22px);
   box-shadow: 0 18px 46px rgba(0, 0, 0, 0.34);
+}
+
+.fancam-mini-panel {
+  bottom: 86px;
+}
+
+.fancam-mini-panel button {
+  width: 100%;
+  min-height: 30px;
+  margin-top: 6px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 10.5px;
+  font-weight: 900;
+}
+
+.video-profile-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 145;
+  display: grid;
+  place-items: end center;
+  padding: max(48px, env(safe-area-inset-top)) 10px max(12px, env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at 50% 10%, rgba(251, 188, 219, 0.2), transparent 14rem),
+    rgba(1, 1, 6, 0.86);
+  backdrop-filter: blur(18px) saturate(1.06);
+  animation: storyViewerIn 180ms ease both;
+}
+
+.video-profile-close {
+  z-index: 2;
+}
+
+.video-profile-card {
+  width: min(100%, 420px);
+  max-height: calc(100dvh - 74px);
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.72)),
+    var(--art);
+  padding: 14px;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.52), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  display: grid;
+  gap: 12px;
+}
+
+.video-profile-hero {
+  display: grid;
+  grid-template-columns: 62px 1fr;
+  align-items: center;
+  gap: 11px;
+}
+
+.video-profile-avatar {
+  width: 62px;
+  height: 62px;
+  border-radius: 22px;
+  box-shadow: 0 0 28px rgba(251, 188, 219, 0.24);
+}
+
+.video-profile-avatar.text-avatar {
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.16);
+  color: white;
+  font-size: 18px;
+  font-weight: 1000;
+  backdrop-filter: blur(14px);
+}
+
+.video-profile-hero h2,
+.video-profile-hero p,
+.video-profile-preview p {
+  margin: 0;
+}
+
+.video-profile-hero h2 {
+  font-size: 24px;
+}
+
+.video-profile-hero p,
+.video-profile-preview p,
+.video-profile-preview small {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.video-profile-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
+
+.video-profile-stats span {
+  min-height: 48px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.095);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 9.5px;
+  font-weight: 850;
+  text-align: center;
+}
+
+.video-profile-stats strong {
+  color: white;
+  font-size: 14px;
+}
+
+.video-profile-preview {
+  display: grid;
+  gap: 6px;
+  border-radius: 20px;
+  background: rgba(5, 2, 12, 0.34);
+  padding: 11px;
+  backdrop-filter: blur(14px);
+}
+
+.video-profile-preview img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 16px;
+  margin-bottom: 3px;
+}
+
+.video-profile-preview strong {
+  color: white;
+  font-size: 15px;
+}
+
+.video-profile-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.video-profile-actions button:first-child,
+.video-profile-actions button:last-child {
+  grid-column: span 2;
 }
 
 .fancam-comments-panel strong,
