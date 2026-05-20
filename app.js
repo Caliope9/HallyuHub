@@ -30,6 +30,19 @@ const state = {
   viewedProfile: null,
   followedProfiles: {},
   dropFeedFilter: "viral",
+  dropSearchOpen: false,
+  dropSearchQuery: "",
+  dropSearchSelection: "",
+  dropCreatorOpen: false,
+  dropEffect: "idol-stage",
+  dropFollowed: {},
+  dropLiked: {},
+  dropSaved: {},
+  dropCommentsOpen: {},
+  dropShareOpen: {},
+  dropMusicOpen: {},
+  dropPaused: {},
+  dropFeedback: {},
   selectedProfileBg: "army",
   activeStory: null,
   likedStories: {},
@@ -259,6 +272,35 @@ const news = [
 
 const NEWS_REFRESH_MS = 3 * 60 * 60 * 1000;
 const newsArtists = ["BTS", "BLACKPINK", "Stray Kids", "NewJeans", "TWICE", "SEVENTEEN", "ATEEZ", "IVE", "TXT"];
+const demoAssetCounts = {
+  users: 20,
+  posts: 12,
+  stories: 8,
+};
+
+// Demo users are fictional and generated for prototype visualization.
+const demoUsers = [
+  { id: "demo-luna", name: "Luna Rivas", username: "luna.hallyu", city: "Santiago", country: "Chile 🇨🇱", fandom: "Stay ⭐", favoriteGroup: "Stray Kids", bio: "Creadora de playlists, comeback nights y trades seguros.", level: 18, starsReceived: "32.8K", posts: "48", followers: "8.7K", following: "412", colors: ["#fbbcdb", "#65e4ff"], accent: "#fbbcdb" },
+  { id: "demo-cami", name: "Camila Seo", username: "cami.stay", city: "Buenos Aires", country: "Argentina 🇦🇷", fandom: "Blink 🖤💖", favoriteGroup: "BLACKPINK", bio: "Outfits, random dance y photocards en Palermo.", level: 14, starsReceived: "18.6K", posts: "36", followers: "5.2K", following: "330", colors: ["#ff3ea5", "#111827"], accent: "#ff8ac8" },
+  { id: "demo-mika", name: "Mika Torres", username: "mika.army", city: "Montevideo", country: "Uruguay 🇺🇾", fandom: "Army 💜", favoriteGroup: "BTS", bio: "Fan edits, lives y guías para ARMY Latam.", level: 21, starsReceived: "41.1K", posts: "64", followers: "12.4K", following: "520", colors: ["#8b5cf6", "#d9b4ff"], accent: "#a855f7" },
+  { id: "demo-vale", name: "Valentina Park", username: "vale.multi", city: "Lima", country: "Perú 🇵🇪", fandom: "Tokki 🐰", favoriteGroup: "NewJeans", bio: "K-pop 101, moodboards y cute concepts.", level: 16, starsReceived: "24.9K", posts: "42", followers: "6.8K", following: "294", colors: ["#77f4c7", "#65e4ff"], accent: "#77f4c7" },
+  { id: "demo-nico", name: "Nico Kim", username: "nico.trades", city: "Córdoba", country: "Argentina 🇦🇷", fandom: "Once 🍭", favoriteGroup: "TWICE", bio: "Trades con referencias, álbumes y sleeves.", level: 12, starsReceived: "11.3K", posts: "29", followers: "3.1K", following: "188", colors: ["#ffd166", "#ff8ac8"], accent: "#ffd166" },
+  { id: "demo-sofi", name: "Sofi Moon", username: "sofi.tokki", city: "Santiago", country: "Chile 🇨🇱", fandom: "Tokki 🐰", favoriteGroup: "NewJeans", bio: "Y2K, fancams suaves y outfits pastel.", level: 15, starsReceived: "19.2K", posts: "34", followers: "4.6K", following: "260", colors: ["#65e4ff", "#fbbcdb"], accent: "#65e4ff" },
+  { id: "demo-agus", name: "Agus Han", username: "agus.random", city: "Buenos Aires", country: "Argentina 🇦🇷", fandom: "Stay ⭐", favoriteGroup: "Stray Kids", bio: "Organizo random play dance y cover crews.", level: 17, starsReceived: "26.4K", posts: "51", followers: "7.9K", following: "402", colors: ["#ff2d55", "#ffb703"], accent: "#ff2d55" },
+  { id: "demo-renata", name: "Renata Vega", username: "ren.fancam", city: "CDMX", country: "México 🇲🇽", fandom: "DIVE 💎", favoriteGroup: "IVE", bio: "Fancams, visual boards y stage edits.", level: 13, starsReceived: "14.7K", posts: "31", followers: "3.9K", following: "216", colors: ["#fff1f9", "#8b5cf6"], accent: "#fbbcdb" },
+  { id: "demo-juli", name: "Julieta Min", username: "juli.cards", city: "Rosario", country: "Argentina 🇦🇷", fandom: "CARAT 💎", favoriteGroup: "SEVENTEEN", bio: "Colección de photocards y wishlist semanal.", level: 19, starsReceived: "33.4K", posts: "57", followers: "9.1K", following: "440", colors: ["#f7cadf", "#9ad7ff"], accent: "#9ad7ff" },
+  { id: "demo-emi", name: "Emi Sol", username: "emi.blink", city: "Medellín", country: "Colombia 🇨🇴", fandom: "Blink 🖤💖", favoriteGroup: "BLACKPINK", bio: "Fashion fandom, dance breaks y covers.", level: 11, starsReceived: "9.8K", posts: "25", followers: "2.7K", following: "172", colors: ["#ff8ac8", "#09060a"], accent: "#ff8ac8" },
+  { id: "demo-dani", name: "Dani Lee", username: "dani.cover", city: "Bogotá", country: "Colombia 🇨🇴", fandom: "ATINY 🏴", favoriteGroup: "ATEEZ", bio: "Cover dance, stage energy y eventos.", level: 15, starsReceived: "17.5K", posts: "38", followers: "4.8K", following: "256", colors: ["#ffb703", "#111827"], accent: "#ffb703" },
+  { id: "demo-martu", name: "Martina Kwon", username: "martu.once", city: "Córdoba", country: "Argentina 🇦🇷", fandom: "Once 🍭", favoriteGroup: "TWICE", bio: "Comebacks cute, álbumes y meetups.", level: 10, starsReceived: "8.4K", posts: "21", followers: "2.2K", following: "140", colors: ["#ff8ac8", "#ffd166"], accent: "#ffd166" },
+  { id: "demo-ara", name: "Ara Chen", username: "ara.aespa", city: "Quito", country: "Ecuador 🇪🇨", fandom: "MY ✨", favoriteGroup: "aespa", bio: "Cyber Seoul, edits futuristas y lore.", level: 18, starsReceived: "28.1K", posts: "44", followers: "6.3K", following: "300", colors: ["#65e4ff", "#d946ef"], accent: "#65e4ff" },
+  { id: "demo-thiago", name: "Thiago Baek", username: "thiago.atiny", city: "Montevideo", country: "Uruguay 🇺🇾", fandom: "ATINY 🏴", favoriteGroup: "ATEEZ", bio: "Lightsticks, stages y fan chants.", level: 12, starsReceived: "12.6K", posts: "28", followers: "3.4K", following: "220", colors: ["#ffb703", "#ff2d55"], accent: "#ffb703" },
+  { id: "demo-noa", name: "Noa Rivera", username: "noa.carat", city: "Asunción", country: "Paraguay 🇵🇾", fandom: "CARAT 💎", favoriteGroup: "SEVENTEEN", bio: "Unit songs, fanart y rankings fandom.", level: 13, starsReceived: "13.9K", posts: "30", followers: "3.7K", following: "198", colors: ["#f7cadf", "#65e4ff"], accent: "#f7cadf" },
+  { id: "demo-isa", name: "Isabella Ryu", username: "isa.dive", city: "Lima", country: "Perú 🇵🇪", fandom: "DIVE 💎", favoriteGroup: "IVE", bio: "Outfits elegantes y fancam mode.", level: 14, starsReceived: "16.2K", posts: "33", followers: "4.1K", following: "230", colors: ["#fff1f9", "#ff8ac8"], accent: "#ff8ac8" },
+  { id: "demo-mateo", name: "Mateo Song", username: "mateo.lightstick", city: "Santiago", country: "Chile 🇨🇱", fandom: "ENGENE", favoriteGroup: "ENHYPEN", bio: "Reviews de lightsticks y conciertos.", level: 9, starsReceived: "7.1K", posts: "18", followers: "1.9K", following: "122", colors: ["#a855f7", "#65e4ff"], accent: "#a855f7" },
+  { id: "demo-flor", name: "Flor Kim", username: "flor.fanart", city: "La Plata", country: "Argentina 🇦🇷", fandom: "FEARNOT", favoriteGroup: "LE SSERAFIM", bio: "Fanart, comeback posters y cute drops.", level: 15, starsReceived: "20.7K", posts: "40", followers: "5.5K", following: "310", colors: ["#f8fafc", "#ff8ac8"], accent: "#ff8ac8" },
+  { id: "demo-zoe", name: "Zoe Choi", username: "zoe.comeback", city: "Valparaíso", country: "Chile 🇨🇱", fandom: "BRIIZE", favoriteGroup: "RIIZE", bio: "Noticias, comeback tracker y playlists.", level: 11, starsReceived: "10.5K", posts: "24", followers: "2.8K", following: "176", colors: ["#ffb703", "#65e4ff"], accent: "#65e4ff" },
+  { id: "demo-bruno", name: "Bruno Park", username: "bruno.album", city: "Mendoza", country: "Argentina 🇦🇷", fandom: "Treasure Maker", favoriteGroup: "TREASURE", bio: "Unboxings, álbumes y compras grupales.", level: 10, starsReceived: "8.9K", posts: "20", followers: "2.4K", following: "150", colors: ["#2563eb", "#65e4ff"], accent: "#2563eb" },
+].map((user, index) => ({ ...user, avatarUrl: getDemoUserImage(index), profileBg: index % 2 ? "stage" : "pastel" }));
 
 const userPosts = [
   {
@@ -454,6 +496,7 @@ const storyDecorations = [
 
 const trendVideos = [
   {
+    id: "blackpink-dance",
     user: "Cami.STAY",
     challenge: "Dance Challenge BLACKPINK",
     song: "BLACKPINK · dance break",
@@ -461,6 +504,7 @@ const trendVideos = [
     colors: "linear-gradient(160deg, #09060a, #ff3ea5 50%, #ff8ac8)",
   },
   {
+    id: "bts-viral-step",
     user: "Mika",
     challenge: "Paso viral de BTS",
     song: "BTS · fan edit",
@@ -468,6 +512,7 @@ const trendVideos = [
     colors: "linear-gradient(160deg, #0d0718, #8b5cf6 52%, #d9b4ff)",
   },
   {
+    id: "newjeans-drop",
     user: "Vale Multi",
     challenge: "Drop NewJeans",
     song: "NewJeans · Y2K pop",
@@ -475,6 +520,7 @@ const trendVideos = [
     colors: "linear-gradient(160deg, #06131a, #65e4ff 46%, #77f4c7)",
   },
   {
+    id: "random-play-ba",
     user: "Random Play BA",
     challenge: "Cover random play dance",
     song: "K-pop mix · LATAM",
@@ -482,6 +528,7 @@ const trendVideos = [
     colors: "linear-gradient(160deg, #ffb703, #ff2d55 48%, #111827)",
   },
   {
+    id: "kpop-chile",
     user: "Hallyu Chile",
     challenge: "Challenge K-pop Chile",
     song: "LATAM fandom · stage",
@@ -1410,6 +1457,8 @@ const conversations = [
   },
 ];
 
+hydrateDemoSocialData();
+
 const profilePhotos = [
   "Live stage",
   "Outfit",
@@ -1485,6 +1534,10 @@ function setView(nextView) {
     state.storyEditorOpen = false;
     clearStoryAutoplay();
   }
+  if (nextView !== "trends") {
+    state.dropSearchOpen = false;
+    state.dropCreatorOpen = false;
+  }
   if (nextView !== "search") state.selectedHashtag = null;
   if (!state.isAuthenticated && nextView !== "auth") {
     state.view = "auth";
@@ -1515,7 +1568,7 @@ function render() {
   appScreen.classList.toggle("home-mode", state.view === "home");
   appScreen.classList.toggle("light-mode", state.user?.mode === "light");
   appScreen.style.setProperty("--user-accent", state.user?.accent || "#fbbcdb");
-  document.querySelector(".bottom-nav").classList.toggle("hidden", !state.isAuthenticated || state.storyEditorOpen || state.activeStory !== null);
+  document.querySelector(".bottom-nav").classList.toggle("hidden", !state.isAuthenticated || state.storyEditorOpen || state.activeStory !== null || state.dropSearchOpen || state.dropCreatorOpen);
   document.querySelector(".topbar").classList.toggle("hidden", !state.isAuthenticated || state.view === "profile" || state.storyEditorOpen || state.activeStory !== null);
   if (!state.isAuthenticated) {
     view.innerHTML = renderAuth();
@@ -1958,28 +2011,125 @@ function bindDynamicActions() {
   });
 
   document.querySelectorAll("[data-create-drop]").forEach((button) => {
-    button.addEventListener("click", () => setView("publish"));
+    button.addEventListener("click", () => {
+      state.dropCreatorOpen = true;
+      state.dropSearchOpen = false;
+      render();
+    });
   });
 
   document.querySelectorAll("[data-search-drops]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.selectedHashtag = "#Drops";
-      setView("search");
+      state.dropSearchOpen = true;
+      state.dropCreatorOpen = false;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-close-drop-search]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.dropSearchOpen = false;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-drop-search-input]").forEach((input) => {
+    input.addEventListener("input", () => {
+      state.dropSearchQuery = input.value;
+      render();
+      setTimeout(() => {
+        const nextInput = document.querySelector("[data-drop-search-input]");
+        if (!nextInput) return;
+        nextInput.focus();
+        nextInput.setSelectionRange(state.dropSearchQuery.length, state.dropSearchQuery.length);
+      }, 0);
+    });
+  });
+
+  document.querySelectorAll("[data-drop-result]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.dropSearchSelection = button.dataset.dropResult;
+      state.dropSearchQuery = button.dataset.dropResult;
+      state.dropSearchOpen = false;
+      showToast(`Drops relacionados: ${button.dataset.dropResult}`);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-clear-drop-search]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.dropSearchQuery = "";
+      state.dropSearchSelection = "";
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-close-drop-creator]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.dropCreatorOpen = false;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-drop-effect]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.dropEffect = button.dataset.dropEffect;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-drop-publish-demo]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.dropCreatorOpen = false;
+      showToast("Drop listo para publicar en modo demo");
+      render();
     });
   });
 
   document.querySelectorAll("[data-drop-action]").forEach((button) => {
     button.addEventListener("click", () => {
-      const [action, index] = button.dataset.dropAction.split(":");
-      const messages = {
-        like: "Drop marcado con estrella",
-        comment: "Comentarios abiertos en modo demo",
-        share: "Drop listo para compartir",
-        save: "Drop guardado",
-      };
-      state.sharedPosts[`drop-${index}-${action}`] = true;
-      showToast(messages[action] || "Accion aplicada");
-      button.classList.add("active");
+      const [action, id] = button.dataset.dropAction.split(":");
+      handleDropAction(action, id);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-drop-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.dropToggle;
+      state.dropPaused[id] = !state.dropPaused[id];
+      state.dropFeedback[id] = state.dropPaused[id] ? "play" : "pause";
+      render();
+      setTimeout(() => {
+        if (state.dropFeedback[id]) {
+          delete state.dropFeedback[id];
+          render();
+        }
+      }, 520);
+    });
+  });
+
+  document.querySelectorAll("[data-drop-share-copy]").forEach((button) => {
+    button.addEventListener("click", () => {
+      showToast("Enlace del Drop copiado en modo demo");
+      state.dropShareOpen[button.dataset.dropShareCopy] = false;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-drop-comment-send]").forEach((button) => {
+    button.addEventListener("click", () => {
+      showToast("Comentario enviado al Drop en modo demo");
+      state.dropCommentsOpen[button.dataset.dropCommentSend] = false;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-toggle-drop-text]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.toggleDropText;
+      state.expandedPosts[`drop-${id}`] = !state.expandedPosts[`drop-${id}`];
+      render();
     });
   });
 
@@ -2129,9 +2279,10 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-open-profile]").forEach((button) => {
     button.addEventListener("click", () => {
       const profile = state.liveProfiles.find((item) => item.id === button.dataset.openProfile);
-      if (!profile) return;
+      const demoProfile = demoUsers.find((item) => item.id === button.dataset.openProfile);
+      if (!profile && !demoProfile) return;
       state.profileEditorOpen = false;
-      state.viewedProfile = {
+      state.viewedProfile = demoProfile ? getDemoProfilePayload(demoProfile) : {
         id: profile.id,
         name: profile.name || "Hallyu fan",
         username: profile.username || "hallyufan",
@@ -2611,29 +2762,32 @@ async function createPost() {
   const category = document.getElementById("post-category")?.value || "posts";
   const optionalFields = {
     location: document.getElementById("post-location")?.value.trim() || "",
-    date: document.getElementById("post-date")?.value || "",
-    hour: document.getElementById("post-hour")?.value || "",
     taggedPeople: document.getElementById("post-tagged-people")?.value.trim() || "",
     taggedPlace: document.getElementById("post-tagged-place")?.value.trim() || "",
   };
+  const hashtags = (document.getElementById("post-hashtags")?.value || "")
+    .split(/[,\s]+/)
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .map((tag) => (tag.startsWith("#") ? tag : `#${tag}`));
   if (state.backendMode !== "supabase") {
     userPosts.unshift({
       id: `local-${Date.now()}`,
       user: state.user.name,
       group: getPostCategoryLabel(category),
       category,
-      time: optionalFields.date || optionalFields.hour ? [optionalFields.date, optionalFields.hour].filter(Boolean).join(" · ") : "Ahora",
+      time: "Ahora",
       badge: state.user.fandom || "Army 💜",
       online: true,
       caption: caption || "Publicacion nueva en modo demo.",
       likes: "0",
       comments: "0",
       commentList: [],
-      hashtags: ["#HallyuHub", "#KpopLatam"],
+      hashtags: hashtags.length ? hashtags : ["#HallyuHub", "#KpopLatam"],
       ...optionalFields,
     });
     storage.set("hallyuHubUserPosts", userPosts.filter((post) => String(post.id || "").startsWith("local-")));
-    setView("home");
+    setView("profile");
     return;
   }
   const mediaUrl = await uploadMedia(file, supabaseBuckets.posts);
@@ -2650,7 +2804,7 @@ async function createPost() {
     return;
   }
   await loadPosts();
-  setView("home");
+  setView("profile");
 }
 
 function getPostCategoryLabel(category) {
@@ -2661,6 +2815,7 @@ function getPostCategoryLabel(category) {
     photocards: "Photocard",
     saved: "Guardado",
     favorites: "Favorito",
+    stories: "Historia",
   };
   return labels[category] || "Publicacion";
 }
@@ -2855,17 +3010,21 @@ function openFeedProfile(name) {
   const key = normalizeProfileKey(name);
   const post = userPosts.find((item) => normalizeProfileKey(item.user) === key || normalizeProfileKey(item.username) === key);
   const commentProfile = post ? null : findCommentProfile(name);
-  if (!post && !commentProfile) return;
-  const source = post || commentProfile.sourcePost;
-  const profileName = post?.user || commentProfile.user;
+  const demoProfile = getDemoUser(name);
+  if (!post && !commentProfile && !demoProfile) return;
+  const source = post || commentProfile?.sourcePost || {};
+  const profileName = post?.user || commentProfile?.user || demoProfile.name;
   if (profileName === state.user?.name || normalizeProfileKey(profileName) === normalizeProfileKey(state.user?.username)) {
     state.viewedProfile = null;
+  } else if (demoProfile) {
+    state.viewedProfile = getDemoProfilePayload(demoProfile);
   } else {
     state.viewedProfile = {
       id: normalizeProfileKey(profileName),
       name: profileName,
       username: normalizeProfileKey(commentProfile?.username || profileName),
       avatar: post?.avatar || commentProfile?.avatar || "star",
+      avatarUrl: post?.avatarUrl || commentProfile?.avatarUrl,
       bio: post?.caption || `Fan activo de ${source.group || "K-pop"} en HallyuHub.`,
       country: source.location || "Latam",
       fandom: source.badge || "Army 💜",
@@ -2911,9 +3070,157 @@ async function startPrivateMessage(recipientId, body) {
 
 function renderAvatarElement(className, avatarId, imageUrl) {
   if (imageUrl) {
-    return `<span class="avatar-photo ${className}" style="background-image:url('${imageUrl}')"></span>`;
+    return `<span class="avatar-photo ${className}" style="background-image:url('${escapeAttr(imageUrl)}')"></span>`;
   }
   return `<span class="plush-avatar ${className}" style="--avatar:${getAvatarGradient(avatarId)}"><span></span></span>`;
+}
+
+function getDemoAssetPath(folder, prefix, index, count) {
+  const safeIndex = ((Number(index) || 0) % count + count) % count;
+  return `./assets/${folder}/${prefix}-${String(safeIndex + 1).padStart(2, "0")}.jpg`;
+}
+
+function getStableAssetIndex(seed, count) {
+  const value = String(seed || "hallyu");
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) % 100000;
+  }
+  return hash % count;
+}
+
+function getDemoUserImage(index) {
+  return getDemoAssetPath("demo-users", "user", index, demoAssetCounts.users);
+}
+
+function getDemoPostImage(index) {
+  return getDemoAssetPath("demo-posts", "post", index, demoAssetCounts.posts);
+}
+
+function getDemoStoryImage(index) {
+  return getDemoAssetPath("demo-stories", "story", index, demoAssetCounts.stories);
+}
+
+function getDemoUser(identifier) {
+  if (typeof identifier === "number") return demoUsers[identifier % demoUsers.length];
+  const key = normalizeProfileKey(identifier);
+  return demoUsers.find((user) => [user.id, user.name, user.username].some((value) => normalizeProfileKey(value) === key || normalizeProfileKey(value).includes(key))) || demoUsers[0];
+}
+
+function getDemoProfilePayload(user) {
+  return {
+    id: user.id,
+    name: user.name,
+    username: user.username,
+    avatar: "berry",
+    avatarUrl: user.avatarUrl,
+    bio: user.bio,
+    country: `${user.city}, ${user.country}`,
+    fandom: user.fandom,
+    bias: "Bias secreto",
+    favoriteGroup: user.favoriteGroup,
+    phrase: user.bio,
+    followers: user.followers,
+    following: user.following,
+    posts: user.posts,
+    starsReceived: user.starsReceived,
+    level: user.level,
+    profileBg: user.profileBg,
+  };
+}
+
+function hydrateDemoSocialData() {
+    const postUsers = ["Luna Rivas", "Camila Seo", "Valentina Park", "Agus Han", "Dani Lee", "Sofi Moon"];
+  const postTopics = [
+    ["Comeback night", ["#comeback", "#STAYLatam"], "Santiago, Chile", "✦"],
+    ["Trade seguro", ["#photocard", "#tradeSeguro"], "Palermo, Buenos Aires", "♡"],
+    ["K-pop 101", ["#Kpop101", "#bias"], "Lima, Perú", "♪"],
+    ["Random dance", ["#DanceChallenge", "#RandomPlay", "#BLACKPINK"], "Buenos Aires", "★"],
+    ["Evento fandom", ["#EventoKpop", "#Santiago", "#FandomSeguro"], "Santiago, Chile", "◇"],
+    ["Outfit pastel", ["#KpopOutfit", "#Y2K", "#PastelNeon"], "Santiago, Chile", "✦"],
+  ];
+  userPosts.forEach((post, index) => {
+    const user = getDemoUser(postUsers[index] || index);
+    const [title, hashtags, location, motif] = postTopics[index] || postTopics[0];
+    const mediaImage = post.imageUrl || post.mediaUrl || getDemoPostImage(index);
+    post.user = user.name;
+    post.username = user.username;
+    post.avatarUrl = user.avatarUrl;
+    post.badge = user.fandom;
+    post.location ||= location;
+    post.hashtags = hashtags || post.hashtags;
+    post.imageUrl = mediaImage;
+    post.mediaUrl = mediaImage;
+    post.mediaType ||= "image";
+    post.caption = post.caption || user.bio;
+    hydrateDemoComments(post.commentList || [], index + 1);
+  });
+  if (!userPosts.some((post) => post.id === "demo-extra-1")) {
+    [
+      ["demo-extra-1", "Renata Vega", "IVE fancam board", "Reacción al stage de IVE: luces frías, look elegante y cámara vertical perfecta para Drop.", ["#IVE", "#fancam", "#DIVE"], "Fancam", "📸"],
+      ["demo-extra-2", "Julieta Min", "Carpeta de photocards", "Actualicé la carpeta con sleeves holográficos y separadores por era. Quedó demasiado cute.", ["#photocard", "#collector", "#tradeSeguro"], "Photocard", "💿"],
+      ["demo-extra-3", "Emi Sol", "Outfit BLACKPINK", "Probando un outfit black-pink para el próximo random dance. Brillo suave, botas y lazo.", ["#BLACKPINK", "#KpopOutfit", "#Blink"], "Outfit", "🎀"],
+      ["demo-extra-4", "Ara Chen", "Cyber Seoul edit", "Hice un edit estilo aespa con neón azul, tipografía futurista y glow de escenario.", ["#aespa", "#CyberSeoul", "#MY"], "Fanart", "✦"],
+      ["demo-extra-5", "Mateo Song", "Lightstick night", "Probé batería, funda y modo concierto del lightstick antes del evento ENGENE.", ["#ENHYPEN", "#lightstick", "#ENGENE"], "Evento fandom", "★"],
+      ["demo-extra-6", "Bruno Park", "Unboxing de álbum", "Llegó el álbum y el photobook se ve increíble. Dejo mini review para quienes están dudando.", ["#album", "#unboxing", "#KpopLatam"], "Compra álbum", "♪"],
+    ].forEach(([id, userName, title, caption, hashtags, group, motif], index) => {
+      const user = getDemoUser(userName);
+      const mediaImage = getDemoPostImage(index + 6);
+      userPosts.push({
+        id,
+        user: user.name,
+        username: user.username,
+        avatarUrl: user.avatarUrl,
+        group,
+        category: group === "Outfit" ? "outfits" : group === "Photocard" ? "photocards" : "posts",
+        type: index % 2 ? "popular" : "event",
+        time: `hace ${index + 2} h`,
+        badge: user.fandom,
+        online: index % 2 === 0,
+        hashtags,
+        caption,
+        likes: `${(1.1 + index * 0.6).toFixed(1)}K`,
+        comments: String(42 + index * 19),
+        commentList: [
+          { id: `${id}-c1`, user: getDemoUser(index + 3).name, username: getDemoUser(index + 3).username, avatarUrl: getDemoUser(index + 3).avatarUrl, time: "18m", body: "Se ve muy real, guardado para inspirarme ✨", likes: 12 + index, replies: [] },
+        ],
+        imageUrl: mediaImage,
+        mediaUrl: mediaImage,
+        mediaType: "image",
+        location: `${user.city}, ${user.country}`,
+        shares: String(30 + index * 14),
+        saves: String(96 + index * 33),
+      });
+    });
+  }
+  followingStories.forEach((story, index) => {
+    const user = getDemoUser(index + 2);
+    story.user = user.name;
+    story.avatarUrl = user.avatarUrl;
+    story.imageUrl = story.imageUrl || getDemoStoryImage(index);
+    story.mediaUrl = story.mediaUrl || story.imageUrl;
+    story.mediaType ||= "image";
+  });
+  privateRequests.forEach((request, index) => {
+    const user = getDemoUser(index + 8);
+    request.name = user.name;
+    request.avatarUrl = user.avatarUrl;
+  });
+  conversations.forEach((chat, index) => {
+    const user = getDemoUser(index + 10);
+    chat.name = user.name;
+    chat.avatarUrl = user.avatarUrl;
+  });
+}
+
+function hydrateDemoComments(comments, offset = 0) {
+  comments.forEach((comment, index) => {
+    const user = getDemoUser(offset + index);
+    comment.user = user.name;
+    comment.username = user.username;
+    comment.avatarUrl = user.avatarUrl;
+    hydrateDemoComments(comment.replies || [], offset + index + 3);
+  });
 }
 
 function renderAuth() {
@@ -3177,7 +3484,7 @@ function renderHome() {
           (story, index) => `
           <button class="story-item" data-story-index="${index}">
             <span class="story-ring">
-              <span class="plush-avatar story-avatar" style="--avatar:${getAvatarGradient(story.avatar)}"><span></span></span>
+              ${renderAvatarElement("story-avatar", story.avatar, story.avatarUrl)}
             </span>
             <strong>${story.user}</strong>
           </button>`,
@@ -3302,7 +3609,7 @@ function renderStoryViewer() {
       <button class="story-tap-zone right" data-story-nav="1" aria-label="Historia siguiente"></button>
       <article class="story-full-card" style="--art:${story.colors}">
         <div class="story-full-head">
-          <span class="story-ring small-ring"><span class="plush-avatar story-avatar small" style="--avatar:${getAvatarGradient(story.avatar)}"><span></span></span></span>
+          <span class="story-ring small-ring">${renderAvatarElement("story-avatar small", story.avatar, story.avatarUrl)}</span>
           <div><h3>${story.user}</h3><p>${story.label} · ${story.time}</p></div>
         </div>
         <div class="story-music-pill"><span>♪</span>${story.music}</div>
@@ -3365,6 +3672,7 @@ function renderStoryLayer(element, editable = false) {
 function renderSocialPost(post, index, options = {}) {
   const expanded = Boolean(options.expanded || state.expandedPosts[post.id]);
   const isFeatured = options.featured || post.type === "trending" || post.type === "event";
+  const postMediaUrl = post.mediaUrl || post.imageUrl;
   return `
     <article class="post-card ${options.compact ? "profile-feed-post" : ""} ${isFeatured ? "featured-post" : ""} ${expanded ? "expanded-post" : ""}">
       <div class="post-head modern-post-head">
@@ -3386,10 +3694,10 @@ function renderSocialPost(post, index, options = {}) {
       <div class="post-body-card">
         <button class="post-open-button" data-toggle-post-more="${post.id}" aria-label="${expanded ? "Contraer publicacion" : "Expandir publicacion"}">
         ${
-          post.mediaUrl
+          postMediaUrl
             ? post.mediaType === "video"
-              ? `<video class="post-media real-media" src="${post.mediaUrl}" controls playsinline></video>`
-              : `<img class="post-media real-media" src="${post.mediaUrl}" alt="Publicacion de ${post.user}" />`
+              ? `<video class="post-media real-media" src="${postMediaUrl}" controls playsinline></video>`
+              : `<img class="post-media real-media" src="${postMediaUrl}" alt="Publicacion de ${post.user}" />`
             : `<div class="post-media" style="--art:${post.art || art[index % art.length]}"></div>`
         }
         </button>
@@ -3886,7 +4194,7 @@ function getNewsKey(item) {
 }
 
 function renderSearch() {
-  const users = state.backendMode === "supabase" && state.liveProfiles.length ? state.liveProfiles : [];
+  const users = state.backendMode === "supabase" && state.liveProfiles.length ? state.liveProfiles : demoUsers.slice(0, 8);
   const hashtagPosts = state.selectedHashtag ? getHashtagPosts(state.selectedHashtag) : [];
   return `
     <div class="search-box">
@@ -3937,15 +4245,15 @@ function renderSearch() {
     </div>
     ${
       users.length
-        ? `<div class="section-heading"><h2>Usuarios</h2><span>Supabase</span></div>
+        ? `<div class="section-heading"><h2>Usuarios sugeridos</h2><span>${state.backendMode === "supabase" ? "Supabase" : "Demo"}</span></div>
           <div class="user-result-list">
             ${users
               .map(
                 (profile) => `
                 <article class="user-result-card">
-                  ${renderAvatarElement("mini", profile.avatar, profile.avatar_url)}
+                  ${renderAvatarElement("mini", profile.avatar || "berry", profile.avatar_url || profile.avatarUrl)}
                   <button class="profile-result-main" data-open-profile="${profile.id}">
-                    <div><h3>${profile.name}</h3><p class="muted">@${profile.username}</p></div>
+                    <div><h3>${profile.name}</h3><p class="muted">@${profile.username} · ${profile.city || profile.country || "Latam"}</p></div>
                   </button>
                   <button class="ghost-button" data-follow-user="${profile.id}">Seguir</button>
                   <button class="ghost-button" data-send-message="${profile.id}">Mensaje</button>
@@ -3972,80 +4280,328 @@ function getEngagementNumber(value) {
   return text.includes("k") ? number * 1000 : number;
 }
 
+function getDropId(trend, fallback = 0) {
+  return trend.id || normalizeProfileKey(`${trend.challenge}-${trend.user}`) || `drop-${fallback}`;
+}
+
+function handleDropAction(action, id) {
+  const closePanels = () => {
+    state.dropCommentsOpen[id] = false;
+    state.dropShareOpen[id] = false;
+    state.dropMusicOpen[id] = false;
+  };
+  if (action === "follow") {
+    state.dropFollowed[id] = !state.dropFollowed[id];
+    showToast(state.dropFollowed[id] ? "Creador seguido" : "Dejaste de seguir al creador");
+    return;
+  }
+  if (action === "like") {
+    state.dropLiked[id] = !state.dropLiked[id];
+    state.dropFeedback[id] = "star";
+    showToast(state.dropLiked[id] ? "Drop marcado con estrella" : "Estrella quitada");
+    setTimeout(() => {
+      if (state.dropFeedback[id] === "star") {
+        delete state.dropFeedback[id];
+        render();
+      }
+    }, 520);
+    return;
+  }
+  if (action === "save") {
+    state.dropSaved[id] = !state.dropSaved[id];
+    showToast(state.dropSaved[id] ? "Drop guardado" : "Drop quitado de guardados");
+    return;
+  }
+  if (action === "comment") {
+    state.dropCommentsOpen[id] = !state.dropCommentsOpen[id];
+    state.dropShareOpen[id] = false;
+    state.dropMusicOpen[id] = false;
+    return;
+  }
+  if (action === "share") {
+    state.dropShareOpen[id] = !state.dropShareOpen[id];
+    state.dropCommentsOpen[id] = false;
+    state.dropMusicOpen[id] = false;
+    return;
+  }
+  if (action === "music") {
+    state.dropMusicOpen[id] = !state.dropMusicOpen[id];
+    state.dropCommentsOpen[id] = false;
+    state.dropShareOpen[id] = false;
+    return;
+  }
+  closePanels();
+}
+
 function renderTrends() {
+  const drops = getFilteredDrops();
   return `
-    <div class="trend-tabs">
-      <button class="${state.dropFeedFilter === "viral" ? "active" : ""}" data-drop-filter="viral">Mas virales</button>
-      <button data-create-drop>Crear Drop</button>
-      <button data-search-drops>Buscar Drop</button>
+    <div class="drop-tools-row">
+      <div class="trend-tabs premium-drop-tabs">
+        <button class="${state.dropFeedFilter === "viral" ? "active" : ""}" data-drop-filter="viral">Virales</button>
+        <button class="${state.dropFeedFilter === "challenge" ? "active" : ""}" data-drop-filter="challenge">Challenges</button>
+        <button class="${state.dropFeedFilter === "fancam" ? "active" : ""}" data-drop-filter="fancam">Fancam</button>
+      </div>
+      <div class="drop-tool-actions">
+        <button class="drop-icon-button" data-search-drops aria-label="Buscar Drops"><span class="nav-icon search-icon"></span></button>
+        <button class="drop-create-mini" data-create-drop>Crear</button>
+      </div>
     </div>
+    ${state.dropSearchSelection ? `<div class="drop-search-chip"><span>Resultados para ${state.dropSearchSelection}</span><button data-clear-drop-search>Limpiar</button></div>` : ""}
     <section class="trends-feed" aria-label="Drops estilo reels">
-      ${trendVideos
+      ${drops
         .map(
-          (trend, index) => `
-          <article class="trend-card" style="--art:${trend.colors}">
-            <div class="trend-overlay">
-              <div class="trend-copy">
-                <div class="post-head compact-head">
-                  <div class="plush-avatar mini" style="--avatar:${avatars[index % avatars.length].gradient}"><span></span></div>
-                  <div><h3>${trend.user}</h3><p>${trend.song}</p></div>
-                </div>
-                <h2>${trend.challenge}</h2>
-                <p>${trend.description}</p>
-              </div>
-              <div class="trend-actions">
-                <button data-drop-action="like:${index}"><span class="nav-icon heart-icon"></span><small>Like</small></button>
-                <button data-drop-action="comment:${index}"><span class="nav-icon chat-icon"></span><small>Comentar</small></button>
-                <button data-drop-action="share:${index}"><span class="share-dot"></span><small>Compartir</small></button>
-                <button data-drop-action="save:${index}"><span class="save-mark"></span><small>Guardar</small></button>
-              </div>
-            </div>
-          </article>`,
+          (trend, index) => renderDropCard(trend, index),
         )
         .join("")}
+    </section>
+    ${state.dropSearchOpen ? renderDropSearchOverlay() : ""}
+    ${state.dropCreatorOpen ? renderDropCreator() : ""}
+  `;
+}
+
+function renderDropCard(trend, index) {
+  const id = getDropId(trend, index);
+  const demoUser = getDemoUser(trend.user);
+  const liked = Boolean(state.dropLiked[id]);
+  const followed = Boolean(state.dropFollowed[id]);
+  const saved = Boolean(state.dropSaved[id]);
+  const expanded = Boolean(state.expandedPosts[`drop-${id}`]);
+  const longDescription = trend.description.length > 68;
+  const feedback = state.dropFeedback[id];
+  return `
+          <article class="trend-card premium-drop-card effect-${state.dropEffect} ${state.dropPaused[id] ? "paused" : ""}" style="--art:${trend.colors}">
+            <button class="drop-play-toggle" data-drop-toggle="${id}" aria-label="${state.dropPaused[id] ? "Reproducir Drop" : "Pausar Drop"}"></button>
+            ${feedback ? `<div class="drop-center-feedback ${feedback === "star" ? "starburst" : ""}">${feedback === "star" ? "★" : state.dropPaused[id] ? "▶" : "Ⅱ"}</div>` : ""}
+            <div class="trend-overlay">
+              <div class="trend-copy">
+                <div class="drop-info-card">
+                  <div class="drop-author-row">
+                    ${renderAvatarElement("mini drop-avatar", demoUser.avatar || "berry", demoUser.avatarUrl)}
+                    <div>
+                      <button type="button" data-open-feed-profile="${escapeAttr(demoUser.username || trend.user)}">${escapeHtml(trend.user)}</button>
+                      <span>♪ ${escapeHtml(trend.song)}</span>
+                    </div>
+                  </div>
+                  <h2>${escapeHtml(trend.challenge)}</h2>
+                  <p class="drop-description ${expanded ? "expanded" : ""}">${escapeHtml(trend.description)}</p>
+                  ${longDescription ? `<button class="drop-more-link" data-toggle-drop-text="${id}">${expanded ? "Ver menos" : "Ver más"}</button>` : ""}
+                </div>
+              </div>
+              <div class="trend-actions">
+                <button class="${followed ? "active" : ""}" data-drop-action="follow:${id}" aria-label="${followed ? "Siguiendo" : "Seguir"}"><span class="drop-action-symbol">${followed ? "✓" : "+"}</span><small>${followed ? "Siguiendo" : "Seguir"}</small></button>
+                <button class="${liked ? "active liked" : ""}" data-drop-action="like:${id}" aria-label="Estrella"><span class="drop-action-symbol star">★</span><small>${liked ? "Listo" : "Like"}</small></button>
+                <button class="${state.dropCommentsOpen[id] ? "active" : ""}" data-drop-action="comment:${id}" aria-label="Comentar"><span class="nav-icon chat-icon"></span><small>Comentar</small></button>
+                <button class="${state.dropShareOpen[id] ? "active" : ""}" data-drop-action="share:${id}" aria-label="Compartir"><span class="share-dot"></span><small>Compartir</small></button>
+                <button class="${saved ? "active saved" : ""}" data-drop-action="save:${id}" aria-label="Guardar"><span class="save-mark"></span><small>${saved ? "Guardado" : "Guardar"}</small></button>
+                <button class="${state.dropMusicOpen[id] ? "active" : ""}" data-drop-action="music:${id}" aria-label="Música"><span class="drop-action-symbol">♪</span><small>Música</small></button>
+              </div>
+              ${renderDropPanel(trend, id)}
+            </div>
+          </article>
+  `;
+}
+
+function renderDropPanel(trend, id) {
+  if (state.dropCommentsOpen[id]) {
+    return `
+      <div class="drop-mini-panel drop-comments-panel">
+        <strong>Comentarios</strong>
+        <p><b>@luna.stay</b> Este paso queda perfecto para random dance.</p>
+        <p><b>@vale.multi</b> Necesito tutorial corto.</p>
+        <div class="drop-comment-input">
+          <input placeholder="Comentar este Drop..." aria-label="Comentar Drop" />
+          <button data-drop-comment-send="${id}">Enviar</button>
+        </div>
+      </div>`;
+  }
+  if (state.dropShareOpen[id]) {
+    return `
+      <div class="drop-mini-panel">
+        <strong>Compartir</strong>
+        <button data-drop-share-copy="${id}">Copiar enlace demo</button>
+        <button data-demo-action="Compartido en mensajes demo">Enviar por mensaje</button>
+      </div>`;
+  }
+  if (state.dropMusicOpen[id]) {
+    return `
+      <div class="drop-mini-panel">
+        <strong>Audio usado</strong>
+        <p>${escapeHtml(trend.song)}</p>
+        <button data-demo-action="Audio agregado a favoritos">Guardar audio</button>
+      </div>`;
+  }
+  return "";
+}
+
+function getFilteredDrops() {
+  const query = normalizeProfileKey(state.dropSearchSelection || "");
+  const searchTerms = getDropRelatedTerms(state.dropSearchSelection || "");
+  const byFilter = trendVideos.filter((trend) => {
+    if (state.dropFeedFilter === "challenge") return normalizeProfileKey([trend.challenge, trend.description].join(" ")).includes("challenge");
+    if (state.dropFeedFilter === "fancam") return normalizeProfileKey([trend.challenge, trend.description, trend.song].join(" ")).includes("fancam");
+    return true;
+  });
+  if (!query) return byFilter;
+  const matchesQuery = (trend) => {
+    const haystack = normalizeProfileKey([trend.user, trend.challenge, trend.song, trend.description].join(" "));
+    return searchTerms.some((term) => haystack.includes(term));
+  };
+  const matched = byFilter.filter(matchesQuery);
+  if (matched.length) return matched;
+  const fallback = trendVideos.filter(matchesQuery);
+  return fallback.length ? fallback : byFilter;
+}
+
+function getDropRelatedTerms(selection) {
+  const terms = new Set([normalizeProfileKey(selection)]);
+  const groupMatch = kpopGroups.find((group) => {
+    const groupFields = [group.name, group.fandom, group.company].map(normalizeProfileKey);
+    const artistFields = group.artists.flatMap((artist) => [artist.name, artist.realName]).map(normalizeProfileKey);
+    return [...groupFields, ...artistFields].some((field) => field && (field.includes(normalizeProfileKey(selection)) || normalizeProfileKey(selection).includes(field)));
+  });
+  if (groupMatch) {
+    terms.add(normalizeProfileKey(groupMatch.name));
+    terms.add(normalizeProfileKey(groupMatch.fandom));
+    groupMatch.artists.forEach((artist) => terms.add(normalizeProfileKey(artist.name)));
+  }
+  return [...terms].filter(Boolean);
+}
+
+function getDropSearchResults() {
+  const query = normalizeProfileKey(state.dropSearchQuery);
+  const base = [
+    ...kpopGroups.map((group) => ({ type: "Grupo", label: group.name, detail: group.fandom })),
+    ...kpopGroups.flatMap((group) => group.artists.map((artist) => ({ type: "Idol", label: artist.name, detail: group.name }))),
+    ...trendVideos.map((trend) => ({ type: "Drop", label: trend.challenge, detail: trend.song })),
+    ...trendVideos.map((trend) => ({ type: "Canción", label: trend.song, detail: trend.challenge })),
+    ...trendVideos.map((trend) => ({ type: "Usuario", label: trend.user, detail: "Creador Drop" })),
+    ...["#BTS", "#BLACKPINK", "#DanceChallenge", "#Fancam", "#KpopChile", "#Drops", "#RandomPlayDance"].map((tag) => ({ type: "Hashtag", label: tag, detail: "Explorar Drops" })),
+  ];
+  const unique = [];
+  const seen = new Set();
+  base.forEach((item) => {
+    const key = normalizeProfileKey(`${item.type}-${item.label}`);
+    if (seen.has(key)) return;
+    seen.add(key);
+    if (!query || normalizeProfileKey([item.type, item.label, item.detail].join(" ")).includes(query)) unique.push(item);
+  });
+  return unique.slice(0, 10);
+}
+
+function renderDropSearchOverlay() {
+  const results = getDropSearchResults();
+  return `
+    <section class="drop-search-overlay">
+      <div class="drop-search-panel">
+        <div class="drop-search-head">
+          <button data-close-drop-search aria-label="Cerrar busqueda">Cerrar</button>
+          <strong>Buscar Drops</strong>
+          <span></span>
+        </div>
+        <div class="drop-search-input">
+          <span class="nav-icon search-icon"></span>
+          <input data-drop-search-input value="${escapeAttr(state.dropSearchQuery)}" placeholder="Grupo, idol, canción, hashtag..." />
+        </div>
+        <div class="drop-result-list">
+          ${results
+            .map(
+              (item) => `
+              <button data-drop-result="${escapeAttr(item.label)}">
+                <span>${item.type}</span>
+                <strong>${item.label}</strong>
+                <small>${item.detail}</small>
+              </button>`,
+            )
+            .join("")}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderDropCreator() {
+  const effects = [
+    ["idol-stage", "Idol stage"],
+    ["cyber-seoul", "Cyber Seoul"],
+    ["pastel-glow", "Glow pastel"],
+    ["lightstick", "Lightstick"],
+    ["vhs-idol", "VHS idol"],
+    ["dreamy-asia", "Dreamy Asia"],
+    ["kawaii", "Kawaii"],
+    ["concert", "Concert lights"],
+    ["fancam", "Fancam mode"],
+  ];
+  return `
+    <section class="drop-creator-overlay">
+      <div class="drop-creator-panel">
+        <div class="drop-search-head">
+          <button data-close-drop-creator>Cerrar</button>
+          <strong>Crear Drop</strong>
+          <button data-drop-publish-demo>Publicar</button>
+        </div>
+        <div class="drop-video-upload">
+          <span class="nav-icon plus-icon"></span>
+          <strong>Subir video</strong>
+          <input type="file" accept="video/*" />
+          <small>Cámara, grabar o galería en modo demo</small>
+        </div>
+        <div class="drop-creator-actions">
+          <button data-demo-action="Cámara lista en modo demo">Cámara</button>
+          <button data-demo-action="Grabación preparada en modo demo">Grabar</button>
+          <button data-demo-action="Música K-pop seleccionada">Música</button>
+        </div>
+        <label class="publish-field">Descripción<textarea placeholder="Describe tu Drop..."></textarea></label>
+        <label class="publish-field">Hashtags<input placeholder="#DanceChallenge #KpopLatam" /></label>
+        <div class="drop-effect-grid">
+          ${effects.map(([key, label]) => `<button class="${state.dropEffect === key ? "active" : ""}" data-drop-effect="${key}">${label}</button>`).join("")}
+        </div>
+      </div>
     </section>
   `;
 }
 
 function renderPublish() {
   return `
-    <section class="publish-card">
-      <div class="post-head">
+    <section class="publish-card refined-publish-card">
+      <div class="publish-header">
+        <button class="ghost-button publish-back" data-go-view="profile">Volver</button>
+        <div>
+          <p class="eyebrow">Crear</p>
+          <h2>Nueva publicación</h2>
+        </div>
+        <button class="story-mini-button" data-story-editor-open>Historia</button>
+      </div>
+      <div class="post-head publish-author">
         <div class="plush-avatar mini" style="--avatar:${getAvatarGradient(state.user.avatar)}"><span></span></div>
         <div><h3>${state.user.name}</h3><p class="muted">@${state.user.username}</p></div>
       </div>
-      <label>Texto de la publicacion<textarea id="post-caption" placeholder="Comparte una foto, trade, noticia o momento fandom..."></textarea></label>
-      <label>Tipo de contenido
+      <label class="publish-field">Tipo de contenido
         <select id="post-category">
           <option value="posts">Publicacion</option>
           <option value="trends">Drop</option>
           <option value="outfits">Outfit</option>
           <option value="photocards">Photocard</option>
           <option value="favorites">Favorito</option>
+          <option value="stories">Historia</option>
         </select>
       </label>
+      <label class="publish-field">Texto o descripción<textarea id="post-caption" placeholder="Comparte un momento fandom, outfit, trade o Drop..."></textarea></label>
       <div class="upload-zone">
         <span class="nav-icon plus-icon"></span>
-        <strong>Agregar foto o video</strong>
+        <strong>Subir foto o video</strong>
         <input id="post-media" type="file" accept="image/*,video/*" />
-        <small>${state.backendMode === "supabase" ? "Se sube a Supabase Storage." : "Modo demo local hasta configurar Supabase."}</small>
+        <small>${state.backendMode === "supabase" ? "Se sube a Supabase Storage." : "Modo demo local."}</small>
       </div>
       <details class="optional-post-fields">
         <summary>Agregar datos opcionales</summary>
         <div class="optional-field-grid">
           <label>Ubicación<input id="post-location" placeholder="Santiago, Chile" /></label>
-          <label>Fecha<input id="post-date" type="date" /></label>
-          <label>Hora<input id="post-hour" type="time" /></label>
           <label>Etiquetar personas<input id="post-tagged-people" placeholder="@cami, @mika" /></label>
           <label>Etiquetar lugares<input id="post-tagged-place" placeholder="Cupsleeve, evento, local" /></label>
+          <label>Hashtags<input id="post-hashtags" placeholder="#BTS #KpopLatam" /></label>
         </div>
       </details>
-      <div class="filter-row">
-        <button class="filter-chip active" data-demo-action="Filtro Post activo">Post</button>
-        <button class="filter-chip" data-story-editor-open>Historia</button>
-        <button class="filter-chip" data-demo-action="Filtro Trade activo">Trade</button>
-        <button class="filter-chip" data-go-view="news">Noticia</button>
-      </div>
       <button class="primary-button" data-create-post>Publicar</button>
     </section>
   `;
@@ -4053,10 +4609,10 @@ function renderPublish() {
 
 function renderNotifications() {
   const items = [
-    ["Cami.STAY", "empezo a seguirte", "Nuevo seguidor", "Ahora"],
-    ["ARMY Chile", "le dio like a tu publicacion", "Like recibido", "12 min"],
-    ["Mika mentor", "comento tu pregunta de K-pop 101", "Comentario", "1 h"],
-    ["Seoul Corner", "guardo tu wishlist de photocards", "Actividad", "Ayer"],
+    [getDemoUser("Camila Seo"), "empezo a seguirte", "Nuevo seguidor", "Ahora"],
+    [getDemoUser("Mika Torres"), "le dio like a tu publicacion", "Like recibido", "12 min"],
+    [getDemoUser("Valentina Park"), "comento tu pregunta de K-pop 101", "Comentario", "1 h"],
+    [getDemoUser("Nico Kim"), "guardo tu wishlist de photocards", "Actividad", "Ayer"],
   ];
   return `
     <div class="inbox-tabs">
@@ -4068,10 +4624,10 @@ function renderNotifications() {
         ? `<div class="notification-list">
             ${items
               .map(
-                ([name, action, type, time], index) => `
+                ([user, action, type, time], index) => `
                 <article class="notification-card">
-                  <div class="plush-avatar mini" style="--avatar:${avatars[index % avatars.length].gradient}"><span></span></div>
-                  <div><h3>${name}</h3><p class="muted">${action}</p><span class="tag">${type}</span></div>
+                  ${renderAvatarElement("mini", user.avatar || "berry", user.avatarUrl)}
+                  <div><h3>${user.name}</h3><p class="muted">${action}</p><span class="tag">${type}</span></div>
                   <span>${time}</span>
                 </article>`,
               )
@@ -4585,7 +5141,7 @@ function renderMessages() {
         .map(
           (request, index) => `
           <article class="request-card">
-            <div class="plush-avatar mini" style="--avatar:${avatars[index].gradient}"><span></span></div>
+            ${renderAvatarElement("mini", "berry", request.avatarUrl)}
             <div>
               <h3>${request.name}</h3>
               <p class="muted">${request.note}</p>
@@ -4605,7 +5161,7 @@ function renderMessages() {
         .map(
           (chat, index) => `
           <article class="dm-card">
-            <div class="plush-avatar mini" style="--avatar:${avatars[(index + 1) % avatars.length].gradient}"><span></span></div>
+            ${renderAvatarElement("mini", "berry", chat.avatarUrl)}
             <div>
               <div class="chat-card-head"><h3>${chat.name}</h3><span>${chat.time}</span></div>
               <p class="muted">${chat.last}</p>
@@ -4975,7 +5531,8 @@ function renderProfile() {
       <div class="premium-profile-actions ${isOwnProfile ? "own-actions" : "other-actions"}">
         ${
           isOwnProfile
-            ? `<button class="primary-button profile-main-action" data-profile-edit-open>Editar perfil</button>`
+            ? `<button class="primary-button profile-create-action" data-go-view="publish" aria-label="Crear publicacion"><span class="nav-icon plus-icon"></span><span>Crear</span></button>
+               <button class="ghost-button profile-edit-action" data-profile-edit-open>Editar perfil</button>`
             : `<button class="primary-button profile-main-action" data-profile-follow="${profileUser.id || profileUser.username}">${isFollowing ? "Siguiendo" : "Seguir"}</button>
                <button class="ghost-button profile-share-action" data-demo-action="Perfil listo para compartir">Compartir perfil</button>`
         }
