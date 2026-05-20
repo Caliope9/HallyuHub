@@ -34,7 +34,7 @@ const state = {
   dropSearchQuery: "",
   dropSearchSelection: "",
   dropCreatorOpen: false,
-  dropEffect: "idol-stage",
+  dropEffect: "kpop-stage",
   dropFollowed: {},
   dropLiked: {},
   dropSaved: {},
@@ -43,6 +43,15 @@ const state = {
   dropMusicOpen: {},
   dropPaused: {},
   dropFeedback: {},
+  fancamGroupFilter: "all",
+  fancamArtistFilter: "all",
+  fancamSort: "trending",
+  likedFancams: {},
+  savedFancams: {},
+  followedArtists: {},
+  fancamCommentsOpen: {},
+  fancamPaused: {},
+  fancamFeedback: {},
   selectedProfileBg: "army",
   activeStory: null,
   likedStories: {},
@@ -97,6 +106,7 @@ const titleByView = {
   home: "Tu universo K-pop latino",
   search: "Buscar",
   trends: "Drops",
+  fancams: "Fancams",
   publish: "Crear publicacion",
   notifications: "Actividad e inbox",
   settings: "Ajustes",
@@ -535,6 +545,18 @@ const trendVideos = [
     description: "Drop local para mostrar pasos, light sticks y comunidad.",
     colors: "linear-gradient(160deg, #fbbcdb, #65e4ff 52%, #ffb86b)",
   },
+];
+
+const dropVisualFilters = [
+  { id: "kpop-stage", name: "K-pop Stage", creator: "HallyuHub", category: "Stage", status: "approved", uses: "18.4K", detail: "Luces de escenario, foco suave y marco premium." },
+  { id: "neon-rush", name: "Neon Rush", creator: "HallyuHub", category: "Neón", status: "approved", uses: "14.2K", detail: "Brillos magenta/cyan y contraste de videoclip." },
+  { id: "lightstick-glow", name: "Lightstick Glow", creator: "HallyuHub", category: "Glow", status: "approved", uses: "11.8K", detail: "Aura de lightstick, partículas suaves y fandom glow." },
+  { id: "vhs-idol", name: "VHS Idol", creator: "HallyuHub", category: "Retro", status: "approved", uses: "9.7K", detail: "Scanlines, tono video casero y estilo vertical retro." },
+  { id: "pastel-comeback", name: "Pastel Comeback", creator: "HallyuHub", category: "Pastel", status: "approved", uses: "12.9K", detail: "Rosa suave, bloom cute y comeback luminoso." },
+  { id: "dark-concept", name: "Dark Concept", creator: "HallyuHub", category: "Concept", status: "approved", uses: "8.1K", detail: "Sombras profundas, violeta oscuro y brillo elegante." },
+  { id: "cyber-seoul", name: "Cyber Seoul", creator: "Mika.army", category: "Comunidad", status: "pending", uses: "0", detail: "Propuesta futurista pendiente de revisión." },
+  { id: "cute-bubble", name: "Cute Bubble", creator: "Vale.multi", category: "Comunidad", status: "approved", uses: "3.2K", detail: "Burbujas pastel, brillo soft y energía cute." },
+  { id: "concert-lights", name: "Concert Lights", creator: "Agus.random", category: "Comunidad", status: "rejected", uses: "0", detail: "Rechazado en demo por exceso de flashes." },
 ];
 
 const kpopGroups = [
@@ -1164,6 +1186,17 @@ function getOfficialLink(entity, label) {
 
 enrichGroupCatalog();
 
+const fancamVideos = [
+  { id: "fc-jungkook-seven", groupId: "bts", artistId: "bts-jungkook", artist: "Jung Kook", group: "BTS", era: "Seven era", show: "Music show focus", date: "2024 · demo", views: "2.8M", likes: "481K", sort: "trending", description: "Focus vertical con energia de stage, pensado para seguir movimientos y expresiones.", mediaUrl: "./assets/demo-stories/story-01.jpg", colors: "linear-gradient(160deg, #0d0718, #8b5cf6 52%, #d9b4ff)" },
+  { id: "fc-jungwon-bite", groupId: "enhypen", artistId: "enhypen-jungwon", artist: "Jungwon", group: "ENHYPEN", era: "Dark Blood", show: "Comeback stage", date: "2024 · demo", views: "1.6M", likes: "302K", sort: "trending", description: "Fancam centrada en lineas limpias, mirada a camara y performance intensa.", mediaUrl: "./assets/demo-stories/story-02.jpg", colors: "linear-gradient(160deg, #111827, #a855f7 48%, #65e4ff)" },
+  { id: "fc-lisa-pink", groupId: "bp", artistId: "bp-lisa", artist: "Lisa", group: "BLACKPINK", era: "Pink stage", show: "Concert focus", date: "2023 · demo", views: "3.4M", likes: "620K", sort: "trending", description: "Dance focus con luces rosas, energia de concierto y cortes verticales.", mediaUrl: "./assets/demo-stories/story-03.jpg", colors: "linear-gradient(160deg, #09060a, #ff3ea5 52%, #ff8ac8)" },
+  { id: "fc-wonyoung-ive", groupId: "ive", artistId: "ive-wonyoung", artist: "Wonyoung", group: "IVE", era: "I AM", show: "Music show", date: "2024 · demo", views: "1.9M", likes: "388K", sort: "recent", description: "Visual focus elegante con close-ups suaves y concepto premium.", mediaUrl: "./assets/demo-stories/story-04.jpg", colors: "linear-gradient(160deg, #fff1f9, #ff8ac8 48%, #8b5cf6)" },
+  { id: "fc-yeonjun-txt", groupId: "txt", artistId: "txt-yeonjun", artist: "Yeonjun", group: "TXT", era: "Sugar Rush", show: "Stage cam", date: "2024 · demo", views: "1.2M", likes: "244K", sort: "recent", description: "Performance cam con transiciones rapidas y presencia escenica.", mediaUrl: "./assets/demo-stories/story-05.jpg", colors: "linear-gradient(160deg, #65e4ff, #77f4c7 52%, #0f172a)" },
+  { id: "fc-karina-aespa", groupId: "aespa", artistId: "aespa-karina", artist: "Karina", group: "aespa", era: "Cyber Seoul", show: "Stage focus", date: "2024 · demo", views: "2.1M", likes: "410K", sort: "trending", description: "Fancam futurista con glow azul, movimientos precisos y concepto cyber.", mediaUrl: "./assets/demo-stories/story-06.jpg", colors: "linear-gradient(160deg, #06131a, #65e4ff 46%, #d946ef)" },
+  { id: "fc-hoshi-svt", groupId: "svt", artistId: "svt-hoshi", artist: "Hoshi", group: "SEVENTEEN", era: "Performance unit", show: "Concert focus", date: "2023 · demo", views: "980K", likes: "190K", sort: "recent", description: "Focus de performance con energia CARAT y coreografia sincronizada.", mediaUrl: "./assets/demo-stories/story-07.jpg", colors: "linear-gradient(160deg, #f7cadf, #9ad7ff 50%, #07101f)" },
+  { id: "fc-san-ateez", groupId: "ateez", artistId: "ateez-san", artist: "San", group: "ATEEZ", era: "Bouncy", show: "Festival focus", date: "2024 · demo", views: "1.4M", likes: "276K", sort: "trending", description: "Stage cam poderosa, expresiones intensas y luces de festival.", mediaUrl: "./assets/demo-stories/story-08.jpg", colors: "linear-gradient(160deg, #ffb703, #ff2d55 48%, #111827)" },
+];
+
 const events = [
   {
     day: "24",
@@ -1586,6 +1619,7 @@ function render() {
     home: renderHome,
     search: renderSearch,
     trends: renderTrends,
+    fancams: renderFancams,
     publish: renderPublish,
     notifications: renderNotifications,
     settings: renderSettings,
@@ -2130,6 +2164,75 @@ function bindDynamicActions() {
       const id = button.dataset.toggleDropText;
       state.expandedPosts[`drop-${id}`] = !state.expandedPosts[`drop-${id}`];
       render();
+    });
+  });
+
+  document.querySelectorAll("[data-fancam-group]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.fancamGroupFilter = button.dataset.fancamGroup;
+      state.fancamArtistFilter = "all";
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-fancam-artist]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.fancamArtistFilter = button.dataset.fancamArtist;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-fancam-sort]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.fancamSort = button.dataset.fancamSort;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-fancam-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const [action, id] = button.dataset.fancamAction.split(":");
+      handleFancamAction(action, id);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-fancam-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.fancamToggle;
+      state.fancamPaused[id] = !state.fancamPaused[id];
+      state.fancamFeedback[id] = true;
+      render();
+      setTimeout(() => {
+        delete state.fancamFeedback[id];
+        render();
+      }, 520);
+    });
+  });
+
+  document.querySelectorAll("[data-fancam-comment-send]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.fancamCommentsOpen[button.dataset.fancamCommentSend] = false;
+      showToast("Comentario enviado a la fancam en modo demo");
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-open-fancam-artist]").forEach((button) => {
+    button.addEventListener("click", () => {
+      openArtistProfile(button.dataset.openFancamArtist);
+      setView("groups");
+    });
+  });
+
+  document.querySelectorAll("[data-open-artist-fancams]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const artistId = button.dataset.openArtistFancams;
+      const fancam = fancamVideos.find((item) => item.artistId === artistId);
+      state.fancamGroupFilter = fancam?.groupId || "all";
+      state.fancamArtistFilter = artistId;
+      state.fancamSort = "all";
+      setView("fancams");
     });
   });
 
@@ -4284,6 +4387,10 @@ function getDropId(trend, fallback = 0) {
   return trend.id || normalizeProfileKey(`${trend.challenge}-${trend.user}`) || `drop-${fallback}`;
 }
 
+function getActiveDropFilter() {
+  return dropVisualFilters.find((filter) => filter.id === state.dropEffect) || dropVisualFilters[0];
+}
+
 function handleDropAction(action, id) {
   const closePanels = () => {
     state.dropCommentsOpen[id] = false;
@@ -4335,12 +4442,12 @@ function handleDropAction(action, id) {
 
 function renderTrends() {
   const drops = getFilteredDrops();
+  const activeFilter = getActiveDropFilter();
   return `
     <div class="drop-tools-row">
       <div class="trend-tabs premium-drop-tabs">
         <button class="${state.dropFeedFilter === "viral" ? "active" : ""}" data-drop-filter="viral">Virales</button>
         <button class="${state.dropFeedFilter === "challenge" ? "active" : ""}" data-drop-filter="challenge">Challenges</button>
-        <button class="${state.dropFeedFilter === "fancam" ? "active" : ""}" data-drop-filter="fancam">Fancam</button>
       </div>
       <div class="drop-tool-actions">
         <button class="drop-icon-button" data-search-drops aria-label="Buscar Drops"><span class="nav-icon search-icon"></span></button>
@@ -4348,6 +4455,11 @@ function renderTrends() {
       </div>
     </div>
     ${state.dropSearchSelection ? `<div class="drop-search-chip"><span>Resultados para ${state.dropSearchSelection}</span><button data-clear-drop-search>Limpiar</button></div>` : ""}
+    <div class="drop-active-filter-pill">
+      <span>Filtro activo</span>
+      <strong>${escapeHtml(activeFilter.name)}</strong>
+      <small>${escapeHtml(activeFilter.category)} · ${escapeHtml(activeFilter.uses)} usos</small>
+    </div>
     <section class="trends-feed" aria-label="Drops estilo reels">
       ${drops
         .map(
@@ -4369,8 +4481,10 @@ function renderDropCard(trend, index) {
   const expanded = Boolean(state.expandedPosts[`drop-${id}`]);
   const longDescription = trend.description.length > 68;
   const feedback = state.dropFeedback[id];
+  const activeFilter = getActiveDropFilter();
   return `
           <article class="trend-card premium-drop-card effect-${state.dropEffect} ${state.dropPaused[id] ? "paused" : ""}" style="--art:${trend.colors}">
+            <span class="drop-filter-tag">${escapeHtml(activeFilter.name)}</span>
             <button class="drop-play-toggle" data-drop-toggle="${id}" aria-label="${state.dropPaused[id] ? "Reproducir Drop" : "Pausar Drop"}"></button>
             ${feedback ? `<div class="drop-center-feedback ${feedback === "star" ? "starburst" : ""}">${feedback === "star" ? "★" : state.dropPaused[id] ? "▶" : "Ⅱ"}</div>` : ""}
             <div class="trend-overlay">
@@ -4439,7 +4553,6 @@ function getFilteredDrops() {
   const searchTerms = getDropRelatedTerms(state.dropSearchSelection || "");
   const byFilter = trendVideos.filter((trend) => {
     if (state.dropFeedFilter === "challenge") return normalizeProfileKey([trend.challenge, trend.description].join(" ")).includes("challenge");
-    if (state.dropFeedFilter === "fancam") return normalizeProfileKey([trend.challenge, trend.description, trend.song].join(" ")).includes("fancam");
     return true;
   });
   if (!query) return byFilter;
@@ -4476,7 +4589,7 @@ function getDropSearchResults() {
     ...trendVideos.map((trend) => ({ type: "Drop", label: trend.challenge, detail: trend.song })),
     ...trendVideos.map((trend) => ({ type: "Canción", label: trend.song, detail: trend.challenge })),
     ...trendVideos.map((trend) => ({ type: "Usuario", label: trend.user, detail: "Creador Drop" })),
-    ...["#BTS", "#BLACKPINK", "#DanceChallenge", "#Fancam", "#KpopChile", "#Drops", "#RandomPlayDance"].map((tag) => ({ type: "Hashtag", label: tag, detail: "Explorar Drops" })),
+    ...["#BTS", "#BLACKPINK", "#DanceChallenge", "#KpopChile", "#Drops", "#RandomPlayDance", "#FanEdit"].map((tag) => ({ type: "Hashtag", label: tag, detail: "Explorar Drops" })),
   ];
   const unique = [];
   const seen = new Set();
@@ -4521,17 +4634,7 @@ function renderDropSearchOverlay() {
 }
 
 function renderDropCreator() {
-  const effects = [
-    ["idol-stage", "Idol stage"],
-    ["cyber-seoul", "Cyber Seoul"],
-    ["pastel-glow", "Glow pastel"],
-    ["lightstick", "Lightstick"],
-    ["vhs-idol", "VHS idol"],
-    ["dreamy-asia", "Dreamy Asia"],
-    ["kawaii", "Kawaii"],
-    ["concert", "Concert lights"],
-    ["fancam", "Fancam mode"],
-  ];
+  const activeFilter = getActiveDropFilter();
   return `
     <section class="drop-creator-overlay">
       <div class="drop-creator-panel">
@@ -4551,14 +4654,190 @@ function renderDropCreator() {
           <button data-demo-action="Grabación preparada en modo demo">Grabar</button>
           <button data-demo-action="Música K-pop seleccionada">Música</button>
         </div>
+        <div class="drop-filter-preview effect-${state.dropEffect}">
+          <div>
+            <span>Filtro activo</span>
+            <strong>${escapeHtml(activeFilter.name)}</strong>
+            <small>${escapeHtml(activeFilter.detail)}</small>
+          </div>
+        </div>
         <label class="publish-field">Descripción<textarea placeholder="Describe tu Drop..."></textarea></label>
         <label class="publish-field">Hashtags<input placeholder="#DanceChallenge #KpopLatam" /></label>
-        <div class="drop-effect-grid">
-          ${effects.map(([key, label]) => `<button class="${state.dropEffect === key ? "active" : ""}" data-drop-effect="${key}">${label}</button>`).join("")}
+        <div class="drop-filter-section">
+          <div class="section-heading small"><h2>Filtros visuales</h2><span>Sin reconocimiento facial</span></div>
+          <div class="drop-effect-grid">
+            ${dropVisualFilters
+              .filter((filter) => filter.status === "approved" && filter.creator === "HallyuHub")
+              .map((filter) => renderDropFilterButton(filter))
+              .join("")}
+          </div>
+        </div>
+        <div class="drop-filter-section">
+          <div class="section-heading small"><h2>Filtros de comunidad</h2><span>Moderados</span></div>
+          <div class="drop-community-filter-list">
+            ${dropVisualFilters
+              .filter((filter) => filter.creator !== "HallyuHub")
+              .map((filter) => renderDropCommunityFilter(filter))
+              .join("")}
+          </div>
         </div>
       </div>
     </section>
   `;
+}
+
+function renderDropFilterButton(filter) {
+  return `
+    <button class="${state.dropEffect === filter.id ? "active" : ""}" data-drop-effect="${filter.id}">
+      <span class="filter-mini-preview effect-${filter.id}"></span>
+      <strong>${escapeHtml(filter.name)}</strong>
+      <small>${escapeHtml(filter.category)}</small>
+    </button>
+  `;
+}
+
+function renderDropCommunityFilter(filter) {
+  const approved = filter.status === "approved";
+  const statusLabel = {
+    approved: "Aprobado",
+    pending: "Pendiente",
+    rejected: "Rechazado",
+  }[filter.status] || filter.status;
+  return `
+    <article class="drop-community-filter ${filter.status}">
+      <span class="filter-mini-preview effect-${filter.id}"></span>
+      <div>
+        <strong>${escapeHtml(filter.name)}</strong>
+        <small>${escapeHtml(filter.creator)} · ${escapeHtml(filter.category)} · ${escapeHtml(filter.uses)} usos</small>
+        <em>${escapeHtml(statusLabel)}</em>
+      </div>
+      <button ${approved ? `data-drop-effect="${filter.id}"` : "disabled"}>${approved ? "Usar filtro" : statusLabel}</button>
+    </article>
+  `;
+}
+
+function getFancamArtistOptions() {
+  return fancamVideos
+    .filter((fancam) => state.fancamGroupFilter === "all" || fancam.groupId === state.fancamGroupFilter)
+    .map((fancam) => [fancam.artistId, fancam.artist]);
+}
+
+function getFilteredFancams(artistId = null) {
+  const targetArtist = artistId || state.fancamArtistFilter;
+  return fancamVideos.filter((fancam) => {
+    const groupOk = state.fancamGroupFilter === "all" || fancam.groupId === state.fancamGroupFilter || artistId;
+    const artistOk = !targetArtist || targetArtist === "all" || fancam.artistId === targetArtist;
+    const sortOk = state.fancamSort === "all" || fancam.sort === state.fancamSort || artistId;
+    return groupOk && artistOk && sortOk;
+  });
+}
+
+function renderFancams() {
+  const fancams = getFilteredFancams();
+  const groupOptions = [["all", "Todos"], ...kpopGroups.filter((group) => fancamVideos.some((fancam) => fancam.groupId === group.id)).map((group) => [group.id, group.name])];
+  const artistOptions = [["all", "Integrantes"], ...getFancamArtistOptions()];
+  return `
+    <section class="fancam-intro">
+      <div>
+        <p class="eyebrow">Focus idol</p>
+        <h2>Fancams</h2>
+        <p>Videos centrados en idols, stages, conciertos, focus member y performances verticales.</p>
+      </div>
+      <span class="fancam-live-badge">Idol focus</span>
+    </section>
+    <div class="fancam-filter-row">
+      ${groupOptions.map(([id, label]) => `<button class="${state.fancamGroupFilter === id ? "active" : ""}" data-fancam-group="${id}">${label}</button>`).join("")}
+    </div>
+    <div class="fancam-filter-row compact">
+      ${artistOptions.slice(0, 8).map(([id, label]) => `<button class="${state.fancamArtistFilter === id ? "active" : ""}" data-fancam-artist="${id}">${label}</button>`).join("")}
+    </div>
+    <div class="fancam-filter-row compact">
+      ${[
+        ["trending", "Trending"],
+        ["recent", "Recientes"],
+        ["all", "Todas"],
+      ].map(([id, label]) => `<button class="${state.fancamSort === id ? "active" : ""}" data-fancam-sort="${id}">${label}</button>`).join("")}
+    </div>
+    <section class="fancam-feed" aria-label="Feed vertical de fancams">
+      ${fancams.length ? fancams.map((fancam, index) => renderFancamCard(fancam, index, { fullscreen: true })).join("") : `<article class="settings-demo-box">No hay fancams con estos filtros.</article>`}
+    </section>
+  `;
+}
+
+function renderFancamCard(fancam, index = 0, options = {}) {
+  const liked = Boolean(state.likedFancams[fancam.id]);
+  const saved = Boolean(state.savedFancams[fancam.id]);
+  const followed = Boolean(state.followedArtists[fancam.artistId]);
+  const commentsOpen = Boolean(state.fancamCommentsOpen[fancam.id]);
+  const paused = Boolean(state.fancamPaused[fancam.id]);
+  return `
+    <article class="fancam-card ${options.compact ? "compact" : ""} ${paused ? "paused" : ""}" style="--art:${fancam.colors}">
+      <button class="fancam-play-area" data-fancam-toggle="${fancam.id}" aria-label="${paused ? "Reproducir fancam" : "Pausar fancam"}"></button>
+      ${state.fancamFeedback[fancam.id] ? `<div class="drop-center-feedback">${paused ? "▶" : "Ⅱ"}</div>` : ""}
+      ${fancam.mediaUrl ? `<img class="fancam-media" src="${escapeAttr(fancam.mediaUrl)}" alt="Fancam de ${escapeAttr(fancam.artist)}" />` : ""}
+      <div class="fancam-shade"></div>
+      <div class="fancam-info">
+        <button class="fancam-artist-link" data-open-fancam-artist="${fancam.artistId}">
+          <span class="fancam-avatar">${getInitials(fancam.artist)}</span>
+          <div>
+            <strong>${escapeHtml(fancam.artist)}</strong>
+            <small>${escapeHtml(fancam.group)} · ${escapeHtml(fancam.show)}</small>
+          </div>
+        </button>
+        <p>${escapeHtml(fancam.description)}</p>
+        <div class="fancam-meta-line"><span>${escapeHtml(fancam.era)}</span><span>${escapeHtml(fancam.date)}</span><span>${escapeHtml(fancam.views)} vistas</span></div>
+      </div>
+      <div class="fancam-actions">
+        <button class="${followed ? "active" : ""}" data-fancam-action="follow:${fancam.id}" aria-label="Seguir artista"><span>${followed ? "✓" : "+"}</span><small>Seguir</small></button>
+        <button class="${liked ? "active" : ""}" data-fancam-action="like:${fancam.id}" aria-label="Like"><span>★</span><small>${fancam.likes}</small></button>
+        <button class="${commentsOpen ? "active" : ""}" data-fancam-action="comment:${fancam.id}" aria-label="Comentar"><span class="nav-icon chat-icon"></span><small>Comentar</small></button>
+        <button data-fancam-action="share:${fancam.id}" aria-label="Compartir"><span class="share-dot"></span><small>Compartir</small></button>
+        <button class="${saved ? "active" : ""}" data-fancam-action="save:${fancam.id}" aria-label="Guardar"><span class="save-mark"></span><small>Guardar</small></button>
+      </div>
+      ${commentsOpen ? renderFancamComments(fancam) : ""}
+    </article>
+  `;
+}
+
+function renderFancamComments(fancam) {
+  return `
+    <div class="fancam-comments-panel">
+      <strong>Comentarios</strong>
+      <p><b>@ren.fancam</b> Ese focus está perfecto para estudiar el stage.</p>
+      <p><b>@mika.army</b> Guardada para ver después ✨</p>
+      <div class="drop-comment-input">
+        <input placeholder="Comentar fancam..." aria-label="Comentar fancam" />
+        <button data-fancam-comment-send="${fancam.id}">Enviar</button>
+      </div>
+    </div>
+  `;
+}
+
+function handleFancamAction(action, fancamId) {
+  const fancam = fancamVideos.find((item) => item.id === fancamId);
+  if (!fancam) return;
+  if (action === "follow") {
+    state.followedArtists[fancam.artistId] = !state.followedArtists[fancam.artistId];
+    showToast(state.followedArtists[fancam.artistId] ? `Seguís a ${fancam.artist}` : `Dejaste de seguir a ${fancam.artist}`);
+    return;
+  }
+  if (action === "like") {
+    state.likedFancams[fancamId] = !state.likedFancams[fancamId];
+    showToast(state.likedFancams[fancamId] ? "Fancam marcada con estrella" : "Estrella quitada");
+    return;
+  }
+  if (action === "save") {
+    state.savedFancams[fancamId] = !state.savedFancams[fancamId];
+    showToast(state.savedFancams[fancamId] ? "Fancam guardada" : "Fancam quitada de guardados");
+    return;
+  }
+  if (action === "comment") {
+    state.fancamCommentsOpen[fancamId] = !state.fancamCommentsOpen[fancamId];
+    return;
+  }
+  if (action === "share") {
+    showToast("Enlace de fancam listo para compartir en modo demo");
+  }
 }
 
 function renderPublish() {
@@ -5039,6 +5318,7 @@ function renderArtistProfile(artist, group) {
       </div>
       <button class="primary-button follow-group-button" data-demo-action="Ahora seguís a ${artist.name}">Seguir artista</button>
       <p>${artist.bio}</p>
+      ${renderArtistFancams(artist)}
       <section class="group-info-grid mini-info-grid">
         ${artistFacts.map(([label, value]) => `<div class="info-tile"><span>${label}</span><strong>${value}</strong></div>`).join("")}
       </section>
@@ -5058,6 +5338,34 @@ function renderArtistProfile(artist, group) {
         </div>
       </div>
     </section>
+  `;
+}
+
+function renderArtistFancams(artist) {
+  const artistFancams = getFilteredFancams(artist.id);
+  return `
+    <section class="artist-fancams-section">
+      <div class="section-heading small"><h2>Fancams</h2><span>${artistFancams.length || "Próximamente"}</span></div>
+      ${
+        artistFancams.length
+          ? `<div class="artist-fancam-row">${artistFancams.map((fancam, index) => renderArtistFancamTile(fancam, index)).join("")}</div>`
+          : `<article class="settings-demo-box">Todavia no hay fancams cargadas para ${escapeHtml(artist.name)}.</article>`
+      }
+    </section>
+  `;
+}
+
+function renderArtistFancamTile(fancam, index = 0) {
+  return `
+    <article class="artist-fancam-tile" style="--art:${fancam.colors}">
+      ${fancam.mediaUrl ? `<img src="${escapeAttr(fancam.mediaUrl)}" alt="Preview fancam ${escapeAttr(fancam.artist)}" />` : ""}
+      <div>
+        <strong>${escapeHtml(fancam.show)}</strong>
+        <small>${escapeHtml(fancam.views)} vistas · ${escapeHtml(fancam.likes)} likes</small>
+        <span>${escapeHtml(fancam.date)}</span>
+      </div>
+      <button data-open-artist-fancams="${fancam.artistId}">Reproducir</button>
+    </article>
   `;
 }
 
