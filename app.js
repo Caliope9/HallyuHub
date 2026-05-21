@@ -48,6 +48,8 @@ const state = {
   videoProfileOverlay: null,
   videoFullscreen: null,
   videoMuted: true,
+  soundEnabled: true,
+  permissionPrompt: null,
   fancamGroupFilter: "all",
   fancamArtistFilter: "all",
   fancamSort: "recommended",
@@ -306,6 +308,7 @@ const news = [
 ];
 
 const NEWS_REFRESH_MS = 3 * 60 * 60 * 1000;
+const PERMISSION_PROMPT_INTERVAL_MS = 30 * 24 * 60 * 60 * 1000;
 const newsArtists = ["BTS", "BLACKPINK", "Stray Kids", "NewJeans", "TWICE", "SEVENTEEN", "ATEEZ", "IVE", "TXT"];
 const demoAssetCounts = {
   users: 20,
@@ -1929,6 +1932,8 @@ function render() {
   appScreen.classList.toggle("home-mode", state.view === "home");
   appScreen.classList.toggle("light-mode", state.user?.mode === "light");
   appScreen.style.setProperty("--user-accent", state.user?.accent || "#fbbcdb");
+  document.querySelector("[data-toggle-app-sound]")?.classList.toggle("active", state.soundEnabled);
+  document.querySelector("[data-toggle-app-sound]")?.setAttribute("aria-label", state.soundEnabled ? "Sonidos activados" : "Sonidos desactivados");
   document.querySelector(".bottom-nav").classList.toggle("hidden", !state.isAuthenticated || state.view === "publish" || state.storyEditorOpen || state.activeStory !== null || state.dropSearchOpen || state.dropCreatorOpen || state.videoProfileOverlay || state.videoFullscreen);
   document.querySelector(".topbar").classList.toggle("hidden", !state.isAuthenticated || state.view === "profile" || state.view === "publish" || state.storyEditorOpen || state.activeStory !== null);
   if (!state.isAuthenticated) {
@@ -1960,7 +1965,7 @@ function render() {
     messages: renderMessages,
     profile: renderProfile,
   };
-  view.innerHTML = templates[state.view]();
+  view.innerHTML = templates[state.view]() + renderPermissionPrompt();
   bindDynamicActions();
   scheduleStoryAutoplay();
 }
@@ -2027,6 +2032,16 @@ function bindDynamicActions() {
     });
   });
 
+  document.querySelectorAll("[data-toggle-app-sound]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.soundEnabled = !state.soundEnabled;
+      storage.set("hallyuHubSoundEnabled", state.soundEnabled);
+      playAppSound(state.soundEnabled ? "message" : "save");
+      showToast(state.soundEnabled ? "Sonidos activados" : "Sonidos silenciados");
+      render();
+    });
+  });
+
   document.querySelectorAll("[data-create-post]").forEach((button) => {
     button.addEventListener("click", createPost);
   });
@@ -2055,11 +2070,11 @@ function bindDynamicActions() {
   });
 
   document.querySelectorAll("[data-publish-file-trigger]").forEach((button) => {
-    button.addEventListener("click", () => document.getElementById("publish-media-input")?.click());
+    button.addEventListener("click", () => requestMediaAccessBeforeFile("publish-media-input", { source: "gallery", camera: false, mic: false }));
   });
 
   document.querySelectorAll("[data-publish-change-file]").forEach((button) => {
-    button.addEventListener("click", () => document.getElementById("publish-media-input")?.click());
+    button.addEventListener("click", () => requestMediaAccessBeforeFile("publish-media-input", { source: "gallery", camera: false, mic: false }));
   });
 
   document.querySelectorAll("[data-publish-remove-media]").forEach((button) => {
@@ -2084,6 +2099,19 @@ function bindDynamicActions() {
         render();
       };
       reader.readAsDataURL(file);
+    });
+  });
+
+  document.querySelectorAll("[data-permission-allow]").forEach((button) => {
+    button.addEventListener("click", () => continuePermissionRequest());
+  });
+
+  document.querySelectorAll("[data-permission-deny]").forEach((button) => {
+    button.addEventListener("click", () => {
+      rememberPermissionInfo(false);
+      state.permissionPrompt = null;
+      showToast("Podés seguir usando HallyuHub sin activar permisos ahora.");
+      render();
     });
   });
 
@@ -2265,6 +2293,7 @@ function bindDynamicActions() {
       state.savedPosts[baseId] = !state.savedPosts[baseId];
       storage.set("hallyuHubSavedPosts", state.savedPosts);
       showToast(state.savedPosts[baseId] ? "Publicacion guardada" : "Publicacion quitada de guardados");
+      if (state.savedPosts[baseId]) playAppSound("save");
       render();
     });
   });
@@ -2376,6 +2405,16 @@ function bindDynamicActions() {
     button.addEventListener("click", () => {
       state.storyDraft.stickerCategory = button.dataset.storyStickerCategory;
       render();
+    });
+  });
+
+  document.querySelectorAll("[data-protected-file]").forEach((button) => {
+    button.addEventListener("click", () => {
+      requestMediaAccessBeforeFile(button.dataset.protectedFile, {
+        source: button.dataset.permissionSource || "gallery",
+        camera: button.dataset.permissionCamera === "true",
+        mic: button.dataset.permissionMic === "true",
+      });
     });
   });
 
@@ -2571,6 +2610,7 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-drop-comment-send]").forEach((button) => {
     button.addEventListener("click", () => {
       showToast("Comentario enviado al Drop en modo demo");
+      playAppSound("comment");
       state.dropCommentsOpen[button.dataset.dropCommentSend] = false;
       render();
     });
@@ -2706,6 +2746,7 @@ function bindDynamicActions() {
     button.addEventListener("click", () => {
       state.fancamCommentsOpen[button.dataset.fancamCommentSend] = false;
       showToast("Comentario enviado a la fancam en modo demo");
+      playAppSound("comment");
       render();
     });
   });
@@ -3092,6 +3133,8 @@ async function initApp() {
   if (Array.isArray(savedLocalPosts) && savedLocalPosts.length) {
     userPosts.unshift(...savedLocalPosts.filter((post) => !userPosts.some((item) => item.id === post.id)));
   }
+  normalizePostTimestamps(userPosts);
+  sortPostsByRecentInPlace(userPosts);
   const savedLocalDrops = storage.get("hallyuHubUserDrops", []);
   if (Array.isArray(savedLocalDrops) && savedLocalDrops.length) {
     trendVideos.unshift(...savedLocalDrops.filter((drop) => !trendVideos.some((item, index) => getDropId(item, index) === drop.id || item.id === drop.id)));
@@ -3105,6 +3148,7 @@ async function initApp() {
   state.newsLastUpdated = savedNews?.updatedAt || null;
   state.ownStory = storage.get("hallyuHubOwnStory", null);
   state.storyInbox = storage.get("hallyuHubStoryInbox", []);
+  state.soundEnabled = storage.get("hallyuHubSoundEnabled", true);
   state.hiddenPosts = storage.get("hallyuHubHiddenPosts", {});
   state.mutedUsers = storage.get("hallyuHubMutedUsers", {});
   state.socialReports = storage.get("hallyuHubReports", []);
@@ -3195,6 +3239,13 @@ async function submitAuth(mode) {
 }
 
 async function saveSettings() {
+  const wantsNotifications = Boolean(document.getElementById("settings-notifications")?.checked);
+  if (wantsNotifications) {
+    const allowed = await requestNotificationPermissionWhenNeeded();
+    if (!allowed) {
+      showToast("No pudimos activar notificaciones. Revisá los permisos del navegador o del dispositivo.");
+    }
+  }
   const selectedAvatar = document.querySelector("[data-avatar].active")?.dataset.avatar || state.selectedAvatar;
   const selectedAmbience = document.querySelector("[data-ambience].active")?.dataset.ambience || state.ambience;
   const selectedProfileBg = document.querySelector("[data-profile-bg].active")?.dataset.profileBg || state.selectedProfileBg || state.user.profileBg;
@@ -3219,7 +3270,7 @@ async function saveSettings() {
     ambience: selectedAmbience,
     accent: document.getElementById("settings-accent")?.value || state.user.accent,
     mode: document.getElementById("settings-mode")?.checked ? "light" : "dark",
-    notifications: Boolean(document.getElementById("settings-notifications")?.checked),
+    notifications: wantsNotifications,
     privateProfile: Boolean(document.getElementById("settings-privacy")?.checked),
   };
   state.selectedAvatar = state.user.avatar;
@@ -3417,8 +3468,10 @@ async function createPost() {
       privacy: draft.privacy,
       allowComments: draft.allowComments,
     });
+    sortPostsByRecentInPlace(userPosts);
     state.publishDraft.result = created;
     showToast("Publicado correctamente");
+    playAppSound("publish");
     render();
     return;
   }
@@ -3459,6 +3512,7 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
   const label = getPostCategoryLabel(category);
   const base = {
     id,
+    createdAt: new Date().toISOString(),
     user: state.user.name,
     username: state.user.username,
     avatarUrl: state.user.avatarUrl || getDemoUserImage(0),
@@ -3509,6 +3563,7 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
   if (category === "trends") {
     const drop = {
       id,
+      createdAt: base.createdAt,
       user: state.user.name,
       avatarUrl: state.user.avatarUrl || getDemoUserImage(0),
       challenge: caption ? caption.slice(0, 44) : "Nuevo Drop HallyuHub",
@@ -3524,6 +3579,7 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
     };
     trendVideos.unshift(drop);
     userPosts.unshift({ ...base, type: "trending" });
+    sortPostsByRecentInPlace(userPosts);
     storage.set("hallyuHubUserPosts", userPosts.filter((post) => String(post.id || "").startsWith("local-")));
     storage.set("hallyuHubUserDrops", trendVideos.filter((dropItem) => String(dropItem.id || "").startsWith("local-trends")));
     return { id, type: category, label: "Drop", mediaUrl, mediaType, filter };
@@ -3532,6 +3588,7 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
     const taggedArtist = findCatalogArtistFromText(`${optionalFields.taggedPeople} ${caption}`);
     const fancam = {
       id,
+      createdAt: base.createdAt,
       groupId: taggedArtist?.group?.id || normalizeProfileKey(state.user.favoriteGroup || "hallyu"),
       artistId: taggedArtist?.artist?.id || `local-artist-${Date.now()}`,
       artist: taggedArtist?.artist?.name || optionalFields.taggedPeople.replace("@", "") || state.user.name,
@@ -3551,10 +3608,14 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
       filter,
     };
     fancamVideos.unshift(fancam);
+    userPosts.unshift({ ...base, type: "popular" });
+    sortPostsByRecentInPlace(userPosts);
+    storage.set("hallyuHubUserPosts", userPosts.filter((post) => String(post.id || "").startsWith("local-")));
     storage.set("hallyuHubUserFancams", fancamVideos.filter((item) => String(item.id || "").startsWith("local-fancams")));
     return { id, type: category, label: "Fancam", mediaUrl, mediaType, filter };
   }
   userPosts.unshift(base);
+  sortPostsByRecentInPlace(userPosts);
   storage.set("hallyuHubUserPosts", userPosts.filter((post) => String(post.id || "").startsWith("local-")));
   return { id, type: category, label, mediaUrl, mediaType, filter };
 }
@@ -3721,6 +3782,103 @@ function showToast(message) {
   }, 2200);
 }
 
+function playAppSound(type = "tap") {
+  if (!state.soundEnabled) return;
+  const AudioEngine = window.AudioContext || window.webkitAudioContext;
+  if (!AudioEngine) return;
+  try {
+    const audio = new AudioEngine();
+    const gain = audio.createGain();
+    const oscillator = audio.createOscillator();
+    const tones = {
+      publish: [659, 880],
+      message: [740, 988],
+      like: [880, 1175],
+      save: [523, 659],
+      comment: [587, 784],
+      tap: [440, 554],
+    };
+    const [first, second] = tones[type] || tones.tap;
+    oscillator.type = type === "message" ? "triangle" : "sine";
+    oscillator.frequency.setValueAtTime(first, audio.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(second, audio.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.0001, audio.currentTime);
+    gain.gain.exponentialRampToValueAtTime(type === "publish" ? 0.055 : 0.035, audio.currentTime + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.18);
+    oscillator.connect(gain);
+    gain.connect(audio.destination);
+    oscillator.start();
+    oscillator.stop(audio.currentTime + 0.2);
+  } catch {
+    // El navegador puede bloquear audio hasta la primera interacción.
+  }
+}
+
+function shouldShowPermissionInfo() {
+  const lastPrompt = storage.get("hallyuHubLastPermissionPromptDate", null);
+  const accepted = storage.get("hallyuHubPermissionsAcceptedInfo", false);
+  if (!lastPrompt) return true;
+  const elapsed = Date.now() - Date.parse(lastPrompt);
+  return !accepted || !Number.isFinite(elapsed) || elapsed > PERMISSION_PROMPT_INTERVAL_MS;
+}
+
+function rememberPermissionInfo(accepted) {
+  storage.set("hallyuHubLastPermissionPromptDate", new Date().toISOString());
+  storage.set("hallyuHubPermissionsAcceptedInfo", Boolean(accepted));
+}
+
+async function requestMediaAccessBeforeFile(inputId, options = {}) {
+  const payload = { inputId, ...options };
+  if (shouldShowPermissionInfo()) {
+    state.permissionPrompt = payload;
+    render();
+    return;
+  }
+  await openProtectedFileInput(payload);
+}
+
+async function continuePermissionRequest() {
+  const payload = state.permissionPrompt;
+  if (!payload) return;
+  rememberPermissionInfo(true);
+  state.permissionPrompt = null;
+  render();
+  await openProtectedFileInput(payload);
+}
+
+async function openProtectedFileInput(payload) {
+  const granted = await requestRealDevicePermission(payload);
+  if (!granted) {
+    showToast("No pudimos acceder. Revisá los permisos del navegador o del dispositivo.");
+    return;
+  }
+  document.getElementById(payload.inputId)?.click();
+}
+
+async function requestRealDevicePermission({ camera = false, mic = false } = {}) {
+  if (!camera && !mic) return true;
+  if (!navigator.mediaDevices?.getUserMedia) return true;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: Boolean(camera), audio: Boolean(mic) });
+    stream.getTracks().forEach((track) => track.stop());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function requestNotificationPermissionWhenNeeded() {
+  if (!("Notification" in window)) return true;
+  if (Notification.permission === "granted") return true;
+  if (Notification.permission === "denied") return false;
+  try {
+    const result = await Notification.requestPermission();
+    return result === "granted";
+  } catch {
+    return false;
+  }
+}
+
 function savePostReport(key) {
   const [postId, reason] = key.split("|");
   const post = findPostById(postId);
@@ -3769,6 +3927,47 @@ function followFeedUser(userName) {
   render();
 }
 
+function normalizePostTimestamps(posts) {
+  const now = Date.now();
+  posts.forEach((post, index) => {
+    if (!post.createdAt) {
+      const localStamp = String(post.id || "").match(/local-[a-z]+-(\d+)/)?.[1] || String(post.id || "").match(/local-(\d+)/)?.[1];
+      post.createdAt = localStamp ? new Date(Number(localStamp)).toISOString() : new Date(now - index * 7 * 60 * 1000).toISOString();
+    }
+  });
+}
+
+function sortPostsByRecentInPlace(posts) {
+  posts.sort((a, b) => getPostTimeValue(b) - getPostTimeValue(a));
+}
+
+function sortPostsByRecent(posts) {
+  normalizePostTimestamps(posts);
+  return [...posts].sort((a, b) => getPostTimeValue(b) - getPostTimeValue(a));
+}
+
+function getPostTimeValue(post) {
+  const value = Date.parse(post.createdAt || "");
+  return Number.isFinite(value) ? value : 0;
+}
+
+function getPostDisplayTime(post) {
+  if (!post.createdAt) return post.time || "Ahora";
+  return formatRelativeTime(post.createdAt);
+}
+
+function formatRelativeTime(dateValue) {
+  const diffMs = Math.max(0, Date.now() - getPostTimeValue({ createdAt: dateValue }));
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "ahora";
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} d`;
+  return new Date(dateValue).toLocaleDateString("es", { day: "2-digit", month: "short" });
+}
+
 function openHashtagExplore(tag) {
   state.selectedHashtag = tag;
   state.hashtagSort = "recent";
@@ -3783,6 +3982,7 @@ async function toggleLike(postId) {
     state.likedPosts[baseId] = !state.likedPosts[baseId];
     storage.set("hallyuHubLikedPosts", state.likedPosts);
     if (post) post.likes = state.likedPosts[baseId] ? bumpEngagement(post.likes) : reduceEngagement(post.likes);
+    if (state.likedPosts[baseId]) playAppSound("like");
     render();
     return;
   }
@@ -3841,6 +4041,8 @@ function sendInlineComment(postId) {
   post.comments = bumpEngagement(post.comments);
   state.commentDrafts[postId] = "";
   state.openComments[postId] = true;
+  persistLocalPosts();
+  playAppSound("comment");
   render();
 }
 
@@ -3851,7 +4053,13 @@ function likeComment(key) {
   state.likedComments[key] = !state.likedComments[key];
   const delta = state.likedComments[key] ? 1 : -1;
   post.commentList = (post.commentList || []).map((comment) => updateCommentLike(comment, commentId, delta));
+  if (state.likedComments[key]) playAppSound("like");
+  persistLocalPosts();
   render();
+}
+
+function persistLocalPosts() {
+  storage.set("hallyuHubUserPosts", userPosts.filter((post) => String(post.id || "").startsWith("local-")));
 }
 
 function updateCommentLike(comment, commentId, delta) {
@@ -4321,6 +4529,7 @@ function createOwnStory(style = "Neon pastel") {
 function publishStoryFromEditor(style = state.storyDraft?.background || "Neon pastel") {
   createOwnStory(style);
   showToast("Historia publicada");
+  playAppSound("publish");
   render();
 }
 
@@ -4347,6 +4556,7 @@ function sendStoryMessage(message) {
   state.storyInbox = [item, ...state.storyInbox].slice(0, 12);
   storage.set("hallyuHubStoryInbox", state.storyInbox);
   state.storyComposerOpen = false;
+  playAppSound("message");
   render();
 }
 
@@ -4365,6 +4575,7 @@ function renderHome() {
           group: post.category || "Post",
           category: "posts",
           time: "hace un momento",
+          createdAt: post.created_at || new Date().toISOString(),
           badge: "Tokki 🐰",
           online: true,
           hashtags: ["#HallyuHub", "#KpopLatam"],
@@ -4441,13 +4652,13 @@ function renderHome() {
 function filterHomeFeed(posts) {
   const filter = state.homeFilter || "all";
   const visiblePosts = posts.filter((post) => !isPostHidden(post) && !isUserMuted(post));
-  if (filter === "all") return visiblePosts;
-  if (filter === "viral" || filter === "trends") return visiblePosts.filter((post) => post.type === "trending" || post.category === "trends");
-  if (filter === "outfits") return visiblePosts.filter((post) => post.category === "outfits" || post.type === "outfit");
-  if (filter === "challenges") return visiblePosts.filter((post) => post.category === "trends" || (post.hashtags || []).some((tag) => tag.toLowerCase().includes("challenge")));
-  if (filter === "events") return visiblePosts.filter((post) => post.type === "event" || (post.hashtags || []).some((tag) => tag.toLowerCase().includes("evento")));
-  if (filter.startsWith("#")) return visiblePosts.filter((post) => (post.hashtags || []).some((tag) => tag.toLowerCase() === filter.toLowerCase()));
-  return visiblePosts;
+  if (filter === "all") return sortPostsByRecent(visiblePosts);
+  if (filter === "viral" || filter === "trends") return sortPostsByRecent(visiblePosts.filter((post) => post.type === "trending" || post.category === "trends"));
+  if (filter === "outfits") return sortPostsByRecent(visiblePosts.filter((post) => post.category === "outfits" || post.type === "outfit"));
+  if (filter === "challenges") return sortPostsByRecent(visiblePosts.filter((post) => post.category === "trends" || (post.hashtags || []).some((tag) => tag.toLowerCase().includes("challenge"))));
+  if (filter === "events") return sortPostsByRecent(visiblePosts.filter((post) => post.type === "event" || (post.hashtags || []).some((tag) => tag.toLowerCase().includes("evento"))));
+  if (filter.startsWith("#")) return sortPostsByRecent(visiblePosts.filter((post) => (post.hashtags || []).some((tag) => tag.toLowerCase() === filter.toLowerCase())));
+  return sortPostsByRecent(visiblePosts);
 }
 
 function getHomeFilterLabel(filter) {
@@ -4464,11 +4675,12 @@ function getHomeFilterLabel(filter) {
 
 function buildHomeFeed(posts) {
   const cycles = ["Ahora", "Hace 4 min", "Hace 12 min", "Hace 25 min"];
+  const sortedPosts = sortPostsByRecent(posts);
   return Array.from({ length: 3 }, (_, round) =>
-    posts.map((post, index) => ({
+    sortedPosts.map((post, index) => ({
       ...post,
       id: `${post.id || "post"}-${round}`,
-      time: round === 0 ? post.time : cycles[(index + round) % cycles.length],
+      time: round === 0 ? getPostDisplayTime(post) : cycles[(index + round) % cycles.length],
       likes: round === 0 ? post.likes : bumpFeedEngagement(post.likes, round + index),
       comments: round === 0 ? post.comments : bumpFeedEngagement(post.comments, round),
     })),
@@ -4600,7 +4812,7 @@ function renderSocialPost(post, index, options = {}) {
             <span class="online-dot ${post.online ? "active" : ""}"></span>
             <h3>${post.user}</h3>
           </div>
-          <p class="muted">${post.time || "Ahora"}</p>
+          <p class="muted">${getPostDisplayTime(post)}</p>
         </button>
         <div class="post-menu-wrap">
           <button class="post-menu-button" data-post-menu="${post.id}" aria-label="Mas opciones">•••</button>
@@ -4692,6 +4904,7 @@ function renderCommentsPanel(post) {
   const comments = post.commentList || [];
   const replyTarget = state.replyTo[post.id];
   const replyUser = replyTarget ? findCommentInPost(post, replyTarget)?.username : null;
+  const replyLabel = replyUser ? `Respondiendo a @${replyUser}` : "Comparte tu opinión...";
   const emojis = ["💜", "✨", "🔥", "🫰", "🎤", "📸"];
   return `
     <section class="comments-panel" aria-label="Comentarios de ${escapeAttr(post.user)}">
@@ -4709,7 +4922,7 @@ function renderCommentsPanel(post) {
       }
       <div class="comment-composer">
         ${renderAvatarElement("mini comment-input-avatar", state.user?.avatar || "berry", state.user?.avatarUrl)}
-        <input type="text" data-comment-draft="${post.id}" value="${escapeAttr(state.commentDrafts[post.id] || "")}" placeholder="${replyTarget ? "Responder comentario..." : "Comparte tu opinión..."}" />
+        <input type="text" data-comment-draft="${post.id}" value="${escapeAttr(state.commentDrafts[post.id] || "")}" placeholder="${escapeAttr(replyLabel)}" />
         <button class="comment-send-button" type="button" data-send-comment="${post.id}">Enviar</button>
         <div class="comment-emoji-row">
           ${emojis.map((emoji) => `<button type="button" data-comment-emoji="${post.id}|${emoji}" aria-label="Agregar ${emoji}">${emoji}</button>`).join("")}
@@ -4900,7 +5113,8 @@ function renderStoryToolPanel(draft, userLevel, visibleTracks) {
       <div class="story-chip-row">${storyTextStyles.map((style) => `<button class="${draft.textStyle === style ? "active" : ""}" data-story-text-style="${style}">${style}</button>`).join("")}</div>`,
     stickers: `<div class="story-chip-row sticker-category-row">${Object.keys(storyStickerGroups).map((category) => `<button class="${draft.stickerCategory === category ? "active" : ""}" data-story-sticker-category="${category}">${category}</button>`).join("")}</div>
       <div class="story-chip-row sticker-palette-row">${(storyStickerGroups[draft.stickerCategory] || storyStickerPalette).map((item) => `<button class="${draft.sticker === item ? "active" : ""}" data-story-sticker="${item}">${item}</button>`).join("")}</div>
-      <label class="custom-sticker-upload">Sticker propio<input type="file" accept="image/png,image/gif,image/webp" data-story-custom-sticker /></label>`,
+      <input id="story-custom-sticker-input" class="hidden-file-input" type="file" accept="image/png,image/gif,image/webp" data-story-custom-sticker />
+      <button type="button" class="custom-sticker-upload" data-protected-file="story-custom-sticker-input" data-permission-source="gallery">Sticker propio</button>`,
     music: `<div class="story-chip-row music-category-row">
         ${storyMusicCategories.map((category) => `<button class="${draft.musicCategory === category ? "active" : ""}" data-story-music-category="${category}">${category}</button>`).join("")}
       </div>
@@ -4924,9 +5138,12 @@ function renderStoryToolPanel(draft, userLevel, visibleTracks) {
       </div>
       <div class="story-chip-row color-row">${storyTextColors.map((color) => `<button class="${draft.textColor === color ? "active" : ""}" style="--swatch:${color}" data-story-text-color="${color}" aria-label="Color ${color}"></button>`).join("")}</div>`,
     gallery: `<div class="story-upload-grid compact-upload">
-        <label>Foto<input type="file" accept="image/*" data-story-media="foto" /></label>
-        <label>Video<input type="file" accept="video/*" data-story-media="video" /></label>
-        <label>Cámara<input type="file" accept="image/*,video/*" capture="environment" data-story-media="camara" /></label>
+        <input id="story-media-foto" class="hidden-file-input" type="file" accept="image/*" data-story-media="foto" />
+        <input id="story-media-video" class="hidden-file-input" type="file" accept="video/*" data-story-media="video" />
+        <input id="story-media-camara" class="hidden-file-input" type="file" accept="image/*,video/*" capture="environment" data-story-media="camara" />
+        <button type="button" data-protected-file="story-media-foto" data-permission-source="gallery">Foto</button>
+        <button type="button" data-protected-file="story-media-video" data-permission-source="gallery">Video</button>
+        <button type="button" data-protected-file="story-media-camara" data-permission-source="camera" data-permission-camera="true" data-permission-mic="true">Cámara</button>
       </div>`,
   }[tool];
   return `
@@ -5244,6 +5461,7 @@ function handleDropAction(action, id) {
     state.dropLiked[id] = !state.dropLiked[id];
     state.dropFeedback[id] = "star";
     showToast(state.dropLiked[id] ? "Drop marcado con estrella" : "Estrella quitada");
+    if (state.dropLiked[id]) playAppSound("like");
     setTimeout(() => {
       if (state.dropFeedback[id] === "star") {
         delete state.dropFeedback[id];
@@ -5255,6 +5473,7 @@ function handleDropAction(action, id) {
   if (action === "save") {
     state.dropSaved[id] = !state.dropSaved[id];
     showToast(state.dropSaved[id] ? "Drop guardado" : "Drop quitado de guardados");
+    if (state.dropSaved[id]) playAppSound("save");
     return;
   }
   if (action === "comment") {
@@ -5545,7 +5764,8 @@ function renderDropCreator() {
         <div class="drop-video-upload">
           <span class="nav-icon plus-icon"></span>
           <strong>Subir video</strong>
-          <input type="file" accept="video/*" />
+          <input id="drop-video-input" class="hidden-file-input" type="file" accept="video/*" />
+          <button type="button" data-protected-file="drop-video-input" data-permission-source="gallery">Elegir video</button>
           <small>Cámara, grabar o galería en modo demo</small>
         </div>
         <div class="drop-creator-actions">
@@ -5806,11 +6026,13 @@ function handleFancamAction(action, fancamId) {
   if (action === "like") {
     state.likedFancams[fancamId] = !state.likedFancams[fancamId];
     showToast(state.likedFancams[fancamId] ? "Fancam marcada con estrella" : "Estrella quitada");
+    if (state.likedFancams[fancamId]) playAppSound("like");
     return;
   }
   if (action === "save") {
     state.savedFancams[fancamId] = !state.savedFancams[fancamId];
     showToast(state.savedFancams[fancamId] ? "Fancam guardada" : "Fancam quitada de guardados");
+    if (state.savedFancams[fancamId]) playAppSound("save");
     return;
   }
   if (action === "comment") {
@@ -6025,6 +6247,24 @@ function renderPublishSuccess(result) {
       <div class="publish-success-actions">
         <button class="primary-button" data-view-created="${result.type}">Ver publicación</button>
         <button class="ghost-button" data-publish-cancel>Volver al perfil</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderPermissionPrompt() {
+  if (!state.permissionPrompt) return "";
+  return `
+    <section class="permission-sheet" role="dialog" aria-label="Permisos de HallyuHub">
+      <div class="permission-card">
+        <div class="permission-glow-icon"><span>+</span></div>
+        <h2>Permisos para crear</h2>
+        <p>HallyuHub necesita acceso a tu cámara, galería y micrófono para crear publicaciones, stories, drops y fancams.</p>
+        <div class="permission-actions">
+          <button class="primary-button" type="button" data-permission-allow>Permitir</button>
+          <button class="ghost-button" type="button" data-permission-deny>Ahora no</button>
+        </div>
+        <small>Este aviso se recuerda por 30 días y no vuelve a aparecer cada vez que subís algo.</small>
       </div>
     </section>
   `;

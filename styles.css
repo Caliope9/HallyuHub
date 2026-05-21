@@ -202,6 +202,10 @@ button {
   display: none !important;
 }
 
+.hidden-file-input {
+  display: none !important;
+}
+
 .topbar {
   position: relative;
   z-index: 2;
@@ -231,7 +235,7 @@ button {
   min-height: 60px;
   justify-content: flex-start;
   margin: 10px 0 4px;
-  padding: 10px 70px 8px 22px;
+  padding: 10px 100px 8px 22px;
   border: 0;
   border-radius: 0;
   background: linear-gradient(180deg, rgba(8, 3, 17, 0.72), rgba(8, 3, 17, 0));
@@ -321,7 +325,32 @@ button {
   font-weight: 800;
 }
 
-.home-mode .topbar .icon-button {
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sound-toggle {
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 14px;
+  font-weight: 1000;
+  backdrop-filter: blur(16px);
+}
+
+.sound-toggle.active {
+  border-color: rgba(101, 228, 255, 0.22);
+  background: linear-gradient(135deg, rgba(251, 188, 219, 0.18), rgba(101, 228, 255, 0.14));
+  color: white;
+  box-shadow: 0 0 18px rgba(101, 228, 255, 0.14);
+}
+
+.home-mode .topbar-actions {
   position: absolute;
   top: 9px;
   right: 18px;
@@ -1818,15 +1847,16 @@ video.post-media.real-media {
 
 .comment-item {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
+  grid-template-columns: 30px minmax(0, 1fr);
   align-items: start;
-  gap: 7px;
+  gap: 9px;
+  width: 100%;
 }
 
 .comment-item.comment-reply {
-  grid-template-columns: 24px minmax(0, 1fr) auto;
-  margin-left: 30px;
-  padding-left: 9px;
+  grid-template-columns: 24px minmax(0, 1fr);
+  margin-left: 28px;
+  padding-left: 10px;
   border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -1850,6 +1880,7 @@ video.post-media.real-media {
 
 .comment-main {
   min-width: 0;
+  max-width: 100%;
 }
 
 .comment-meta {
@@ -1904,6 +1935,8 @@ video.post-media.real-media {
 }
 
 .comment-like {
+  grid-column: 2;
+  justify-self: start;
   min-width: 34px;
   border: 0;
   border-radius: 999px;
@@ -1911,16 +1944,16 @@ video.post-media.real-media {
   color: rgba(255, 255, 255, 0.56);
   padding: 1px 0;
   display: inline-flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 1px;
+  gap: 4px;
   font-size: 10px;
   font-weight: 900;
   transition: transform 160ms ease, color 160ms ease, text-shadow 160ms ease;
 }
 
 .comment-like span {
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1;
 }
 
@@ -2943,7 +2976,8 @@ button.story-layer:active {
   gap: 7px;
 }
 
-.story-upload-grid label {
+.story-upload-grid label,
+.story-upload-grid button {
   min-height: 52px;
   border: 1px dashed rgba(255, 255, 255, 0.16);
   border-radius: 16px;
@@ -4212,6 +4246,69 @@ button.story-layer:active {
   grid-template-columns: 1fr 1fr;
 }
 
+.permission-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(2, 1, 8, 0.62);
+  backdrop-filter: blur(18px);
+  animation: commentsIn 180ms ease both;
+}
+
+.permission-card {
+  width: min(100%, 360px);
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 30% 0%, rgba(251, 188, 219, 0.18), transparent 9rem),
+    radial-gradient(circle at 84% 10%, rgba(101, 228, 255, 0.14), transparent 8rem),
+    rgba(11, 5, 25, 0.94);
+  padding: 18px;
+  text-align: center;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.48);
+}
+
+.permission-glow-icon {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 22px;
+  background: linear-gradient(135deg, var(--pink), var(--cyan));
+  color: #16071d;
+  font-size: 30px;
+  font-weight: 1000;
+  box-shadow: 0 0 34px rgba(251, 188, 219, 0.24);
+}
+
+.permission-card h2,
+.permission-card p {
+  margin: 0;
+}
+
+.permission-card h2 {
+  font-size: 22px;
+}
+
+.permission-card p,
+.permission-card small {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.permission-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+
 .filter-neon-idol img,
 .filter-neon-idol video {
   filter: saturate(1.25) contrast(1.08) hue-rotate(12deg);
@@ -5008,6 +5105,17 @@ button.story-layer:active {
 .drop-video-upload input {
   max-width: 100%;
   color: var(--muted);
+}
+
+.drop-video-upload button {
+  min-height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  padding: 0 13px;
+  font-size: 11px;
+  font-weight: 950;
 }
 
 .drop-filter-preview {
