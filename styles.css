@@ -206,6 +206,331 @@ button {
   display: none !important;
 }
 
+.video-editor-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 42;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(251, 188, 219, 0.18), transparent 15rem),
+    radial-gradient(circle at 80% 16%, rgba(101, 228, 255, 0.16), transparent 14rem),
+    rgba(3, 2, 10, 0.94);
+  backdrop-filter: blur(18px);
+  display: grid;
+  place-items: stretch;
+}
+
+.video-editor-shell {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  color: white;
+}
+
+.video-editor-topbar {
+  min-height: 62px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: max(12px, env(safe-area-inset-top)) 14px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 4, 20, 0.72);
+  backdrop-filter: blur(20px);
+}
+
+.video-editor-topbar div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  text-align: center;
+}
+
+.video-editor-topbar strong {
+  font-size: 15px;
+  letter-spacing: 0;
+}
+
+.video-editor-topbar span {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.video-editor-topbar button,
+.video-cover-button {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.075);
+  color: white;
+  padding: 9px 12px;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.video-editor-publish {
+  border-color: transparent !important;
+  background: linear-gradient(135deg, var(--pink), var(--cyan)) !important;
+  color: #140619 !important;
+  box-shadow: 0 16px 30px rgba(251, 188, 219, 0.18);
+}
+
+.video-editor-body {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 12px max(18px, env(safe-area-inset-bottom));
+  display: grid;
+  gap: 12px;
+}
+
+.video-editor-preview-card {
+  position: relative;
+  min-height: min(64vh, 620px);
+  aspect-ratio: 9 / 16;
+  justify-self: center;
+  width: min(100%, 360px);
+  overflow: hidden;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background:
+    linear-gradient(160deg, rgba(251, 188, 219, 0.2), rgba(101, 228, 255, 0.12)),
+    #090513;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.video-editor-preview-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 48%, rgba(0, 0, 0, 0.2));
+}
+
+.video-upload-stage {
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  border: 0;
+  background: transparent;
+  color: white;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 9px;
+  text-align: center;
+}
+
+.video-upload-plus {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.13);
+  box-shadow: 0 0 28px rgba(251, 188, 219, 0.22);
+  font-size: 36px;
+  font-weight: 650;
+}
+
+.video-upload-stage small {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.video-editor-preview {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  background: black;
+}
+
+.video-editor-overlay-text {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 22%;
+  z-index: 2;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.28);
+  padding: 8px 10px;
+  color: white;
+  font-weight: 950;
+  text-align: center;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(10px);
+}
+
+.video-editor-sticker {
+  position: absolute;
+  top: 18%;
+  right: 18%;
+  z-index: 2;
+  font-size: 38px;
+  filter: drop-shadow(0 0 16px rgba(251, 188, 219, 0.52));
+}
+
+.video-editor-media-actions {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.video-editor-media-actions button {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(12, 6, 24, 0.62);
+  color: white;
+  padding: 8px 11px;
+  font-size: 11px;
+  font-weight: 950;
+  backdrop-filter: blur(14px);
+}
+
+.video-editor-tools {
+  display: grid;
+  gap: 12px;
+}
+
+.video-editor-chip-row,
+.video-editor-filter-row,
+.video-editor-sticker-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.video-editor-chip-row button,
+.video-editor-filter-row button,
+.video-editor-sticker-row button {
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.78);
+  padding: 9px 12px;
+  font-size: 11px;
+  font-weight: 950;
+  backdrop-filter: blur(14px);
+}
+
+.video-editor-chip-row button.active,
+.video-editor-filter-row button.active,
+.video-editor-sticker-row button.active {
+  color: #16071d;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--pink), var(--cyan));
+}
+
+.video-editor-trim,
+.video-editor-fields,
+.video-editor-section {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.055);
+  padding: 12px;
+  backdrop-filter: blur(16px);
+}
+
+.video-editor-trim {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+
+.video-editor-trim p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.video-editor-fields,
+.video-editor-section {
+  display: grid;
+  gap: 10px;
+}
+
+.video-editor-fields label,
+.video-editor-trim label {
+  display: grid;
+  gap: 5px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 10px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.video-editor-fields input,
+.video-editor-fields textarea,
+.video-editor-trim input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  background: rgba(0, 0, 0, 0.18);
+  color: white;
+  padding: 10px;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.video-editor-fields textarea {
+  min-height: 74px;
+  resize: vertical;
+}
+
+.video-editor-grid-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.video-editor-toggle-row {
+  display: grid;
+  gap: 8px;
+}
+
+.video-editor-toggle-row label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: none;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.video-cover-button {
+  justify-self: start;
+}
+
+.video-cover-preview {
+  width: 96px;
+  height: 128px;
+  object-fit: cover;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+@media (min-width: 760px) {
+  .video-editor-body {
+    grid-template-columns: minmax(280px, 360px) 1fr;
+    align-items: start;
+  }
+
+  .video-editor-preview-card {
+    position: sticky;
+    top: 12px;
+  }
+}
+
 .topbar {
   position: relative;
   z-index: 2;
@@ -4462,6 +4787,32 @@ button.story-layer:active {
   box-shadow: 0 14px 28px rgba(251, 188, 219, 0.14);
 }
 
+.drop-create-mini,
+.fancam-create-mini {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.drop-create-mini span,
+.fancam-create-mini span {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.42);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.drop-create-mini small,
+.fancam-create-mini small {
+  font-size: 10px;
+  font-weight: 950;
+}
+
 .trend-tabs {
   display: flex;
   gap: 8px;
@@ -5328,7 +5679,7 @@ button.story-layer:active {
 
 .fancam-control-bar {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   gap: 8px;
   margin-bottom: 8px;
 }
@@ -5373,6 +5724,18 @@ button.story-layer:active {
   color: #16071d;
   border-color: transparent;
   background: linear-gradient(135deg, var(--pink), var(--cyan));
+}
+
+.fancam-create-mini {
+  min-height: 38px;
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(101, 228, 255, 0.9), rgba(251, 188, 219, 0.86));
+  color: #120719;
+  padding: 0 11px;
+  font-size: 11px;
+  font-weight: 950;
+  box-shadow: 0 14px 26px rgba(101, 228, 255, 0.13);
 }
 
 .fancam-filter-panel {

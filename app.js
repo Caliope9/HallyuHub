@@ -41,6 +41,7 @@ const state = {
   dropLiked: {},
   dropSaved: {},
   dropCommentsOpen: {},
+  dropVideoComments: {},
   dropShareOpen: {},
   dropMusicOpen: {},
   dropPaused: {},
@@ -48,6 +49,9 @@ const state = {
   videoProfileOverlay: null,
   videoFullscreen: null,
   videoMuted: true,
+  videoCommentDrafts: {},
+  videoCommentReplyTo: {},
+  videoCommentLikes: {},
   soundEnabled: true,
   permissionPrompt: null,
   fancamGroupFilter: "all",
@@ -59,10 +63,37 @@ const state = {
   savedFancams: {},
   followedArtists: {},
   fancamCommentsOpen: {},
+  fancamVideoComments: {},
   fancamShareOpen: {},
   fancamMusicOpen: {},
   fancamPaused: {},
   fancamFeedback: {},
+  fancamCreatorOpen: false,
+  videoEditorDraft: {
+    kind: "trends",
+    mediaUrl: "",
+    mediaType: "",
+    mediaName: "",
+    coverUrl: "",
+    coverName: "",
+    description: "",
+    hashtags: "",
+    music: "",
+    group: "",
+    artist: "",
+    show: "",
+    start: "0",
+    end: "60",
+    muted: false,
+    soundOn: true,
+    overlayText: "",
+    sticker: "✨",
+    filter: "original",
+    privacy: "Seguidores",
+    allowComments: true,
+    vertical: true,
+    result: null,
+  },
   publishDraft: {
     type: "posts",
     mediaUrl: "",
@@ -1891,6 +1922,9 @@ function setView(nextView) {
     state.dropSearchOpen = false;
     state.dropCreatorOpen = false;
   }
+  if (nextView !== "fancams") {
+    state.fancamCreatorOpen = false;
+  }
   if (nextView !== "search") state.selectedHashtag = null;
   if (!state.isAuthenticated && nextView !== "auth") {
     state.view = "auth";
@@ -1934,7 +1968,7 @@ function render() {
   appScreen.style.setProperty("--user-accent", state.user?.accent || "#fbbcdb");
   document.querySelector("[data-toggle-app-sound]")?.classList.toggle("active", state.soundEnabled);
   document.querySelector("[data-toggle-app-sound]")?.setAttribute("aria-label", state.soundEnabled ? "Sonidos activados" : "Sonidos desactivados");
-  document.querySelector(".bottom-nav").classList.toggle("hidden", !state.isAuthenticated || state.view === "publish" || state.storyEditorOpen || state.activeStory !== null || state.dropSearchOpen || state.dropCreatorOpen || state.videoProfileOverlay || state.videoFullscreen);
+  document.querySelector(".bottom-nav").classList.toggle("hidden", !state.isAuthenticated || state.view === "publish" || state.storyEditorOpen || state.activeStory !== null || state.dropSearchOpen || state.dropCreatorOpen || state.fancamCreatorOpen || state.videoProfileOverlay || state.videoFullscreen);
   document.querySelector(".topbar").classList.toggle("hidden", !state.isAuthenticated || state.view === "profile" || state.view === "publish" || state.storyEditorOpen || state.activeStory !== null);
   if (!state.isAuthenticated) {
     view.innerHTML = renderAuth();
@@ -2432,6 +2466,36 @@ function bindDynamicActions() {
     });
   });
 
+  document.querySelectorAll("[data-video-editor-file]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        state.videoEditorDraft.mediaUrl = reader.result || "";
+        state.videoEditorDraft.mediaType = file.type.startsWith("video") ? "video" : "image";
+        state.videoEditorDraft.mediaName = file.name;
+        state.videoEditorDraft.result = null;
+        render();
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+
+  document.querySelectorAll("[data-video-editor-cover]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        state.videoEditorDraft.coverUrl = reader.result || "";
+        state.videoEditorDraft.coverName = file.name;
+        render();
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+
   document.querySelectorAll("[data-story-layer]").forEach((button) => {
     button.addEventListener("pointerdown", (event) => startStoryElementDrag(event, button.dataset.storyLayer));
     button.addEventListener("click", () => {
@@ -2502,8 +2566,18 @@ function bindDynamicActions() {
 
   document.querySelectorAll("[data-create-drop]").forEach((button) => {
     button.addEventListener("click", () => {
+      resetVideoEditorDraft("trends");
       state.dropCreatorOpen = true;
       state.dropSearchOpen = false;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-create-fancam]").forEach((button) => {
+    button.addEventListener("click", () => {
+      resetVideoEditorDraft("fancams");
+      state.fancamCreatorOpen = true;
+      state.fancamFilterOpen = false;
       render();
     });
   });
@@ -2557,21 +2631,70 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-close-drop-creator]").forEach((button) => {
     button.addEventListener("click", () => {
       state.dropCreatorOpen = false;
+      resetVideoEditorDraft("trends");
       render();
     });
+  });
+
+  document.querySelectorAll("[data-close-video-editor]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const kind = state.videoEditorDraft.kind;
+      state.dropCreatorOpen = false;
+      state.fancamCreatorOpen = false;
+      resetVideoEditorDraft(kind);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-video-editor-field]").forEach((field) => {
+    field.addEventListener("input", () => {
+      state.videoEditorDraft[field.dataset.videoEditorField] = field.type === "checkbox" ? field.checked : field.value;
+    });
+    field.addEventListener("change", () => {
+      state.videoEditorDraft[field.dataset.videoEditorField] = field.type === "checkbox" ? field.checked : field.value;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-video-editor-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.videoEditorDraft.filter = button.dataset.videoEditorFilter;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-video-editor-sticker]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.videoEditorDraft.sticker = button.dataset.videoEditorSticker;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-video-editor-remove-media]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.videoEditorDraft.mediaUrl = "";
+      state.videoEditorDraft.mediaType = "";
+      state.videoEditorDraft.mediaName = "";
+      state.videoEditorDraft.result = null;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-video-editor-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const key = button.dataset.videoEditorToggle;
+      state.videoEditorDraft[key] = !state.videoEditorDraft[key];
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-video-editor-publish]").forEach((button) => {
+    button.addEventListener("click", () => publishVideoEditorContent());
   });
 
   document.querySelectorAll("[data-drop-effect]").forEach((button) => {
     button.addEventListener("click", () => {
       state.dropEffect = button.dataset.dropEffect;
-      render();
-    });
-  });
-
-  document.querySelectorAll("[data-drop-publish-demo]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.dropCreatorOpen = false;
-      showToast("Drop listo para publicar en modo demo");
       render();
     });
   });
@@ -2609,10 +2732,7 @@ function bindDynamicActions() {
 
   document.querySelectorAll("[data-drop-comment-send]").forEach((button) => {
     button.addEventListener("click", () => {
-      showToast("Comentario enviado al Drop en modo demo");
-      playAppSound("comment");
-      state.dropCommentsOpen[button.dataset.dropCommentSend] = false;
-      render();
+      sendVideoComment("drop", button.dataset.dropCommentSend);
     });
   });
 
@@ -2744,10 +2864,41 @@ function bindDynamicActions() {
 
   document.querySelectorAll("[data-fancam-comment-send]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.fancamCommentsOpen[button.dataset.fancamCommentSend] = false;
-      showToast("Comentario enviado a la fancam en modo demo");
-      playAppSound("comment");
+      sendVideoComment("fancam", button.dataset.fancamCommentSend);
+    });
+  });
+
+  document.querySelectorAll("[data-video-comment-draft]").forEach((input) => {
+    input.addEventListener("input", () => {
+      state.videoCommentDrafts[input.dataset.videoCommentDraft] = input.value;
+    });
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        const [type, id] = input.dataset.videoCommentDraft.split(":");
+        sendVideoComment(type, id);
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-video-comment-reply]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const [key, commentId, username] = button.dataset.videoCommentReply.split("|");
+      if (!commentId) {
+        state.videoCommentReplyTo[key] = null;
+        state.videoCommentDrafts[key] = "";
+        render();
+        return;
+      }
+      state.videoCommentReplyTo[key] = commentId;
+      state.videoCommentDrafts[key] = `@${username} `;
       render();
+    });
+  });
+
+  document.querySelectorAll("[data-video-comment-like]").forEach((button) => {
+    button.addEventListener("click", () => {
+      likeVideoComment(button.dataset.videoCommentLike);
     });
   });
 
@@ -3507,6 +3658,93 @@ function syncPublishDraftFromDom() {
   });
 }
 
+function resetVideoEditorDraft(kind = "trends") {
+  state.videoEditorDraft = {
+    kind,
+    mediaUrl: "",
+    mediaType: "",
+    mediaName: "",
+    coverUrl: "",
+    coverName: "",
+    description: "",
+    hashtags: "",
+    music: kind === "fancams" ? "Stage audio · safe preview" : "Drop dance · demo loop",
+    group: "",
+    artist: "",
+    show: "",
+    start: "0",
+    end: kind === "fancams" ? "180" : "60",
+    muted: false,
+    soundOn: true,
+    overlayText: "",
+    sticker: "✨",
+    filter: "original",
+    privacy: "Seguidores",
+    allowComments: true,
+    vertical: true,
+    result: null,
+  };
+}
+
+function syncVideoEditorDraftFromDom() {
+  document.querySelectorAll("[data-video-editor-field]").forEach((field) => {
+    state.videoEditorDraft[field.dataset.videoEditorField] = field.type === "checkbox" ? field.checked : field.value;
+  });
+}
+
+function getVideoEditorHashtags() {
+  return String(state.videoEditorDraft.hashtags || "")
+    .split(/[,\s]+/)
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .map((tag) => (tag.startsWith("#") ? tag : `#${tag}`));
+}
+
+function isVideoEditorLong(kind, endValue) {
+  const end = Number(endValue || 0);
+  if (!end) return false;
+  if (kind === "fancams") return end > 180;
+  if (kind === "stories") return end > 15;
+  return end > 60;
+}
+
+function publishVideoEditorContent() {
+  syncVideoEditorDraftFromDom();
+  const draft = state.videoEditorDraft;
+  if (!draft.mediaUrl) {
+    showToast("Subí un video antes de publicar");
+    return;
+  }
+  if (isVideoEditorLong(draft.kind, draft.end)) {
+    showToast("Tu video es muy largo, recortalo antes de publicar");
+    return;
+  }
+  const optionalFields = {
+    location: "",
+    taggedPeople: draft.artist ? `@${draft.artist.replace(/^@/, "")}` : "",
+    taggedPlace: draft.show || "",
+  };
+  const created = createLocalPublishedContent({
+    category: draft.kind,
+    caption: draft.description.trim(),
+    hashtags: getVideoEditorHashtags(),
+    optionalFields,
+    mediaUrl: draft.mediaUrl,
+    mediaType: "video",
+    filter: draft.filter,
+    audio: draft.music,
+    privacy: draft.privacy,
+    allowComments: draft.allowComments,
+  });
+  state.videoEditorDraft.result = created;
+  state.dropCreatorOpen = false;
+  state.fancamCreatorOpen = false;
+  showToast("Publicado correctamente");
+  playAppSound("publish");
+  scrollActiveViewToTop();
+  render();
+}
+
 function createLocalPublishedContent({ category, caption, hashtags, optionalFields, mediaUrl, mediaType, filter, audio, privacy, allowComments }) {
   const id = `local-${category}-${Date.now()}`;
   const label = getPostCategoryLabel(category);
@@ -3576,6 +3814,8 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
       mediaType,
       filter,
       hashtags: base.hashtags,
+      audio,
+      comments: allowComments ? "0" : "Cerrados",
     };
     trendVideos.unshift(drop);
     userPosts.unshift({ ...base, type: "trending" });
@@ -3606,6 +3846,9 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
       mediaType,
       colors: art[3],
       filter,
+      hashtags: base.hashtags,
+      audio,
+      comments: allowComments ? "0" : "Cerrados",
     };
     fancamVideos.unshift(fancam);
     userPosts.unshift({ ...base, type: "popular" });
@@ -4001,6 +4244,7 @@ async function addComment(postId, body) {
           user: state.user?.name || "Hallyu fan",
           username: state.user?.username || "hallyufan",
           avatar: state.user?.avatar || "berry",
+          avatarUrl: state.user?.avatarUrl || getDemoUserImage(0),
           time: "Ahora",
           body,
           likes: 0,
@@ -4025,6 +4269,7 @@ function sendInlineComment(postId) {
     user: state.user?.name || "Hallyu fan",
     username: state.user?.username || "hallyufan",
     avatar: state.user?.avatar || "berry",
+    avatarUrl: state.user?.avatarUrl || getDemoUserImage(0),
     time: "Ahora",
     body,
     likes: 0,
@@ -4055,6 +4300,72 @@ function likeComment(key) {
   post.commentList = (post.commentList || []).map((comment) => updateCommentLike(comment, commentId, delta));
   if (state.likedComments[key]) playAppSound("like");
   persistLocalPosts();
+  render();
+}
+
+function getVideoCommentStore(type) {
+  return type === "fancam" ? state.fancamVideoComments : state.dropVideoComments;
+}
+
+function getDefaultVideoComments(type, id) {
+  const key = `${type}:${id}`;
+  const store = getVideoCommentStore(type);
+  if (!store[id]) {
+    store[id] = [
+      { id: `${type}-${id}-demo-1`, user: "Luna Hallyu", username: "luna.hallyu", avatar: "berry", avatarUrl: getDemoUserImage(0), time: "2m", body: "Ese momento quedó increíble para verlo en loop.", likes: 24, replies: [] },
+      { id: `${type}-${id}-demo-2`, user: "Cami.STAY", username: "cami.stay", avatar: "star", avatarUrl: getDemoUserImage(2), time: "8m", body: "Necesito tutorial y audio guardado ✨", likes: 17, replies: [] },
+    ];
+  }
+  return store[id];
+}
+
+function sendVideoComment(type, id) {
+  const key = `${type}:${id}`;
+  const body = (state.videoCommentDrafts[key] || "").trim();
+  if (!body) return;
+  const store = getVideoCommentStore(type);
+  const comments = getDefaultVideoComments(type, id);
+  const replyTarget = state.videoCommentReplyTo[key];
+  const comment = {
+    id: `video-comment-${Date.now()}`,
+    user: state.user?.name || "Hallyu fan",
+    username: state.user?.username || "hallyufan",
+    avatar: state.user?.avatar || "berry",
+    avatarUrl: state.user?.avatarUrl || getDemoUserImage(0),
+    time: "Ahora",
+    body,
+    likes: 0,
+    replies: [],
+  };
+  store[id] = replyTarget
+    ? comments.map((item) => (item.id === replyTarget ? { ...item, replies: [...(item.replies || []), comment] } : item))
+    : [...comments, comment];
+  if (!replyTarget) bumpVideoCommentCount(type, id);
+  state.videoCommentDrafts[key] = "";
+  state.videoCommentReplyTo[key] = null;
+  playAppSound("comment");
+  showToast("Comentario enviado");
+  render();
+}
+
+function bumpVideoCommentCount(type, id) {
+  if (type === "drop") {
+    const entry = trendVideos.map((item, index) => [item, getDropId(item, index)]).find(([, itemId]) => itemId === id);
+    if (entry?.[0]) entry[0].comments = bumpEngagement(entry[0].comments || "0");
+    return;
+  }
+  const fancam = fancamVideos.find((item) => item.id === id);
+  if (fancam) fancam.comments = bumpEngagement(fancam.comments || "0");
+}
+
+function likeVideoComment(key) {
+  const [type, id, commentId] = key.split(":");
+  const store = getVideoCommentStore(type);
+  const comments = getDefaultVideoComments(type, id);
+  state.videoCommentLikes[key] = !state.videoCommentLikes[key];
+  const delta = state.videoCommentLikes[key] ? 1 : -1;
+  store[id] = comments.map((comment) => updateCommentLike(comment, commentId, delta));
+  if (state.videoCommentLikes[key]) playAppSound("like");
   render();
 }
 
@@ -5507,7 +5818,7 @@ function renderTrends() {
       </div>
       <div class="drop-tool-actions">
         <button class="drop-icon-button" data-search-drops aria-label="Buscar Drops"><span class="nav-icon search-icon"></span></button>
-        <button class="drop-create-mini" data-create-drop>Crear</button>
+        <button class="drop-create-mini" data-create-drop aria-label="Crear Drop"><span>+</span><small>Drop</small></button>
       </div>
     </div>
     ${state.dropSearchSelection ? `<div class="drop-search-chip"><span>Resultados para ${state.dropSearchSelection}</span><button data-clear-drop-search>Limpiar</button></div>` : ""}
@@ -5539,7 +5850,11 @@ function renderDropCard(trend, index) {
   const feedback = state.dropFeedback[id];
   return `
           <article class="trend-card premium-drop-card effect-${state.dropEffect} filter-${trend.filter || "original"} ${state.dropPaused[id] ? "paused" : ""}" style="--art:${trend.colors}">
-            <img class="drop-video-media" src="${escapeAttr(mediaUrl)}" alt="${escapeAttr(trend.challenge)}" loading="lazy" onerror="this.onerror=null;this.src='${escapeAttr(fallbackUrl)}';" />
+            ${
+              trend.mediaType === "video"
+                ? `<video class="drop-video-media" src="${escapeAttr(mediaUrl)}" playsinline loop ${state.videoMuted ? "muted" : ""} ${state.dropPaused[id] ? "" : "autoplay"}></video>`
+                : `<img class="drop-video-media" src="${escapeAttr(mediaUrl)}" alt="${escapeAttr(trend.challenge)}" loading="lazy" onerror="this.onerror=null;this.src='${escapeAttr(fallbackUrl)}';" />`
+            }
             <button class="drop-play-toggle" data-drop-toggle="${id}" aria-label="${state.dropPaused[id] ? "Reproducir Drop" : "Pausar Drop"}"></button>
             ${feedback ? `<div class="drop-center-feedback ${feedback === "star" ? "starburst" : ""}">${feedback === "star" ? "★" : state.dropPaused[id] ? "▶" : "Ⅱ"}</div>` : ""}
             <div class="video-quick-controls">
@@ -5563,7 +5878,7 @@ function renderDropCard(trend, index) {
               <div class="trend-actions">
                 <button class="${followed ? "active" : ""}" data-drop-action="follow:${id}" aria-label="${followed ? "Siguiendo" : "Seguir"}"><span class="drop-action-symbol">${followed ? "✓" : "+"}</span><small>${followed ? "Siguiendo" : "Seguir"}</small></button>
                 <button class="${liked ? "active liked" : ""}" data-drop-action="like:${id}" aria-label="Estrella"><span class="drop-action-symbol star">★</span><small>${liked ? "Listo" : "Like"}</small></button>
-                <button class="${state.dropCommentsOpen[id] ? "active" : ""}" data-drop-action="comment:${id}" aria-label="Comentar"><span class="nav-icon chat-icon"></span><small>Comentar</small></button>
+                <button class="${state.dropCommentsOpen[id] ? "active" : ""}" data-drop-action="comment:${id}" aria-label="Comentar"><span class="nav-icon chat-icon"></span><small>${trend.comments || "0"}</small></button>
                 <button class="${state.dropShareOpen[id] ? "active" : ""}" data-drop-action="share:${id}" aria-label="Compartir"><span class="share-dot"></span><small>Compartir</small></button>
                 <button class="${saved ? "active saved" : ""}" data-drop-action="save:${id}" aria-label="Guardar"><span class="save-mark"></span><small>${saved ? "Guardado" : "Guardar"}</small></button>
                 <button class="${state.dropMusicOpen[id] ? "active" : ""}" data-drop-action="music:${id}" aria-label="Música"><span class="drop-action-symbol">♪</span><small>Música</small></button>
@@ -5625,10 +5940,10 @@ function renderOpenFancamCommentsSheet() {
 }
 
 function renderVideoCommentsSheet({ id, title, subtitle, type, sendAttr }) {
-  const demoComments = [
-    { user: "Luna Hallyu", username: "luna.hallyu", avatar: "berry", time: "2m", body: "Ese momento quedó increíble para verlo en loop.", likes: 24 },
-    { user: "Cami.STAY", username: "cami.stay", avatar: "star", time: "8m", body: "Necesito tutorial y audio guardado ✨", likes: 17 },
-  ];
+  const key = `${type}:${id}`;
+  const comments = getDefaultVideoComments(type, id);
+  const replyTarget = state.videoCommentReplyTo[key];
+  const replyUser = replyTarget ? findCommentInList(comments, replyTarget)?.username : null;
   return `
     <section class="video-comments-sheet" aria-label="Comentarios de ${escapeAttr(title)}">
       <div class="sheet-handle"></div>
@@ -5637,33 +5952,55 @@ function renderVideoCommentsSheet({ id, title, subtitle, type, sendAttr }) {
         <button type="button" ${type === "drop" ? `data-drop-action="comment:${id}"` : `data-fancam-action="comment:${id}"`} aria-label="Cerrar comentarios">X</button>
       </div>
       <div class="video-comment-list">
-        ${demoComments
-          .map(
-            (comment) => `
-            <div class="comment-item">
-              ${renderAvatarElement("mini comment-avatar", comment.avatar)}
-              <div class="comment-main">
-                <div class="comment-meta">
-                  <button type="button" data-open-feed-profile="${escapeAttr(comment.username)}">${escapeHtml(comment.user)}</button>
-                  <span>${comment.time}</span>
-                </div>
-                <p class="comment-text">${escapeHtml(comment.body)}</p>
-                <div class="comment-tools">
-                  <button type="button" data-demo-action="Respondiendo a ${escapeAttr(comment.user)} en modo demo">Responder</button>
-                </div>
-              </div>
-              <button class="comment-like" type="button" data-demo-action="Like al comentario en modo demo"><span>★</span><strong>${comment.likes}</strong></button>
-            </div>`,
-          )
-          .join("")}
+        ${comments.map((comment) => renderVideoCommentItem(type, id, comment)).join("")}
       </div>
+      ${
+        replyTarget
+          ? `<div class="reply-context">Respondiendo a @${escapeHtml(replyUser || "fan")} <button type="button" data-video-comment-reply="${key}||">Cancelar</button></div>`
+          : ""
+      }
       <div class="comment-composer video-comment-composer">
         ${renderAvatarElement("mini comment-input-avatar", state.user?.avatar || "berry", state.user?.avatarUrl)}
-        <input placeholder="Comentar..." aria-label="Escribir comentario" />
+        <input data-video-comment-draft="${key}" value="${escapeAttr(state.videoCommentDrafts[key] || "")}" placeholder="${replyUser ? `Respondiendo a @${escapeAttr(replyUser)}` : "Comentar..."}" aria-label="Escribir comentario" />
         <button class="comment-send-button" type="button" ${sendAttr}>Enviar</button>
       </div>
     </section>
   `;
+}
+
+function renderVideoCommentItem(type, id, comment, isReply = false) {
+  const sheetKey = `${type}:${id}`;
+  const likeKey = `${type}:${id}:${comment.id}`;
+  const liked = Boolean(state.videoCommentLikes[likeKey]);
+  return `
+    <div class="comment-item ${isReply ? "comment-reply" : ""}">
+      ${renderAvatarElement("mini comment-avatar", comment.avatar || "berry", comment.avatarUrl)}
+      <div class="comment-main">
+        <div class="comment-meta">
+          <button type="button" data-open-feed-profile="${escapeAttr(comment.username || comment.user)}">${escapeHtml(comment.user || "Hallyu fan")}</button>
+          <span>${escapeHtml(comment.time || "Ahora")}</span>
+        </div>
+        <p class="comment-text">${renderMentionedText(comment.body || "")}</p>
+        <div class="comment-tools">
+          <button type="button" data-video-comment-reply="${sheetKey}|${comment.id}|${escapeAttr(comment.username || normalizeProfileKey(comment.user))}">Responder</button>
+        </div>
+        ${(comment.replies || []).map((reply) => renderVideoCommentItem(type, id, reply, true)).join("")}
+      </div>
+      <button class="comment-like ${liked ? "active" : ""}" type="button" data-video-comment-like="${likeKey}" aria-label="Dar estrella al comentario">
+        <span>★</span>
+        <strong>${Number(comment.likes || 0)}</strong>
+      </button>
+    </div>
+  `;
+}
+
+function findCommentInList(comments, commentId) {
+  for (const comment of comments || []) {
+    if (comment.id === commentId) return comment;
+    const reply = findCommentInList(comment.replies || [], commentId);
+    if (reply) return reply;
+  }
+  return null;
 }
 
 function getFilteredDrops() {
@@ -5752,53 +6089,121 @@ function renderDropSearchOverlay() {
 }
 
 function renderDropCreator() {
-  const activeFilter = getActiveDropFilter();
+  return renderVideoUploadEditor("trends");
+}
+
+function renderFancamCreator() {
+  return renderVideoUploadEditor("fancams");
+}
+
+function renderVideoUploadEditor(kind) {
+  const draft = state.videoEditorDraft.kind === kind ? state.videoEditorDraft : { ...state.videoEditorDraft, kind };
+  const isFancam = kind === "fancams";
+  const title = isFancam ? "Crear Fancam" : "Crear Drop";
+  const accepted = "video/*";
+  const fileInputId = isFancam ? "fancam-video-input" : "drop-video-input";
+  const coverInputId = isFancam ? "fancam-cover-input" : "drop-cover-input";
+  const maxLabel = isFancam ? "hasta 3 min" : "15-60 seg recomendado";
+  const longVideo = isVideoEditorLong(kind, draft.end);
+  const activeFilter = publishFilters.find(([id]) => id === draft.filter) || publishFilters[0];
+  const filterClass = `filter-${draft.filter || "original"}`;
   return `
-    <section class="drop-creator-overlay">
-      <div class="drop-creator-panel">
-        <div class="drop-search-head">
-          <button data-close-drop-creator>Cerrar</button>
-          <strong>Crear Drop</strong>
-          <button data-drop-publish-demo>Publicar</button>
-        </div>
-        <div class="drop-video-upload">
-          <span class="nav-icon plus-icon"></span>
-          <strong>Subir video</strong>
-          <input id="drop-video-input" class="hidden-file-input" type="file" accept="video/*" />
-          <button type="button" data-protected-file="drop-video-input" data-permission-source="gallery">Elegir video</button>
-          <small>Cámara, grabar o galería en modo demo</small>
-        </div>
-        <div class="drop-creator-actions">
-          <button data-demo-action="Cámara lista en modo demo">Cámara</button>
-          <button data-demo-action="Grabación preparada en modo demo">Grabar</button>
-          <button data-demo-action="Música K-pop seleccionada">Música</button>
-        </div>
-        <div class="drop-filter-preview effect-${state.dropEffect}">
+    <section class="video-editor-overlay" aria-label="${escapeAttr(title)}">
+      <div class="video-editor-shell">
+        <header class="video-editor-topbar">
+          <button type="button" data-close-video-editor>Cerrar</button>
           <div>
-            <span>Filtro activo</span>
-            <strong>${escapeHtml(activeFilter.name)}</strong>
-            <small>${escapeHtml(activeFilter.detail)}</small>
+            <strong>${title}</strong>
+            <span>${maxLabel} · formato vertical 9:16</span>
           </div>
-        </div>
-        <label class="publish-field">Descripción<textarea placeholder="Describe tu Drop..."></textarea></label>
-        <label class="publish-field">Hashtags<input placeholder="#DanceChallenge #KpopLatam" /></label>
-        <div class="drop-filter-section">
-          <div class="section-heading small"><h2>Filtros visuales</h2><span>Sin reconocimiento facial</span></div>
-          <div class="drop-effect-grid">
-            ${dropVisualFilters
-              .filter((filter) => filter.status === "approved" && filter.creator === "HallyuHub")
-              .map((filter) => renderDropFilterButton(filter))
-              .join("")}
-          </div>
-        </div>
-        <div class="drop-filter-section">
-          <div class="section-heading small"><h2>Filtros de comunidad</h2><span>Moderados</span></div>
-          <div class="drop-community-filter-list">
-            ${dropVisualFilters
-              .filter((filter) => filter.creator !== "HallyuHub")
-              .map((filter) => renderDropCommunityFilter(filter))
-              .join("")}
-          </div>
+          <button class="video-editor-publish" type="button" data-video-editor-publish>Publicar</button>
+        </header>
+
+        <div class="video-editor-body">
+          <section class="video-editor-preview-card ${filterClass}">
+            ${
+              draft.mediaUrl
+                ? `<video class="video-editor-preview" src="${escapeAttr(draft.mediaUrl)}" controls playsinline ${draft.muted ? "muted" : ""}></video>`
+                : `<button class="video-upload-stage" type="button" data-protected-file="${fileInputId}" data-permission-source="gallery" data-permission-mic="true">
+                    <span class="video-upload-plus">+</span>
+                    <strong>Subir video</strong>
+                    <small>Galería, cámara o grabación</small>
+                  </button>`
+            }
+            ${draft.overlayText ? `<div class="video-editor-overlay-text">${escapeHtml(draft.overlayText)}</div>` : ""}
+            ${draft.sticker ? `<div class="video-editor-sticker">${escapeHtml(draft.sticker)}</div>` : ""}
+            <div class="video-editor-media-actions">
+              <input id="${fileInputId}" class="hidden-file-input" type="file" accept="${accepted}" data-video-editor-file />
+              <button type="button" data-protected-file="${fileInputId}" data-permission-source="gallery" data-permission-mic="true">${draft.mediaUrl ? "Cambiar" : "Subir"}</button>
+              ${draft.mediaUrl ? `<button type="button" data-video-editor-remove-media>Eliminar</button>` : ""}
+            </div>
+          </section>
+
+          <section class="video-editor-tools">
+            <div class="video-editor-chip-row">
+              <button type="button" data-demo-action="Cámara preparada en modo demo">Cámara</button>
+              <button type="button" data-demo-action="Grabación lista en modo demo">Grabar</button>
+              <button class="${draft.muted ? "active" : ""}" type="button" data-video-editor-toggle="muted">Audio original ${draft.muted ? "OFF" : "ON"}</button>
+              <button class="${draft.soundOn ? "active" : ""}" type="button" data-video-editor-toggle="soundOn">Sonido ${draft.soundOn ? "ON" : "OFF"}</button>
+            </div>
+
+            <div class="video-editor-trim">
+              <label>Inicio<input type="number" min="0" max="180" value="${escapeAttr(draft.start)}" data-video-editor-field="start" /></label>
+              <label>Final<input type="number" min="1" max="${isFancam ? "180" : "60"}" value="${escapeAttr(draft.end)}" data-video-editor-field="end" /></label>
+              ${longVideo ? `<p>Tu video es muy largo, recortalo antes de publicar</p>` : `<p>Recorte demo visual. La edición avanzada se conectará luego.</p>`}
+            </div>
+
+            <div class="video-editor-fields">
+              <label>Descripción<textarea data-video-editor-field="description" placeholder="${isFancam ? "Describe la fancam..." : "Describe tu Drop..."}">${escapeHtml(draft.description)}</textarea></label>
+              <label>Hashtags<input data-video-editor-field="hashtags" value="${escapeAttr(draft.hashtags)}" placeholder="#HallyuHub #KpopLatam" /></label>
+              <label>Música/audio<input data-video-editor-field="music" value="${escapeAttr(draft.music)}" placeholder="Elegí o escribí audio seguro" /></label>
+              ${
+                isFancam
+                  ? `<div class="video-editor-grid-fields">
+                      <label>Grupo<input data-video-editor-field="group" value="${escapeAttr(draft.group)}" placeholder="BTS, ENHYPEN..." /></label>
+                      <label>Artista<input data-video-editor-field="artist" value="${escapeAttr(draft.artist)}" placeholder="Jung Kook, Jungwon..." /></label>
+                      <label>Show/evento<input data-video-editor-field="show" value="${escapeAttr(draft.show)}" placeholder="Music show, concierto..." /></label>
+                    </div>`
+                  : ""
+              }
+              <label>Texto sobre video<input data-video-editor-field="overlayText" value="${escapeAttr(draft.overlayText)}" placeholder="Texto corto opcional" /></label>
+              <div class="video-editor-toggle-row">
+                <label><input type="checkbox" data-video-editor-field="allowComments" ${draft.allowComments ? "checked" : ""} /> Permitir comentarios</label>
+                <label><input type="checkbox" data-video-editor-field="vertical" ${draft.vertical ? "checked" : ""} /> Ajustar 9:16</label>
+              </div>
+            </div>
+
+            <div class="video-editor-section">
+              <div class="section-heading small"><h2>Filtros</h2><span>${escapeHtml(activeFilter[1])}</span></div>
+              <div class="video-editor-filter-row">
+                ${publishFilters.map(([id, label]) => `<button class="${draft.filter === id ? "active" : ""}" type="button" data-video-editor-filter="${id}">${label}</button>`).join("")}
+              </div>
+            </div>
+
+            <div class="video-editor-section">
+              <div class="section-heading small"><h2>Efectos K-pop</h2><span>Comunidad moderada</span></div>
+              <div class="video-editor-filter-row">
+                ${dropVisualFilters
+                  .filter((filter) => filter.status === "approved")
+                  .map((filter) => `<button class="${state.dropEffect === filter.id ? "active" : ""}" type="button" data-drop-effect="${filter.id}">${escapeHtml(filter.name)}</button>`)
+                  .join("")}
+              </div>
+            </div>
+
+            <div class="video-editor-section">
+              <div class="section-heading small"><h2>Stickers</h2><span>K-pop aesthetic</span></div>
+              <div class="video-editor-sticker-row">
+                ${["✨", "💜", "🫰", "🎤", "📸", "🪩", "🎀", "💿"].map((sticker) => `<button class="${draft.sticker === sticker ? "active" : ""}" type="button" data-video-editor-sticker="${sticker}">${sticker}</button>`).join("")}
+              </div>
+            </div>
+
+            <div class="video-editor-section">
+              <div class="section-heading small"><h2>Portada</h2><span>Opcional</span></div>
+              <input id="${coverInputId}" class="hidden-file-input" type="file" accept="image/*" data-video-editor-cover />
+              <button class="video-cover-button" type="button" data-protected-file="${coverInputId}" data-permission-source="gallery">${draft.coverName ? `Cambiar portada · ${escapeHtml(draft.coverName)}` : "Elegir portada/thumbnail"}</button>
+              ${draft.coverUrl ? `<img class="video-cover-preview" src="${escapeAttr(draft.coverUrl)}" alt="Portada elegida" />` : ""}
+            </div>
+          </section>
         </div>
       </div>
     </section>
@@ -5897,6 +6302,7 @@ function renderFancams() {
         <input data-fancam-search-input value="${escapeAttr(state.fancamSearchQuery)}" placeholder="Grupo, artista, show, era..." />
       </div>
       <button class="${state.fancamFilterOpen ? "active" : ""}" data-toggle-fancam-filter>Filtros</button>
+      <button class="fancam-create-mini" data-create-fancam aria-label="Crear Fancam"><span>+</span><small>Fancam</small></button>
     </section>
     ${
       state.fancamFilterOpen
@@ -5923,6 +6329,7 @@ function renderFancams() {
       ${fancams.length ? fancams.map((fancam, index) => renderFancamCard(fancam, index, { fullscreen: true })).join("") : `<article class="settings-demo-box">No hay fancams con estos filtros.</article>`}
     </section>
     ${renderOpenFancamCommentsSheet()}
+    ${state.fancamCreatorOpen ? renderFancamCreator() : ""}
     ${state.videoProfileOverlay?.startsWith("fancam:") ? renderVideoProfileOverlay() : ""}
     ${state.videoFullscreen?.startsWith("fancam:") ? renderVideoFullscreenOverlay() : ""}
   `;
@@ -5943,7 +6350,11 @@ function renderFancamCard(fancam, index = 0, options = {}) {
     <article class="fancam-card filter-${fancam.filter || "original"} ${options.compact ? "compact" : ""} ${paused ? "paused" : ""}" style="--art:${fancam.colors}">
       <button class="fancam-play-area" data-fancam-toggle="${fancam.id}" aria-label="${paused ? "Reproducir fancam" : "Pausar fancam"}"></button>
       ${state.fancamFeedback[fancam.id] ? `<div class="drop-center-feedback">${paused ? "▶" : "Ⅱ"}</div>` : ""}
-      <img class="fancam-media" src="${escapeAttr(mediaUrl)}" alt="Fancam de ${escapeAttr(fancam.artist)}" loading="lazy" onerror="this.onerror=null;this.src='${escapeAttr(fallbackUrl)}';" />
+      ${
+        fancam.mediaType === "video"
+          ? `<video class="fancam-media" src="${escapeAttr(mediaUrl)}" playsinline loop ${state.videoMuted ? "muted" : ""} ${paused ? "" : "autoplay"}></video>`
+          : `<img class="fancam-media" src="${escapeAttr(mediaUrl)}" alt="Fancam de ${escapeAttr(fancam.artist)}" loading="lazy" onerror="this.onerror=null;this.src='${escapeAttr(fallbackUrl)}';" />`
+      }
       <div class="video-quick-controls">
         <button class="video-sound-button ${state.videoMuted ? "muted" : ""}" data-toggle-video-sound aria-label="${state.videoMuted ? "Activar audio" : "Silenciar"}">♪</button>
         <button class="video-fullscreen-button" data-open-video-fullscreen="fancam:${fancam.id}" aria-label="Ver en pantalla completa"></button>
@@ -5964,7 +6375,7 @@ function renderFancamCard(fancam, index = 0, options = {}) {
         <button data-fancam-action="profile:${fancam.id}" aria-label="Abrir perfil"><span>@</span><small>Perfil</small></button>
         <button class="${followed ? "active" : ""}" data-fancam-action="follow:${fancam.id}" aria-label="Seguir artista"><span>${followed ? "✓" : "+"}</span><small>Seguir</small></button>
         <button class="${liked ? "active" : ""}" data-fancam-action="like:${fancam.id}" aria-label="Like"><span>★</span><small>${fancam.likes}</small></button>
-        <button class="${commentsOpen ? "active" : ""}" data-fancam-action="comment:${fancam.id}" aria-label="Comentar"><span class="nav-icon chat-icon"></span><small>Comentar</small></button>
+        <button class="${commentsOpen ? "active" : ""}" data-fancam-action="comment:${fancam.id}" aria-label="Comentar"><span class="nav-icon chat-icon"></span><small>${fancam.comments || "0"}</small></button>
         <button class="${state.fancamShareOpen[fancam.id] ? "active" : ""}" data-fancam-action="share:${fancam.id}" aria-label="Compartir"><span class="share-dot"></span><small>Compartir</small></button>
         <button class="${saved ? "active" : ""}" data-fancam-action="save:${fancam.id}" aria-label="Guardar"><span class="save-mark"></span><small>Guardar</small></button>
         <button class="${state.fancamMusicOpen[fancam.id] ? "active" : ""}" data-fancam-action="music:${fancam.id}" aria-label="Audio"><span>♪</span><small>Audio</small></button>
