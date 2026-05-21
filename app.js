@@ -34,7 +34,7 @@ const state = {
   settingsPanel: null,
   viewedProfile: null,
   followedProfiles: {},
-  dropFeedFilter: "viral",
+  dropFeedFilter: "popular",
   dropSearchOpen: false,
   dropSearchQuery: "",
   dropSearchSelection: "",
@@ -877,11 +877,20 @@ const DEMO_DROPS = [
   },
 ].map((drop, index) => ({
   ...drop,
+  userId: normalizeProfileKey(getDemoUser(drop.user).username || drop.user),
+  username: getDemoUser(drop.user).username || normalizeProfileKey(drop.user),
+  groupId: ["bp", "bts", "newjeans", "", ""][index] || "",
+  artistId: ["", "bts-jungkook", "", "", ""][index] || "",
   avatarUrl: getDemoUser(drop.user).avatarUrl,
   imageUrl: getDemoDropMedia(index),
   coverUrl: getDemoDropMedia(index),
   mediaUrl: getDemoDropMedia(index),
+  thumbnail: getDemoDropMedia(index),
   mediaType: "image",
+  createdAt: new Date(Date.now() - index * 38 * 60 * 1000).toISOString(),
+  likes: ["82K", "64K", "48K", "33K", "21K"][index] || "12K",
+  comments: ["1.2K", "840", "520", "311", "204"][index] || "98",
+  hashtags: ["#Drops", "#KpopLatam", index === 0 ? "#BLACKPINK" : index === 1 ? "#BTS" : index === 2 ? "#NewJeans" : "#Dance"],
 }));
 
 const trendVideos = DEMO_DROPS;
@@ -1589,6 +1598,13 @@ const fancamVideos = [
 
 fancamVideos.forEach((fancam, index) => {
   const mediaUrl = getDemoDropMedia(index + 1);
+  fancam.userId = fancam.userId || `fan-${normalizeProfileKey(fancam.artist)}`;
+  fancam.user = fancam.user || ["Renata Vega", "Mateo Song", "Emi Sol", "Isa DIVE", "Ara Chen", "Dani Lee", "Noa Rivera", "Thiago Baek"][index] || "Hallyu fan";
+  fancam.username = fancam.username || normalizeProfileKey(fancam.user);
+  fancam.createdAt = fancam.createdAt || new Date(Date.now() - index * 52 * 60 * 1000).toISOString();
+  fancam.comments = fancam.comments || ["2.1K", "1K", "1.7K", "840", "620", "1.1K", "420", "730"][index] || "120";
+  fancam.hashtags = fancam.hashtags || [`#${fancam.group}`, `#${fancam.artist.replace(/\s+/g, "")}`, "#Fancam"];
+  fancam.thumbnail = fancam.thumbnail || mediaUrl;
   fancam.imageUrl = mediaUrl;
   fancam.coverUrl = mediaUrl;
   fancam.mediaUrl = mediaUrl;
@@ -3350,6 +3366,19 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-go-view]").forEach((button) => {
     button.addEventListener("click", () => setView(button.dataset.goView));
   });
+
+  bindFallbackButtonActions();
+}
+
+function bindFallbackButtonActions() {
+  document.querySelectorAll("button").forEach((button) => {
+    if (button.dataset.fallbackReady === "true" || button.disabled) return;
+    const hasDataAction = Object.keys(button.dataset || {}).some((key) => key !== "fallbackReady");
+    const hasNativeAction = button.type === "submit" || button.closest("a[href]");
+    if (hasDataAction || hasNativeAction) return;
+    button.dataset.fallbackReady = "true";
+    button.addEventListener("click", () => showToast("Estamos preparando esta función"));
+  });
 }
 
 function openArtistProfile(artistId) {
@@ -3476,6 +3505,7 @@ async function initApp() {
   if (Array.isArray(savedLocalFancams) && savedLocalFancams.length) {
     fancamVideos.unshift(...savedLocalFancams.filter((fancam) => !fancamVideos.some((item) => item.id === fancam.id)));
   }
+  normalizeDropAndFancamMetadata();
   const savedNews = storage.get("hallyuHubNewsCache", null);
   state.newsItems = savedNews?.items?.length ? mergeNewsStatuses(savedNews.items, news) : news;
   state.newsLastUpdated = savedNews?.updatedAt || null;
@@ -3927,6 +3957,7 @@ function publishVideoEditorContent() {
     taggedShow: draft.show || "",
     city: draft.city || "",
     eventDate: draft.eventDate || "",
+    coverUrl: draft.coverUrl || "",
     taggedPeople: draft.artist ? `@${draft.artist.replace(/^@/, "")}` : "",
     taggedPlace: draft.show || draft.location || "",
   };
@@ -3955,13 +3986,32 @@ function publishVideoEditorContent() {
 function createLocalPublishedContent({ category, caption, hashtags, optionalFields, mediaUrl, mediaType, filter, audio, privacy, allowComments, rightsConfirmed }) {
   const id = `local-${category}-${Date.now()}`;
   const label = getPostCategoryLabel(category);
+  const tagText = [
+    caption,
+    ...(hashtags || []),
+    optionalFields?.taggedGroup,
+    optionalFields?.taggedArtist,
+    optionalFields?.taggedPeople,
+    optionalFields?.taggedShow,
+    optionalFields?.taggedPlace,
+    optionalFields?.location,
+  ].join(" ");
+  const taggedGroupMatch = findCatalogGroupFromText(tagText);
+  const taggedArtistMatch = findCatalogArtistFromText(tagText);
+  const linkedGroup = taggedGroupMatch || taggedArtistMatch?.group || null;
+  const linkedArtist = taggedArtistMatch?.artist || null;
+  const userId = state.user?.id || normalizeProfileKey(state.user?.username || state.user?.name || "current-user");
+  const username = state.user?.username || "hallyufan";
   const base = {
     id,
+    userId,
     createdAt: new Date().toISOString(),
     user: state.user.name,
-    username: state.user.username,
+    username,
     avatarUrl: state.user.avatarUrl || getDemoUserImage(0),
     group: label,
+    groupId: linkedGroup?.id || "",
+    artistId: linkedArtist?.id || "",
     category,
     time: "Ahora",
     badge: state.user.fandom || "Army 💜",
@@ -3974,8 +4024,9 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
     shares: "0",
     saves: "0",
     mediaUrl,
+    thumbnail: optionalFields?.coverUrl || mediaUrl,
     imageUrl: mediaUrl,
-    coverUrl: mediaUrl,
+    coverUrl: optionalFields?.coverUrl || mediaUrl,
     mediaType,
     filter,
     audio,
@@ -4011,16 +4062,23 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
   if (category === "trends") {
     const drop = {
       id,
+      userId,
       createdAt: base.createdAt,
       user: state.user.name,
+      username,
       avatarUrl: state.user.avatarUrl || getDemoUserImage(0),
+      groupId: linkedGroup?.id || normalizeProfileKey(optionalFields.taggedGroup || ""),
+      artistId: linkedArtist?.id || normalizeProfileKey(optionalFields.taggedArtist || optionalFields.taggedPeople || ""),
+      group: linkedGroup?.name || optionalFields.taggedGroup || state.user.favoriteGroup || "HallyuHub",
+      artist: linkedArtist?.name || optionalFields.taggedArtist || optionalFields.taggedPeople?.replace("@", "") || "",
       challenge: caption ? caption.slice(0, 44) : "Nuevo Drop HallyuHub",
       song: audio || "HallyuHub · safe loop",
       description: caption || "Drop nuevo creado en modo demo.",
       colors: art[1],
       imageUrl: mediaUrl,
-      coverUrl: mediaUrl,
+      coverUrl: optionalFields?.coverUrl || mediaUrl,
       mediaUrl,
+      thumbnail: optionalFields?.coverUrl || mediaUrl,
       mediaType,
       filter,
       hashtags: base.hashtags,
@@ -4043,14 +4101,17 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
     return { id, type: category, label: "Drop", mediaUrl, mediaType, filter };
   }
   if (category === "fancams") {
-    const taggedArtist = findCatalogArtistFromText(`${optionalFields.taggedPeople} ${caption}`);
     const fancam = {
       id,
+      userId,
       createdAt: base.createdAt,
-      groupId: taggedArtist?.group?.id || normalizeProfileKey(state.user.favoriteGroup || "hallyu"),
-      artistId: taggedArtist?.artist?.id || `local-artist-${Date.now()}`,
-      artist: taggedArtist?.artist?.name || optionalFields.taggedPeople.replace("@", "") || state.user.name,
-      group: taggedArtist?.group?.name || state.user.favoriteGroup || "HallyuHub",
+      groupId: linkedGroup?.id || normalizeProfileKey(optionalFields.taggedGroup || state.user.favoriteGroup || "hallyu"),
+      artistId: linkedArtist?.id || normalizeProfileKey(optionalFields.taggedArtist || optionalFields.taggedPeople || `local-artist-${Date.now()}`),
+      artist: linkedArtist?.name || optionalFields.taggedArtist || optionalFields.taggedPeople.replace("@", "") || state.user.name,
+      group: linkedGroup?.name || optionalFields.taggedGroup || state.user.favoriteGroup || "HallyuHub",
+      user: state.user.name,
+      username,
+      avatarUrl: state.user.avatarUrl || getDemoUserImage(0),
       era: "Demo upload",
       show: optionalFields.taggedPlace || "Fan focus",
       date: "Ahora",
@@ -4059,8 +4120,9 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
       sort: "recent",
       description: caption || "Fancam nueva creada en modo demo.",
       imageUrl: mediaUrl,
-      coverUrl: mediaUrl,
+      coverUrl: optionalFields?.coverUrl || mediaUrl,
       mediaUrl,
+      thumbnail: optionalFields?.coverUrl || mediaUrl,
       mediaType,
       colors: art[3],
       filter,
@@ -4089,16 +4151,90 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
   return { id, type: category, label, mediaUrl, mediaType, filter };
 }
 
+function findCatalogGroupFromText(text) {
+  const source = String(text || "").replace(/@/g, " ");
+  const normalized = normalizeProfileKey(source);
+  if (!normalized) return null;
+  return (
+    kpopGroups.find((group) => {
+      const fields = [group.id, group.name, group.fandom, group.company, ...(group.aliases || [])].filter(Boolean);
+      return fields.some((field) => matchesCatalogField(source, normalized, field));
+    }) || null
+  );
+}
+
 function findCatalogArtistFromText(text) {
-  const normalized = normalizeProfileKey(String(text || "").replace(/@/g, " "));
+  const source = String(text || "").replace(/@/g, " ");
+  const normalized = normalizeProfileKey(source);
   if (!normalized) return null;
   for (const group of kpopGroups) {
-    for (const artist of group.artists || []) {
-      const names = [artist.name, artist.realName, artist.id].filter(Boolean).map(normalizeProfileKey);
-      if (names.some((name) => name && normalized.includes(name))) {
+    const artists = [...(group.artists || [])].sort((a, b) => normalizeProfileKey(b.name).length - normalizeProfileKey(a.name).length);
+    for (const artist of artists) {
+      const names = [artist.name, artist.realName, artist.id].filter(Boolean);
+      if (names.some((name) => matchesCatalogField(source, normalized, name))) {
         return { group, artist };
       }
     }
+  }
+  return null;
+}
+
+function matchesCatalogField(sourceText, normalizedText, fieldValue, options = {}) {
+  const field = normalizeProfileKey(fieldValue);
+  if (!field) return false;
+  if (field.length <= 3 && !options.allowShortContains) {
+    const escaped = String(fieldValue).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`(^|[^a-z0-9])${escaped}($|[^a-z0-9])`, "i").test(String(sourceText || ""));
+  }
+  return normalizedText.includes(field) || field.includes(normalizedText);
+}
+
+function normalizeDropAndFancamMetadata() {
+  trendVideos.forEach((drop, index) => {
+    const tagText = [drop.challenge, drop.description, drop.song, drop.group, drop.groupId, drop.artist, drop.artistId, drop.taggedGroup, drop.taggedArtist, ...(drop.hashtags || [])].join(" ");
+    const group = drop.groupId ? kpopGroups.find((item) => item.id === drop.groupId) : findCatalogGroupFromText(tagText);
+    const artistMatch = drop.artistId ? findArtistById(drop.artistId) : findCatalogArtistFromText(tagText);
+    drop.userId = drop.userId || normalizeProfileKey(drop.username || drop.user || `drop-user-${index}`);
+    drop.username = drop.username || normalizeProfileKey(drop.user || `drop-user-${index}`);
+    drop.groupId = drop.groupId || group?.id || artistMatch?.group?.id || "";
+    drop.artistId = drop.artistId || artistMatch?.artist?.id || "";
+    drop.group = drop.group || group?.name || artistMatch?.group?.name || "";
+    drop.artist = drop.artist || artistMatch?.artist?.name || "";
+    drop.createdAt = drop.createdAt || new Date(Date.now() - index * 38 * 60 * 1000).toISOString();
+    drop.likes = drop.likes || "0";
+    drop.comments = drop.comments || "0";
+    drop.hashtags = drop.hashtags || ["#Drops", "#HallyuHub"];
+    drop.thumbnail = drop.thumbnail || drop.coverUrl || drop.imageUrl || drop.mediaUrl || getDemoDropMedia(index);
+    drop.mediaUrl = drop.mediaUrl || drop.imageUrl || drop.thumbnail;
+    drop.coverUrl = drop.coverUrl || drop.thumbnail;
+    drop.imageUrl = drop.imageUrl || drop.thumbnail;
+  });
+  fancamVideos.forEach((fancam, index) => {
+    const tagText = [fancam.artist, fancam.artistId, fancam.group, fancam.groupId, fancam.show, fancam.era, ...(fancam.hashtags || [])].join(" ");
+    const artistMatch = fancam.artistId ? findArtistById(fancam.artistId) : findCatalogArtistFromText(tagText);
+    const group = fancam.groupId ? kpopGroups.find((item) => item.id === fancam.groupId) : artistMatch?.group || findCatalogGroupFromText(tagText);
+    fancam.userId = fancam.userId || normalizeProfileKey(fancam.username || fancam.user || `fancam-user-${index}`);
+    fancam.username = fancam.username || normalizeProfileKey(fancam.user || `fancam-user-${index}`);
+    fancam.groupId = fancam.groupId || group?.id || artistMatch?.group?.id || "";
+    fancam.artistId = fancam.artistId || artistMatch?.artist?.id || "";
+    fancam.group = fancam.group || group?.name || artistMatch?.group?.name || "";
+    fancam.artist = fancam.artist || artistMatch?.artist?.name || "Fancam";
+    fancam.createdAt = fancam.createdAt || new Date(Date.now() - index * 52 * 60 * 1000).toISOString();
+    fancam.likes = fancam.likes || "0";
+    fancam.comments = fancam.comments || "0";
+    fancam.hashtags = fancam.hashtags || [`#${fancam.group || "Kpop"}`, "#Fancam"];
+    fancam.thumbnail = fancam.thumbnail || fancam.coverUrl || fancam.imageUrl || fancam.mediaUrl || getDemoDropMedia(index + 1);
+    fancam.mediaUrl = fancam.mediaUrl || fancam.imageUrl || fancam.thumbnail;
+    fancam.coverUrl = fancam.coverUrl || fancam.thumbnail;
+    fancam.imageUrl = fancam.imageUrl || fancam.thumbnail;
+  });
+}
+
+function findArtistById(artistId) {
+  const normalized = normalizeProfileKey(artistId);
+  for (const group of kpopGroups) {
+    const artist = (group.artists || []).find((item) => normalizeProfileKey(item.id) === normalized);
+    if (artist) return { group, artist };
   }
   return null;
 }
@@ -6071,11 +6207,19 @@ function handleDropAction(action, id) {
 
 function renderTrends() {
   const drops = getFilteredDrops();
+  const dropFilters = [
+    ["popular", "Populares"],
+    ["recent", "Recientes"],
+    ["followed", "Seguidos"],
+    ["challenge", "Challenges"],
+    ["dance", "Dance"],
+    ["outfit", "Outfit"],
+    ["edits", "Edits"],
+  ];
   return `
     <div class="drop-tools-row">
       <div class="trend-tabs premium-drop-tabs">
-        <button class="${state.dropFeedFilter === "viral" ? "active" : ""}" data-drop-filter="viral">Virales</button>
-        <button class="${state.dropFeedFilter === "challenge" ? "active" : ""}" data-drop-filter="challenge">Challenges</button>
+        ${dropFilters.map(([id, label]) => `<button class="${(state.dropFeedFilter === id || (state.dropFeedFilter === "viral" && id === "popular")) ? "active" : ""}" data-drop-filter="${id}">${label}</button>`).join("")}
       </div>
       <div class="drop-tool-actions">
         <button class="drop-icon-button" data-search-drops aria-label="Buscar Drops"><span class="nav-icon search-icon"></span></button>
@@ -6269,19 +6413,68 @@ function findCommentInList(comments, commentId) {
 function getFilteredDrops() {
   const query = normalizeProfileKey(state.dropSearchSelection || "");
   const searchTerms = getDropRelatedTerms(state.dropSearchSelection || "");
-  const byFilter = trendVideos.filter((trend) => {
-    if (state.dropFeedFilter === "challenge") return normalizeProfileKey([trend.challenge, trend.description].join(" ")).includes("challenge");
-    return true;
-  });
-  if (!query) return byFilter;
+  const base = sortDropsForFeed(trendVideos);
+  const byFilter = base.filter((trend) => dropMatchesFeedFilter(trend, state.dropFeedFilter));
+  const safeFiltered = byFilter.length ? byFilter : base;
+  if (!query) return safeFiltered;
   const matchesQuery = (trend) => {
-    const haystack = normalizeProfileKey([trend.user, trend.challenge, trend.song, trend.description].join(" "));
+    const haystack = getDropSearchText(trend);
     return searchTerms.some((term) => haystack.includes(term));
   };
-  const matched = byFilter.filter(matchesQuery);
+  const matched = safeFiltered.filter(matchesQuery);
   if (matched.length) return matched;
-  const fallback = trendVideos.filter(matchesQuery);
-  return fallback.length ? fallback : byFilter;
+  const fallback = base.filter(matchesQuery);
+  return fallback.length ? fallback : safeFiltered;
+}
+
+function dropMatchesFeedFilter(trend, filterValue) {
+  const filter = filterValue === "viral" ? "popular" : filterValue || "popular";
+  const haystack = getDropSearchText(trend);
+  if (filter === "popular") return true;
+  if (filter === "recent") return true;
+  if (filter === "followed") {
+    const favorite = normalizeProfileKey(state.user?.favoriteGroup || "");
+    return Boolean(state.dropFollowed[getDropId(trend)]) || (favorite && haystack.includes(favorite));
+  }
+  if (filter === "challenge") return /(challenge|reto|viral|paso)/.test(haystack);
+  if (filter === "dance") return /(dance|baile|cover|randomplay|coreografia|paso)/.test(haystack);
+  if (filter === "outfit") return /(outfit|look|fashion|ropa|style|kstyle)/.test(haystack);
+  if (filter === "edits") return /(edit|clip|fancam|transition|transicion)/.test(haystack);
+  return true;
+}
+
+function sortDropsForFeed(items) {
+  const filter = state.dropFeedFilter === "viral" ? "popular" : state.dropFeedFilter;
+  const favorite = normalizeProfileKey(state.user?.favoriteGroup || "");
+  return [...items].sort((a, b) => {
+    if (filter === "recent") return getPostTimeValue(b) - getPostTimeValue(a);
+    const score = (item) =>
+      getEngagementNumber(item.likes) +
+      getEngagementNumber(item.comments) * 2 +
+      Number(Boolean(state.dropFollowed[getDropId(item)])) * 8000 +
+      Number(favorite && getDropSearchText(item).includes(favorite)) * 5000;
+    return score(b) - score(a) || getPostTimeValue(b) - getPostTimeValue(a);
+  });
+}
+
+function getDropSearchText(trend) {
+  return normalizeProfileKey([
+    trend.user,
+    trend.username,
+    trend.challenge,
+    trend.song,
+    trend.description,
+    trend.group,
+    trend.groupId,
+    trend.artist,
+    trend.artistId,
+    trend.taggedGroup,
+    trend.taggedArtist,
+    trend.taggedShow,
+    trend.city,
+    trend.location,
+    ...(trend.hashtags || []),
+  ].join(" "));
 }
 
 function getDropRelatedTerms(selection) {
@@ -6516,18 +6709,33 @@ function getFilteredFancams(artistId = null) {
   const filtered = fancamVideos.filter((fancam) => {
     const groupOk = state.fancamGroupFilter === "all" || fancam.groupId === state.fancamGroupFilter || artistId;
     const artistOk = !targetArtist || targetArtist === "all" || fancam.artistId === targetArtist;
-    const sortOk = state.fancamSort === "recommended" || state.fancamSort === "all" || fancam.sort === state.fancamSort || artistId;
+    const sortOk = artistId || fancamMatchesSort(fancam, state.fancamSort);
     const queryOk = !query || getFancamSearchText(fancam).includes(query);
     return groupOk && artistOk && sortOk && queryOk;
   });
-  const base = filtered.length || query || artistId ? filtered : fancamVideos;
-  return sortFancamsForFeed(base);
+  const hasActiveFilter = query || artistId || state.fancamGroupFilter !== "all" || (targetArtist && targetArtist !== "all") || state.fancamSort !== "recommended";
+  const base = filtered.length || hasActiveFilter ? filtered : fancamVideos;
+  const sorted = sortFancamsForFeed(base.length ? base : fancamVideos);
+  return sorted;
+}
+
+function fancamMatchesSort(fancam, sortValue) {
+  const sort = sortValue || "recommended";
+  const text = getFancamSearchText(fancam);
+  if (sort === "recommended" || sort === "all") return true;
+  if (sort === "recent") return fancam.sort === "recent" || getPostTimeValue(fancam) > Date.now() - 7 * 24 * 60 * 60 * 1000;
+  if (sort === "trending" || sort === "popular") return fancam.sort === "trending" || getEngagementNumber(fancam.likes) > 250000 || getEngagementNumber(fancam.views) > 1500000;
+  if (sort === "followed") return Boolean(state.followedArtists[fancam.artistId]);
+  if (sort === "show") return /(show|stage|concert|concierto|festival|focus|musicshow|fanmeeting)/.test(text);
+  return true;
 }
 
 function getFancamSearchText(fancam) {
   const group = kpopGroups.find((item) => item.id === fancam.groupId);
   return normalizeProfileKey([
     fancam.artist,
+    fancam.user,
+    fancam.username,
     fancam.group,
     fancam.groupId,
     fancam.artistId,
@@ -6535,6 +6743,7 @@ function getFancamSearchText(fancam) {
     fancam.era,
     fancam.date,
     fancam.description,
+    ...(fancam.hashtags || []),
     fancam.sort === "recent" ? "recientes reciente nuevo" : "popular populares trending virales",
     group?.fandom,
     group?.company,
@@ -6545,7 +6754,7 @@ function sortFancamsForFeed(items) {
   const favorite = normalizeProfileKey(state.user?.favoriteGroup || "");
   return [...items].sort((a, b) => {
     if (state.fancamSort === "recent") return Number(b.sort === "recent") - Number(a.sort === "recent");
-    if (state.fancamSort === "trending") return Number(b.sort === "trending") - Number(a.sort === "trending");
+    if (state.fancamSort === "trending" || state.fancamSort === "popular") return getEngagementNumber(b.likes) - getEngagementNumber(a.likes) || getEngagementNumber(b.views) - getEngagementNumber(a.views);
     const score = (item) =>
       Number(Boolean(state.followedArtists[item.artistId])) * 8 +
       Number(normalizeProfileKey(item.group).includes(favorite) || favorite.includes(normalizeProfileKey(item.group))) * 5 +
@@ -6580,8 +6789,10 @@ function renderFancams() {
             <div class="fancam-filter-row compact">
               ${[
                 ["recommended", "Para ti"],
-                ["trending", "Populares"],
+                ["popular", "Populares"],
                 ["recent", "Recientes"],
+                ["followed", "Seguidas"],
+                ["show", "Shows"],
                 ["all", "Todas"],
               ].map(([id, label]) => `<button class="${state.fancamSort === id ? "active" : ""}" data-fancam-sort="${id}">${label}</button>`).join("")}
             </div>
@@ -7505,6 +7716,7 @@ function renderGroupFanContent(group) {
 function renderFanContentSection({ title, subtitle, empty, content }) {
   const filtered = filterFanContent(content);
   const fancams = filtered.filter((item) => item.type === "fancam").slice(0, 6);
+  const drops = filtered.filter((item) => item.type === "drop").slice(0, 6);
   const photos = filtered.filter((item) => item.mediaType === "image" || item.type === "photo").slice(0, 8);
   const feed = filtered.slice(0, 5);
   const filters = [
@@ -7527,6 +7739,10 @@ function renderFanContentSection({ title, subtitle, empty, content }) {
             <div class="fan-content-block">
               <div class="artist-media-title"><strong>Carrusel de fancams</strong><small>Usuarios/fans</small></div>
               <div class="fan-fancam-row">${(fancams.length ? fancams : filtered.slice(0, 4)).map(renderFanFancamTile).join("")}</div>
+            </div>
+            <div class="fan-content-block">
+              <div class="artist-media-title"><strong>Drops relacionados</strong><small>Challenges, edits y clips fan</small></div>
+              <div class="fan-fancam-row">${(drops.length ? drops : filtered.filter((item) => item.type === "video").slice(0, 4)).map(renderFanFancamTile).join("")}</div>
             </div>
             <div class="fan-content-block">
               <div class="artist-media-title"><strong>Fotos de conciertos</strong><small>Subidas por fans</small></div>
@@ -7558,11 +7774,12 @@ function getFanContentForEntity({ artist, group, scope }) {
     user: post.user || "Hallyu fan",
     username: post.username || normalizeProfileKey(post.user),
     mediaUrl: post.mediaUrl || post.imageUrl || getDemoPostImage(index),
+    thumbnail: post.thumbnail || post.coverUrl || post.imageUrl || post.mediaUrl || getDemoPostImage(index),
     likes: post.likes || "0",
     comments: post.comments || "0",
     status: post.fanContentStatus || post.moderationStatus || "publicado",
-    taggedGroup: post.taggedGroup || post.group || "",
-    taggedArtist: post.taggedArtist || post.taggedPeople || "",
+    taggedGroup: post.taggedGroup || post.group || post.groupId || "",
+    taggedArtist: post.taggedArtist || post.taggedPeople || post.artistId || "",
     taggedShow: post.taggedShow || post.taggedPlace || "",
     city: post.city || post.location || "",
     eventDate: post.eventDate || "",
@@ -7578,6 +7795,7 @@ function getFanContentForEntity({ artist, group, scope }) {
     user: fancam.user || state.user?.name || "Fan upload",
     username: fancam.username || state.user?.username || "fan",
     mediaUrl: fancam.mediaUrl || fancam.imageUrl || getDemoDropMedia(index),
+    thumbnail: fancam.thumbnail || fancam.coverUrl || fancam.imageUrl || fancam.mediaUrl || getDemoDropMedia(index),
     likes: fancam.likes || "0",
     comments: fancam.comments || "0",
     status: fancam.fanContentStatus || fancam.moderationStatus || "publicado",
@@ -7589,7 +7807,28 @@ function getFanContentForEntity({ artist, group, scope }) {
     hashtags: fancam.hashtags || [],
     createdAt: fancam.createdAt || new Date().toISOString(),
   }));
-  return [...postItems, ...fancamItems]
+  const dropItems = trendVideos.map((drop, index) => ({
+    id: drop.id || getDropId(drop, index),
+    type: "drop",
+    mediaType: drop.mediaType || "image",
+    title: drop.challenge || "Drop fan",
+    caption: drop.description || "Drop creado por la comunidad.",
+    user: drop.user || "Hallyu fan",
+    username: drop.username || normalizeProfileKey(drop.user),
+    mediaUrl: drop.mediaUrl || drop.imageUrl || drop.thumbnail || getDemoDropMedia(index),
+    thumbnail: drop.thumbnail || drop.coverUrl || drop.imageUrl || drop.mediaUrl || getDemoDropMedia(index),
+    likes: drop.likes || "0",
+    comments: drop.comments || "0",
+    status: drop.fanContentStatus || drop.moderationStatus || "publicado",
+    taggedGroup: drop.taggedGroup || drop.group || drop.groupId || "",
+    taggedArtist: drop.taggedArtist || drop.artist || drop.artistId || "",
+    taggedShow: drop.taggedShow || "",
+    city: drop.city || drop.location || "",
+    eventDate: drop.eventDate || "",
+    hashtags: drop.hashtags || [],
+    createdAt: drop.createdAt || new Date().toISOString(),
+  }));
+  return [...postItems, ...fancamItems, ...dropItems]
     .filter((item) => !state.hiddenFanContent[item.id] && !state.mutedUsers[normalizeProfileKey(item.user)])
     .filter((item) => item.status !== "oculto" && item.status !== "eliminado")
     .filter((item) => {
@@ -7619,9 +7858,10 @@ function filterFanContent(content) {
 }
 
 function renderFanFancamTile(item) {
+  const previewUrl = item.thumbnail || item.mediaUrl;
   return `
     <article class="fan-fancam-tile">
-      <img src="${escapeAttr(item.mediaUrl)}" alt="${escapeAttr(item.title)}" loading="lazy" />
+      <img src="${escapeAttr(previewUrl)}" alt="${escapeAttr(item.title)}" loading="lazy" />
       <div>
         <strong>${escapeHtml(item.title)}</strong>
         <small>${escapeHtml(item.taggedShow || item.city || "Fan upload")} · ${escapeHtml(item.status)}</small>
@@ -7636,9 +7876,10 @@ function renderFanFancamTile(item) {
 }
 
 function renderFanPhotoTile(item) {
+  const previewUrl = item.thumbnail || item.mediaUrl;
   return `
     <article class="fan-photo-tile">
-      <img src="${escapeAttr(item.mediaUrl)}" alt="${escapeAttr(item.title)}" loading="lazy" />
+      <img src="${escapeAttr(previewUrl)}" alt="${escapeAttr(item.title)}" loading="lazy" />
       <span>${escapeHtml(item.status)}</span>
       <div class="fan-photo-actions">
         <button data-report-content="${item.type}:${item.id}">Reportar</button>
@@ -7649,9 +7890,10 @@ function renderFanPhotoTile(item) {
 }
 
 function renderFanFeedCard(item) {
+  const previewUrl = item.thumbnail || item.mediaUrl;
   return `
     <article class="fan-feed-card">
-      <img src="${escapeAttr(item.mediaUrl)}" alt="${escapeAttr(item.title)}" loading="lazy" />
+      <img src="${escapeAttr(previewUrl)}" alt="${escapeAttr(item.title)}" loading="lazy" />
       <div>
         <div class="fan-feed-head">
           <strong>${escapeHtml(item.user)}</strong>
