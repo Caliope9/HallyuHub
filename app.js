@@ -90,6 +90,7 @@ const state = {
     location: "",
     start: "0",
     end: "60",
+    duration: "60",
     muted: false,
     soundOn: true,
     overlayText: "",
@@ -2622,6 +2623,9 @@ function bindDynamicActions() {
         state.videoEditorDraft.mediaUrl = reader.result || "";
         state.videoEditorDraft.mediaType = file.type.startsWith("video") ? "video" : "image";
         state.videoEditorDraft.mediaName = file.name;
+        state.videoEditorDraft.start = "0";
+        state.videoEditorDraft.end = state.videoEditorDraft.kind === "fancams" ? "180" : "60";
+        state.videoEditorDraft.duration = state.videoEditorDraft.kind === "fancams" ? "180" : "60";
         state.videoEditorDraft.loading = false;
         state.videoEditorDraft.error = "";
         state.videoEditorDraft.result = null;
@@ -2845,6 +2849,30 @@ function bindDynamicActions() {
 
   document.querySelectorAll("[data-video-editor-publish]").forEach((button) => {
     button.addEventListener("click", () => publishVideoEditorContent());
+  });
+
+  document.querySelectorAll("[data-video-editor-preview]").forEach((video) => {
+    video.addEventListener("loadedmetadata", () => syncVideoEditorDuration(video));
+    video.addEventListener("timeupdate", () => stopVideoAtTrimEnd(video));
+  });
+
+  document.querySelectorAll("[data-video-trim-handle]").forEach((handle) => {
+    handle.addEventListener("pointerdown", (event) => startVideoTrimDrag(event, handle.dataset.videoTrimHandle));
+  });
+
+  document.querySelectorAll("[data-video-trim-range]").forEach((range) => {
+    range.addEventListener("pointerdown", (event) => startVideoTrimDrag(event, "range"));
+  });
+
+  document.querySelectorAll("[data-video-trim-track]").forEach((track) => {
+    track.addEventListener("pointerdown", (event) => {
+      if (event.target.closest("[data-video-trim-range]") || event.target.closest("[data-video-trim-handle]")) return;
+      moveNearestTrimHandle(event, track);
+    });
+  });
+
+  document.querySelectorAll("[data-video-preview-range]").forEach((button) => {
+    button.addEventListener("click", playSelectedVideoRange);
   });
 
   document.querySelectorAll("[data-drop-effect]").forEach((button) => {
@@ -3928,6 +3956,7 @@ function resetVideoEditorDraft(kind = "trends") {
     location: "",
     start: "0",
     end: kind === "fancams" ? "180" : "60",
+    duration: kind === "fancams" ? "180" : "60",
     muted: false,
     soundOn: true,
     overlayText: "",
@@ -3949,6 +3978,154 @@ function syncVideoEditorDraftFromDom() {
   });
 }
 
+function getVideoEditorMaxDuration(kind) {
+  if (kind === "fancams") return 180;
+  if (kind === "stories") return 15;
+  return 60;
+}
+
+function getVideoTrimMetrics(kind = state.videoEditorDraft.kind, draft = state.videoEditorDraft) {
+  const recommendedMax = getVideoEditorMaxDuration(kind);
+  const duration = Math.max(1, Number(draft.duration || 0) || recommendedMax, Number(draft.end || 0) || recommendedMax);
+  let start = Math.max(0, Math.min(duration - 0.5, Number(draft.start || 0)));
+  let end = Math.max(start + 0.5, Math.min(duration, Number(draft.end || recommendedMax)));
+  if (end > duration) end = duration;
+  if (start >= end) start = Math.max(0, end - 0.5);
+  return { start, end, duration, selected: Math.max(0, end - start), recommendedMax };
+}
+
+function formatTrimTime(value) {
+  const total = Math.max(0, Number(value || 0));
+  const minutes = Math.floor(total / 60);
+  const seconds = Math.floor(total % 60);
+  const tenths = Math.round((total - Math.floor(total)) * 10);
+  return total < 10 && tenths ? `${seconds}.${tenths}s` : `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function updateVideoTrimValues(start, end, options = {}) {
+  const metrics = getVideoTrimMetrics();
+  const nextStart = Math.max(0, Math.min(metrics.duration - 0.5, Number(start)));
+  const nextEnd = Math.max(nextStart + 0.5, Math.min(metrics.duration, Number(end)));
+  state.videoEditorDraft.start = String(Math.round(nextStart * 10) / 10);
+  state.videoEditorDraft.end = String(Math.round(nextEnd * 10) / 10);
+  updateVideoTrimDom();
+  if (options.preview !== false) setVideoPreviewTime(nextStart);
+}
+
+function updateVideoTrimDom() {
+  const { start, end, duration, selected } = getVideoTrimMetrics();
+  const left = (start / duration) * 100;
+  const width = (selected / duration) * 100;
+  document.querySelectorAll("[data-video-trim-selection]").forEach((element) => {
+    element.style.left = `${left}%`;
+    element.style.width = `${width}%`;
+  });
+  document.querySelectorAll("[data-video-trim-start]").forEach((element) => {
+    element.textContent = formatTrimTime(start);
+  });
+  document.querySelectorAll("[data-video-trim-end]").forEach((element) => {
+    element.textContent = formatTrimTime(end);
+  });
+  document.querySelectorAll("[data-video-trim-duration]").forEach((element) => {
+    element.textContent = `${formatTrimTime(selected)} seleccionados`;
+  });
+}
+
+function setVideoPreviewTime(time) {
+  const video = document.querySelector("[data-video-editor-preview]");
+  if (!video || !Number.isFinite(Number(time))) return;
+  const safeTime = Math.max(0, Math.min(Number(time), video.duration || Number(time)));
+  try {
+    video.currentTime = safeTime;
+  } catch {
+    // Some mobile browsers delay seeking until metadata is ready.
+  }
+}
+
+function syncVideoEditorDuration(video) {
+  const duration = Math.ceil(Number(video.duration || 0));
+  if (!duration) return;
+  const current = Number(state.videoEditorDraft.duration || 0);
+  if (Math.abs(current - duration) < 1) return;
+  const max = getVideoEditorMaxDuration(state.videoEditorDraft.kind);
+  state.videoEditorDraft.duration = String(duration);
+  state.videoEditorDraft.start = "0";
+  state.videoEditorDraft.end = String(Math.min(duration, max));
+  render();
+}
+
+function stopVideoAtTrimEnd(video) {
+  if (video.dataset.playingRange !== "true") return;
+  const { end } = getVideoTrimMetrics();
+  if (video.currentTime >= end) {
+    video.pause();
+    video.dataset.playingRange = "false";
+    setVideoPreviewTime(Number(state.videoEditorDraft.start || 0));
+  }
+}
+
+function playSelectedVideoRange() {
+  const video = document.querySelector("[data-video-editor-preview]");
+  if (!video) {
+    showToast("Subí un video para previsualizar el recorte");
+    return;
+  }
+  const { start } = getVideoTrimMetrics();
+  video.dataset.playingRange = "true";
+  setVideoPreviewTime(start);
+  video.play().catch(() => showToast("Tocá el video para reproducir la vista previa"));
+}
+
+function startVideoTrimDrag(event, mode) {
+  const track = event.currentTarget.closest("[data-video-trim-track]");
+  if (!track) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const rect = track.getBoundingClientRect();
+  const initial = getVideoTrimMetrics();
+  const drag = {
+    mode,
+    startX: event.clientX,
+    width: Math.max(1, rect.width),
+    initialStart: initial.start,
+    initialEnd: initial.end,
+    duration: initial.duration,
+  };
+  const onMove = (moveEvent) => updateVideoTrimFromPointer(moveEvent, drag);
+  const onUp = () => {
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+    render();
+  };
+  window.addEventListener("pointermove", onMove);
+  window.addEventListener("pointerup", onUp, { once: true });
+}
+
+function updateVideoTrimFromPointer(event, drag) {
+  const delta = ((event.clientX - drag.startX) / drag.width) * drag.duration;
+  let start = drag.initialStart;
+  let end = drag.initialEnd;
+  if (drag.mode === "start") {
+    start = Math.min(Math.max(0, drag.initialStart + delta), drag.initialEnd - 0.5);
+  } else if (drag.mode === "end") {
+    end = Math.max(Math.min(drag.duration, drag.initialEnd + delta), drag.initialStart + 0.5);
+  } else {
+    const length = drag.initialEnd - drag.initialStart;
+    start = Math.min(Math.max(0, drag.initialStart + delta), drag.duration - length);
+    end = start + length;
+  }
+  updateVideoTrimValues(start, end);
+}
+
+function moveNearestTrimHandle(event, track) {
+  const rect = track.getBoundingClientRect();
+  const metrics = getVideoTrimMetrics();
+  const position = ((event.clientX - rect.left) / Math.max(1, rect.width)) * metrics.duration;
+  const moveStart = Math.abs(position - metrics.start) <= Math.abs(position - metrics.end);
+  updateVideoTrimValues(moveStart ? position : metrics.start, moveStart ? metrics.end : position);
+  render();
+}
+
 function getVideoEditorHashtags() {
   return String(state.videoEditorDraft.hashtags || "")
     .split(/[,\s]+/)
@@ -3957,12 +4134,12 @@ function getVideoEditorHashtags() {
     .map((tag) => (tag.startsWith("#") ? tag : `#${tag}`));
 }
 
-function isVideoEditorLong(kind, endValue) {
-  const end = Number(endValue || 0);
-  if (!end) return false;
-  if (kind === "fancams") return end > 180;
-  if (kind === "stories") return end > 15;
-  return end > 60;
+function isVideoEditorLong(kind, draftOrEnd) {
+  const selected = typeof draftOrEnd === "object"
+    ? getVideoTrimMetrics(kind, draftOrEnd).selected
+    : Number(draftOrEnd || 0);
+  if (!selected) return false;
+  return selected > getVideoEditorMaxDuration(kind);
 }
 
 function publishVideoEditorContent() {
@@ -3980,7 +4157,7 @@ function publishVideoEditorContent() {
     showToast("Confirmá que este contenido fue creado por vos o tenés permiso");
     return;
   }
-  if (isVideoEditorLong(draft.kind, draft.end)) {
+  if (isVideoEditorLong(draft.kind, draft)) {
     showToast("Tu video es muy largo, recortalo antes de publicar");
     return;
   }
@@ -3991,6 +4168,9 @@ function publishVideoEditorContent() {
     taggedShow: draft.show || "",
     city: draft.city || "",
     eventDate: draft.eventDate || "",
+    trimStart: draft.start || "0",
+    trimEnd: draft.end || "",
+    trimDuration: String(getVideoTrimMetrics(draft.kind, draft).selected),
     coverUrl: draft.coverUrl || "",
     taggedPeople: draft.artist ? `@${draft.artist.replace(/^@/, "")}` : "",
     taggedPlace: draft.show || draft.location || "",
@@ -4126,6 +4306,9 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
       city: base.city,
       eventDate: base.eventDate,
       location: base.location,
+      trimStart: base.trimStart,
+      trimEnd: base.trimEnd,
+      trimDuration: base.trimDuration,
     };
     trendVideos.unshift(drop);
     userPosts.unshift({ ...base, type: "trending" });
@@ -4171,6 +4354,9 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
       city: base.city,
       eventDate: base.eventDate,
       location: base.location,
+      trimStart: base.trimStart,
+      trimEnd: base.trimEnd,
+      trimDuration: base.trimDuration,
     };
     fancamVideos.unshift(fancam);
     userPosts.unshift({ ...base, type: "popular" });
@@ -6596,7 +6782,7 @@ function renderVideoUploadEditor(kind) {
   const fileInputId = isFancam ? "fancam-video-input" : "drop-video-input";
   const coverInputId = isFancam ? "fancam-cover-input" : "drop-cover-input";
   const maxLabel = isFancam ? "hasta 3 min" : "15-60 seg recomendado";
-  const longVideo = isVideoEditorLong(kind, draft.end);
+  const longVideo = isVideoEditorLong(kind, draft);
   const activeFilter = publishFilters.find(([id]) => id === draft.filter) || publishFilters[0];
   const filterClass = `filter-${draft.filter || "original"}`;
   return `
@@ -6617,7 +6803,7 @@ function renderVideoUploadEditor(kind) {
               draft.loading
                 ? `<div class="video-upload-stage video-loading-state"><span class="video-upload-plus">...</span><strong>Cargando video</strong><small>Preparando preview para mobile</small></div>`
                 : draft.mediaUrl
-                ? `<video class="video-editor-preview" src="${escapeAttr(draft.mediaUrl)}" controls playsinline ${draft.muted ? "muted" : ""}></video>`
+                ? `<video class="video-editor-preview" data-video-editor-preview src="${escapeAttr(draft.mediaUrl)}" controls playsinline ${draft.muted ? "muted" : ""}></video>`
                 : `<button class="video-upload-stage" type="button" data-protected-file="${fileInputId}" data-permission-source="gallery" data-permission-mic="true">
                     <span class="video-upload-plus">+</span>
                     <strong>Subir video</strong>
@@ -6634,18 +6820,14 @@ function renderVideoUploadEditor(kind) {
             </div>
           </section>
 
+          ${renderVideoTrimControl(kind, draft, longVideo)}
+
           <section class="video-editor-tools">
             <div class="video-editor-chip-row">
               <button type="button" data-demo-action="Cámara preparada en modo demo">Cámara</button>
               <button type="button" data-demo-action="Grabación lista en modo demo">Grabar</button>
               <button class="${draft.muted ? "active" : ""}" type="button" data-video-editor-toggle="muted">Audio original ${draft.muted ? "OFF" : "ON"}</button>
               <button class="${draft.soundOn ? "active" : ""}" type="button" data-video-editor-toggle="soundOn">Sonido ${draft.soundOn ? "ON" : "OFF"}</button>
-            </div>
-
-            <div class="video-editor-trim">
-              <label>Inicio<input type="number" min="0" max="180" value="${escapeAttr(draft.start)}" data-video-editor-field="start" /></label>
-              <label>Final<input type="number" min="1" max="${isFancam ? "180" : "60"}" value="${escapeAttr(draft.end)}" data-video-editor-field="end" /></label>
-              ${longVideo ? `<p>Tu video es muy largo, recortalo antes de publicar</p>` : `<p>Recorte demo visual. La edición avanzada se conectará luego.</p>`}
             </div>
 
             <div class="video-editor-fields">
@@ -6702,6 +6884,42 @@ function renderVideoUploadEditor(kind) {
           </section>
         </div>
       </div>
+    </section>
+  `;
+}
+
+function renderVideoTrimControl(kind, draft, longVideo) {
+  const { start, end, duration, selected, recommendedMax } = getVideoTrimMetrics(kind, draft);
+  const left = (start / duration) * 100;
+  const width = (selected / duration) * 100;
+  const helper = longVideo
+    ? "Recortá tu video para que cargue mejor."
+    : kind === "fancams"
+      ? "Arrastrá el rango. Fancams permite hasta 3 minutos."
+      : "Arrastrá el rango. Drops funciona mejor entre 15 y 60 segundos.";
+  const ticks = Array.from({ length: 12 }, (_, index) => `<span style="--tick:${index}"></span>`).join("");
+  return `
+    <section class="video-editor-trim visual-trim ${longVideo ? "warning" : ""}" aria-label="Recortar video">
+      <div class="trim-head">
+        <div>
+          <strong>Recorte</strong>
+          <small data-video-trim-duration>${formatTrimTime(selected)} seleccionados</small>
+        </div>
+        <button type="button" data-video-preview-range>Previsualizar</button>
+      </div>
+      <div class="trim-timeline" data-video-trim-track>
+        <div class="trim-ticks">${ticks}</div>
+        <div class="trim-selection" data-video-trim-selection data-video-trim-range style="left:${left}%;width:${width}%">
+          <button type="button" class="trim-handle start" data-video-trim-handle="start" aria-label="Mover inicio del recorte"></button>
+          <button type="button" class="trim-handle end" data-video-trim-handle="end" aria-label="Mover final del recorte"></button>
+        </div>
+      </div>
+      <div class="trim-time-row">
+        <span>Inicio <strong data-video-trim-start>${formatTrimTime(start)}</strong></span>
+        <span>Final <strong data-video-trim-end>${formatTrimTime(end)}</strong></span>
+        <span>Máx. <strong>${formatTrimTime(recommendedMax)}</strong></span>
+      </div>
+      <p>${helper}</p>
     </section>
   `;
 }

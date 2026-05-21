@@ -484,16 +484,139 @@ button {
 
 .video-editor-trim {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 9px;
+  gap: 10px;
 }
 
 .video-editor-trim p {
-  grid-column: 1 / -1;
   margin: 0;
   color: rgba(255, 255, 255, 0.62);
   font-size: 11px;
   font-weight: 750;
+}
+
+.visual-trim {
+  width: min(100%, 520px);
+  justify-self: center;
+}
+
+.visual-trim.warning {
+  border-color: rgba(255, 183, 3, 0.24);
+  background: linear-gradient(180deg, rgba(255, 183, 3, 0.08), rgba(255, 255, 255, 0.045));
+}
+
+.trim-head,
+.trim-time-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.trim-head strong,
+.trim-head small {
+  display: block;
+}
+
+.trim-head strong {
+  color: white;
+  font-size: 13px;
+}
+
+.trim-head small,
+.trim-time-row {
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 10.5px;
+  font-weight: 850;
+}
+
+.trim-head button {
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(251, 188, 219, 0.9), rgba(101, 228, 255, 0.78));
+  color: #16071d;
+  padding: 7px 10px;
+  font-size: 10.5px;
+  font-weight: 1000;
+}
+
+.trim-timeline {
+  position: relative;
+  height: 52px;
+  border-radius: 18px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.055)),
+    rgba(0, 0, 0, 0.24);
+  overflow: hidden;
+  touch-action: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+}
+
+.trim-ticks {
+  position: absolute;
+  inset: 7px 9px;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 4px;
+  pointer-events: none;
+}
+
+.trim-ticks span {
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(251, 188, 219, 0.22), rgba(101, 228, 255, 0.08)),
+    rgba(255, 255, 255, 0.08);
+}
+
+.trim-selection {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  min-width: 34px;
+  border: 2px solid rgba(251, 188, 219, 0.94);
+  border-radius: 16px;
+  background: linear-gradient(90deg, rgba(251, 188, 219, 0.2), rgba(101, 228, 255, 0.18));
+  box-shadow: 0 0 22px rgba(251, 188, 219, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  cursor: grab;
+  touch-action: none;
+}
+
+.trim-selection:active {
+  cursor: grabbing;
+}
+
+.trim-handle {
+  position: absolute;
+  top: 50%;
+  width: 24px;
+  height: 44px;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, white, rgba(251, 188, 219, 0.86));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28), 0 0 18px rgba(251, 188, 219, 0.36);
+  touch-action: none;
+}
+
+.trim-handle::before {
+  content: "";
+  position: absolute;
+  inset: 12px 9px;
+  border-left: 2px solid rgba(20, 6, 30, 0.42);
+  border-right: 2px solid rgba(20, 6, 30, 0.42);
+}
+
+.trim-handle.start {
+  left: -12px;
+}
+
+.trim-handle.end {
+  right: -12px;
+}
+
+.trim-time-row strong {
+  color: white;
+  font-size: 11px;
 }
 
 .video-editor-fields,
@@ -572,6 +695,12 @@ button {
   .video-editor-preview-card {
     position: sticky;
     top: 12px;
+    grid-row: 1 / span 2;
+  }
+
+  .visual-trim,
+  .video-editor-tools {
+    grid-column: 2;
   }
 }
 
