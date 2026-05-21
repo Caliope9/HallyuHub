@@ -293,12 +293,67 @@ const NEWS_REFRESH_MS = 3 * 60 * 60 * 1000;
 const newsArtists = ["BTS", "BLACKPINK", "Stray Kids", "NewJeans", "TWICE", "SEVENTEEN", "ATEEZ", "IVE", "TXT"];
 const demoAssetCounts = {
   users: 20,
-  posts: 12,
-  stories: 8,
+  posts: 15,
+  stories: 10,
 };
 
+const DEMO_USER_IMAGES = [
+  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=640&q=80",
+  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=640&q=80",
+  "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=640&q=80",
+  "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=640&q=80",
+  "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=640&q=80",
+  "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=640&q=80",
+  "https://images.unsplash.com/photo-1527980965255-d3b416303d12?auto=format&fit=crop&w=640&q=80",
+  "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=640&q=80",
+  "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?auto=format&fit=crop&w=640&q=80",
+  "https://images.unsplash.com/photo-1520813792240-56fc4a3765a7?auto=format&fit=crop&w=640&q=80",
+];
+
+const DEMO_POST_IMAGES = [
+  "https://images.unsplash.com/photo-1517154421773-0529f29ea451?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1526948128573-703ee1aeb6fa?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1200&q=80",
+  "https://images.pexels.com/photos/2113566/pexels-photo-2113566.jpeg?auto=compress&cs=tinysrgb&w=1200",
+  "https://images.pexels.com/photos/1858175/pexels-photo-1858175.jpeg?auto=compress&cs=tinysrgb&w=1200",
+  "https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=1200",
+  "https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg?auto=compress&cs=tinysrgb&w=1200",
+  "https://images.pexels.com/photos/3735641/pexels-photo-3735641.jpeg?auto=compress&cs=tinysrgb&w=1200",
+  "https://images.pexels.com/photos/3777943/pexels-photo-3777943.jpeg?auto=compress&cs=tinysrgb&w=1200",
+  "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1521334884684-d80222895322?auto=format&fit=crop&w=1200&q=80",
+];
+
+const DEMO_STORY_IMAGES = [
+  "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1526948128573-703ee1aeb6fa?auto=format&fit=crop&w=900&q=80",
+  "https://images.pexels.com/photos/2113566/pexels-photo-2113566.jpeg?auto=compress&cs=tinysrgb&w=900",
+  "https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg?auto=compress&cs=tinysrgb&w=900",
+  "https://images.pexels.com/photos/1858175/pexels-photo-1858175.jpeg?auto=compress&cs=tinysrgb&w=900",
+  "https://images.pexels.com/photos/3777943/pexels-photo-3777943.jpeg?auto=compress&cs=tinysrgb&w=900",
+  "https://images.unsplash.com/photo-1517154421773-0529f29ea451?auto=format&fit=crop&w=900&q=80",
+];
+
+const DEMO_DROP_MEDIA = [
+  "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1080&q=80",
+  "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1080&q=80",
+  "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=1080&q=80",
+  "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1080&q=80",
+  "https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg?auto=compress&cs=tinysrgb&w=1080",
+  "https://images.pexels.com/photos/2113566/pexels-photo-2113566.jpeg?auto=compress&cs=tinysrgb&w=1080",
+  "https://images.pexels.com/photos/1858175/pexels-photo-1858175.jpeg?auto=compress&cs=tinysrgb&w=1080",
+  "https://images.pexels.com/photos/3735641/pexels-photo-3735641.jpeg?auto=compress&cs=tinysrgb&w=1080",
+];
+
 // Demo users are fictional and generated for prototype visualization.
-const demoUsers = [
+const DEMO_USERS = [
   { id: "demo-luna", name: "Luna Rivas", username: "luna.hallyu", city: "Santiago", country: "Chile 🇨🇱", fandom: "Stay ⭐", favoriteGroup: "Stray Kids", bio: "Creadora de playlists, comeback nights y trades seguros.", level: 18, starsReceived: "32.8K", posts: "48", followers: "8.7K", following: "412", colors: ["#fbbcdb", "#65e4ff"], accent: "#fbbcdb" },
   { id: "demo-cami", name: "Camila Seo", username: "cami.stay", city: "Buenos Aires", country: "Argentina 🇦🇷", fandom: "Blink 🖤💖", favoriteGroup: "BLACKPINK", bio: "Outfits, random dance y photocards en Palermo.", level: 14, starsReceived: "18.6K", posts: "36", followers: "5.2K", following: "330", colors: ["#ff3ea5", "#111827"], accent: "#ff8ac8" },
   { id: "demo-mika", name: "Mika Torres", username: "mika.army", city: "Montevideo", country: "Uruguay 🇺🇾", fandom: "Army 💜", favoriteGroup: "BTS", bio: "Fan edits, lives y guías para ARMY Latam.", level: 21, starsReceived: "41.1K", posts: "64", followers: "12.4K", following: "520", colors: ["#8b5cf6", "#d9b4ff"], accent: "#a855f7" },
@@ -319,9 +374,18 @@ const demoUsers = [
   { id: "demo-flor", name: "Flor Kim", username: "flor.fanart", city: "La Plata", country: "Argentina 🇦🇷", fandom: "FEARNOT", favoriteGroup: "LE SSERAFIM", bio: "Fanart, comeback posters y cute drops.", level: 15, starsReceived: "20.7K", posts: "40", followers: "5.5K", following: "310", colors: ["#f8fafc", "#ff8ac8"], accent: "#ff8ac8" },
   { id: "demo-zoe", name: "Zoe Choi", username: "zoe.comeback", city: "Valparaíso", country: "Chile 🇨🇱", fandom: "BRIIZE", favoriteGroup: "RIIZE", bio: "Noticias, comeback tracker y playlists.", level: 11, starsReceived: "10.5K", posts: "24", followers: "2.8K", following: "176", colors: ["#ffb703", "#65e4ff"], accent: "#65e4ff" },
   { id: "demo-bruno", name: "Bruno Park", username: "bruno.album", city: "Mendoza", country: "Argentina 🇦🇷", fandom: "Treasure Maker", favoriteGroup: "TREASURE", bio: "Unboxings, álbumes y compras grupales.", level: 10, starsReceived: "8.9K", posts: "20", followers: "2.4K", following: "150", colors: ["#2563eb", "#65e4ff"], accent: "#2563eb" },
-].map((user, index) => ({ ...user, avatarUrl: getDemoUserImage(index), profileBg: index % 2 ? "stage" : "pastel" }));
+].slice(0, 10).map((user, index) => ({
+  ...user,
+  avatarUrl: getDemoUserImage(index),
+  imageUrl: getDemoUserImage(index),
+  coverUrl: getDemoPostImage(index),
+  mediaUrl: getDemoStoryImage(index),
+  profileBg: index % 2 ? "stage" : "pastel",
+}));
 
-const userPosts = [
+const demoUsers = DEMO_USERS;
+
+const DEMO_POSTS = [
   {
     id: "demo-post-1",
     user: "Luna Hallyu",
@@ -454,7 +518,174 @@ const userPosts = [
     shares: "110",
     saves: "740",
   },
-];
+  {
+    id: "demo-post-7",
+    user: "Renata Vega",
+    group: "Fancam",
+    category: "posts",
+    type: "popular",
+    time: "hace 2 h",
+    badge: "DIVE 💎",
+    online: true,
+    hashtags: ["#IVE", "#fancam", "#DIVE"],
+    caption: "Armé un moodboard de fancams para estudiar luces, poses y cámara vertical.",
+    likes: "2.1K",
+    comments: "86",
+    commentList: [],
+    location: "CDMX",
+    shares: "76",
+    saves: "410",
+  },
+  {
+    id: "demo-post-8",
+    user: "Julieta Min",
+    group: "Photocard",
+    category: "photocards",
+    type: "trade",
+    time: "hace 3 h",
+    badge: "CARAT 💎",
+    online: false,
+    hashtags: ["#photocard", "#collector", "#CARAT"],
+    caption: "Nueva carpeta con sleeves holográficos, separadores por era y wishlist ordenada.",
+    likes: "1.8K",
+    comments: "73",
+    commentList: [],
+    shares: "58",
+    saves: "390",
+  },
+  {
+    id: "demo-post-9",
+    user: "Emi Sol",
+    group: "Outfit",
+    category: "outfits",
+    type: "outfit",
+    time: "hace 4 h",
+    badge: "Blink 🖤💖",
+    online: true,
+    hashtags: ["#BLACKPINK", "#KpopOutfit", "#Blink"],
+    caption: "Look black-pink para random dance: brillo suave, botas y detalle cute.",
+    likes: "3.7K",
+    comments: "120",
+    commentList: [],
+    location: "Medellín",
+    shares: "140",
+    saves: "820",
+  },
+  {
+    id: "demo-post-10",
+    user: "Ara Chen",
+    group: "Fanart",
+    category: "posts",
+    type: "popular",
+    time: "hace 5 h",
+    badge: "MY ✨",
+    online: true,
+    hashtags: ["#aespa", "#CyberSeoul", "#fanart"],
+    caption: "Edit cyber Seoul con neón azul, tipografía futurista y energía de stage.",
+    likes: "2.9K",
+    comments: "98",
+    commentList: [],
+    shares: "118",
+    saves: "605",
+  },
+  {
+    id: "demo-post-11",
+    user: "Mateo Song",
+    group: "Evento fandom",
+    category: "posts",
+    type: "event",
+    time: "hace 6 h",
+    badge: "ENGENE",
+    online: false,
+    hashtags: ["#ENHYPEN", "#lightstick", "#ENGENE"],
+    caption: "Probé batería, funda y modo concierto del lightstick antes del evento.",
+    likes: "1.3K",
+    comments: "51",
+    commentList: [],
+    location: "Santiago, Chile",
+    shares: "39",
+    saves: "260",
+  },
+  {
+    id: "demo-post-12",
+    user: "Bruno Park",
+    group: "Album",
+    category: "posts",
+    type: "popular",
+    time: "hace 7 h",
+    badge: "Treasure Maker",
+    online: true,
+    hashtags: ["#album", "#unboxing", "#KpopLatam"],
+    caption: "Llegó el álbum y el photobook se ve increíble. Dejo mini review para quienes dudan.",
+    likes: "980",
+    comments: "44",
+    commentList: [],
+    shares: "32",
+    saves: "180",
+  },
+  {
+    id: "demo-post-13",
+    user: "Sofi Moon",
+    group: "Café fandom",
+    category: "posts",
+    type: "event",
+    time: "hace 8 h",
+    badge: "Tokki 🐰",
+    online: true,
+    hashtags: ["#cafe", "#KpopLatam", "#Tokki"],
+    caption: "Café temático con playlist suave, stickers y photospot pastel.",
+    likes: "2.5K",
+    comments: "89",
+    commentList: [],
+    location: "Santiago, Chile",
+    shares: "101",
+    saves: "510",
+  },
+  {
+    id: "demo-post-14",
+    user: "Agus Han",
+    group: "Random dance",
+    category: "trends",
+    type: "trending",
+    time: "hace 9 h",
+    badge: "Stay ⭐",
+    online: true,
+    hashtags: ["#RandomDance", "#Challenge", "#STAY"],
+    caption: "La ronda explotó cuando sonó el dance break. Próxima juntada con lista abierta.",
+    likes: "5.4K",
+    comments: "230",
+    commentList: [],
+    location: "Buenos Aires",
+    shares: "320",
+    saves: "1.1K",
+  },
+  {
+    id: "demo-post-15",
+    user: "Flor Kim",
+    group: "Comeback poster",
+    category: "posts",
+    type: "popular",
+    time: "hace 10 h",
+    badge: "FEARNOT",
+    online: false,
+    hashtags: ["#comeback", "#LE_SSERAFIM", "#fanart"],
+    caption: "Poster fanmade para comeback night con glitter, luces suaves y concepto editorial.",
+    likes: "1.9K",
+    comments: "77",
+    commentList: [],
+    shares: "88",
+    saves: "430",
+  },
+].map((post, index) => ({
+  ...post,
+  avatarUrl: post.avatarUrl || getDemoUser(index).avatarUrl,
+  imageUrl: getDemoPostImage(index),
+  coverUrl: getDemoPostImage(index),
+  mediaUrl: getDemoPostImage(index),
+  mediaType: "image",
+}));
+
+const userPosts = [...DEMO_POSTS];
 
 const storyViewers = [
   { name: "Cami.STAY", badge: "Stay ⭐", action: "vio tu historia" },
@@ -463,14 +694,27 @@ const storyViewers = [
   { name: "Nico K", badge: "Once 🍭", action: "dio estrella" },
 ];
 
-const followingStories = [
+const DEMO_STORIES = [
   { user: "Mika", avatar: "berry", label: "conciertos", time: "Hace 12 min", music: "BTS · live remix", title: "Concierto soñado", detail: "Luces, fan chants y pulsera lista para Santiago.", stars: 248, colors: "linear-gradient(160deg, #ffb703, #ff2d55 48%, #111827)" },
   { user: "Cami.STAY", avatar: "star", label: "fancams", time: "Hace 26 min", music: "Stray Kids · stage cut", title: "Fancam del dia", detail: "Mi toma favorita del dance break.", stars: 918, colors: "linear-gradient(160deg, #65e4ff, #a855f7 50%, #0c0616)" },
   { user: "Vale Multi", avatar: "mochi", label: "outfits", time: "Hace 41 min", music: "NewJeans · Y2K pop", title: "Outfit comeback", detail: "Rosa, denim y brillos para random dance.", stars: 573, colors: "linear-gradient(160deg, #fbbcdb, #65e4ff 52%, #ffb86b)" },
   { user: "Nico K", avatar: "berry", label: "idols", time: "Hace 1 h", music: "IVE · dreamy edit", title: "Idol mood", detail: "Visual board para elegir bias de la semana.", stars: 441, colors: "linear-gradient(160deg, #8b5cf6, #d9b4ff 52%, #101827)" },
   { user: "ARMY Chile", avatar: "star", label: "dance practice", time: "Hace 2 h", music: "BLACKPINK · dance break", title: "Practice night", detail: "Ensayo grupal antes del evento.", stars: 1200, colors: "linear-gradient(160deg, #0d0718, #8b5cf6 52%, #d9b4ff)" },
   { user: "DIVE Lima", avatar: "mochi", label: "photocards", time: "Hace 3 h", music: "SEVENTEEN · fan chant", title: "Trade seguro", detail: "Photocards protegidas y wishlist nueva.", stars: 336, colors: "linear-gradient(160deg, #fff1f9, #ff8ac8 48%, #8b5cf6)" },
-];
+  { user: "Agus Han", avatar: "neon", label: "random dance", time: "Hace 4 h", music: "K-pop mix · crowd", title: "Random play", detail: "La ronda se lleno en el primer chorus.", stars: 801, colors: "linear-gradient(160deg, #ff2d55, #ffb703 52%, #111827)" },
+  { user: "Renata Vega", avatar: "idol", label: "stage", time: "Hace 5 h", music: "IVE · stage focus", title: "Stage lights", detail: "Luces frias y camara vertical lista.", stars: 690, colors: "linear-gradient(160deg, #fff1f9, #65e4ff 52%, #8b5cf6)" },
+  { user: "Julieta Min", avatar: "cyber", label: "albums", time: "Hace 6 h", music: "SEVENTEEN · soft loop", title: "Album shelf", detail: "Nueva organizacion por era y bias.", stars: 512, colors: "linear-gradient(160deg, #f7cadf, #9ad7ff 50%, #07101f)" },
+  { user: "Emi Sol", avatar: "anime", label: "fashion", time: "Hace 7 h", music: "BLACKPINK · fashion cut", title: "Street fashion", detail: "Look inspirado en concierto y cafe.", stars: 740, colors: "linear-gradient(160deg, #09060a, #ff3ea5 52%, #ff8ac8)" },
+].map((story, index) => ({
+  ...story,
+  avatarUrl: getDemoUser(index).avatarUrl,
+  imageUrl: getDemoStoryImage(index),
+  coverUrl: getDemoStoryImage(index),
+  mediaUrl: getDemoStoryImage(index),
+  mediaType: "image",
+}));
+
+const followingStories = DEMO_STORIES;
 
 const homeBanners = [
   { title: "Noticias destacadas", meta: "K-pop al minuto", colors: "linear-gradient(135deg, #1d1024, #fbbcdb 45%, #65e4ff)" },
@@ -523,7 +767,7 @@ const storyDecorations = [
   "Fancam FX",
 ];
 
-const trendVideos = [
+const DEMO_DROPS = [
   {
     id: "blackpink-dance",
     user: "Cami.STAY",
@@ -564,7 +808,16 @@ const trendVideos = [
     description: "Drop local para mostrar pasos, light sticks y comunidad.",
     colors: "linear-gradient(160deg, #fbbcdb, #65e4ff 52%, #ffb86b)",
   },
-];
+].map((drop, index) => ({
+  ...drop,
+  avatarUrl: getDemoUser(drop.user).avatarUrl,
+  imageUrl: getDemoDropMedia(index),
+  coverUrl: getDemoDropMedia(index),
+  mediaUrl: getDemoDropMedia(index),
+  mediaType: "image",
+}));
+
+const trendVideos = DEMO_DROPS;
 
 const dropVisualFilters = [
   { id: "kpop-stage", name: "K-pop Stage", creator: "HallyuHub", category: "Stage", status: "approved", uses: "18.4K", detail: "Luces de escenario, foco suave y marco premium." },
@@ -1206,15 +1459,23 @@ function getOfficialLink(entity, label) {
 enrichGroupCatalog();
 
 const fancamVideos = [
-  { id: "fc-jungkook-seven", groupId: "bts", artistId: "bts-jungkook", artist: "Jung Kook", group: "BTS", era: "Seven era", show: "Music show focus", date: "2024 · demo", views: "2.8M", likes: "481K", sort: "trending", description: "Focus vertical con energia de stage, pensado para seguir movimientos y expresiones.", mediaUrl: "./assets/demo-stories/story-01.jpg", colors: "linear-gradient(160deg, #0d0718, #8b5cf6 52%, #d9b4ff)" },
-  { id: "fc-jungwon-bite", groupId: "enhypen", artistId: "enhypen-jungwon", artist: "Jungwon", group: "ENHYPEN", era: "Dark Blood", show: "Comeback stage", date: "2024 · demo", views: "1.6M", likes: "302K", sort: "trending", description: "Fancam centrada en lineas limpias, mirada a camara y performance intensa.", mediaUrl: "./assets/demo-stories/story-02.jpg", colors: "linear-gradient(160deg, #111827, #a855f7 48%, #65e4ff)" },
-  { id: "fc-lisa-pink", groupId: "bp", artistId: "bp-lisa", artist: "Lisa", group: "BLACKPINK", era: "Pink stage", show: "Concert focus", date: "2023 · demo", views: "3.4M", likes: "620K", sort: "trending", description: "Dance focus con luces rosas, energia de concierto y cortes verticales.", mediaUrl: "./assets/demo-stories/story-03.jpg", colors: "linear-gradient(160deg, #09060a, #ff3ea5 52%, #ff8ac8)" },
-  { id: "fc-wonyoung-ive", groupId: "ive", artistId: "ive-wonyoung", artist: "Wonyoung", group: "IVE", era: "I AM", show: "Music show", date: "2024 · demo", views: "1.9M", likes: "388K", sort: "recent", description: "Visual focus elegante con close-ups suaves y concepto premium.", mediaUrl: "./assets/demo-stories/story-04.jpg", colors: "linear-gradient(160deg, #fff1f9, #ff8ac8 48%, #8b5cf6)" },
-  { id: "fc-yeonjun-txt", groupId: "txt", artistId: "txt-yeonjun", artist: "Yeonjun", group: "TXT", era: "Sugar Rush", show: "Stage cam", date: "2024 · demo", views: "1.2M", likes: "244K", sort: "recent", description: "Performance cam con transiciones rapidas y presencia escenica.", mediaUrl: "./assets/demo-stories/story-05.jpg", colors: "linear-gradient(160deg, #65e4ff, #77f4c7 52%, #0f172a)" },
-  { id: "fc-karina-aespa", groupId: "aespa", artistId: "aespa-karina", artist: "Karina", group: "aespa", era: "Cyber Seoul", show: "Stage focus", date: "2024 · demo", views: "2.1M", likes: "410K", sort: "trending", description: "Fancam futurista con glow azul, movimientos precisos y concepto cyber.", mediaUrl: "./assets/demo-stories/story-06.jpg", colors: "linear-gradient(160deg, #06131a, #65e4ff 46%, #d946ef)" },
-  { id: "fc-hoshi-svt", groupId: "svt", artistId: "svt-hoshi", artist: "Hoshi", group: "SEVENTEEN", era: "Performance unit", show: "Concert focus", date: "2023 · demo", views: "980K", likes: "190K", sort: "recent", description: "Focus de performance con energia CARAT y coreografia sincronizada.", mediaUrl: "./assets/demo-stories/story-07.jpg", colors: "linear-gradient(160deg, #f7cadf, #9ad7ff 50%, #07101f)" },
-  { id: "fc-san-ateez", groupId: "ateez", artistId: "ateez-san", artist: "San", group: "ATEEZ", era: "Bouncy", show: "Festival focus", date: "2024 · demo", views: "1.4M", likes: "276K", sort: "trending", description: "Stage cam poderosa, expresiones intensas y luces de festival.", mediaUrl: "./assets/demo-stories/story-08.jpg", colors: "linear-gradient(160deg, #ffb703, #ff2d55 48%, #111827)" },
+  { id: "fc-jungkook-seven", groupId: "bts", artistId: "bts-jungkook", artist: "Jung Kook", group: "BTS", era: "Seven era", show: "Music show focus", date: "2024 · demo", views: "2.8M", likes: "481K", sort: "trending", description: "Focus vertical con energia de stage, pensado para seguir movimientos y expresiones.", mediaUrl: getDemoDropMedia(1), colors: "linear-gradient(160deg, #0d0718, #8b5cf6 52%, #d9b4ff)" },
+  { id: "fc-jungwon-bite", groupId: "enhypen", artistId: "enhypen-jungwon", artist: "Jungwon", group: "ENHYPEN", era: "Dark Blood", show: "Comeback stage", date: "2024 · demo", views: "1.6M", likes: "302K", sort: "trending", description: "Fancam centrada en lineas limpias, mirada a camara y performance intensa.", mediaUrl: getDemoDropMedia(2), colors: "linear-gradient(160deg, #111827, #a855f7 48%, #65e4ff)" },
+  { id: "fc-lisa-pink", groupId: "bp", artistId: "bp-lisa", artist: "Lisa", group: "BLACKPINK", era: "Pink stage", show: "Concert focus", date: "2023 · demo", views: "3.4M", likes: "620K", sort: "trending", description: "Dance focus con luces rosas, energia de concierto y cortes verticales.", mediaUrl: getDemoDropMedia(3), colors: "linear-gradient(160deg, #09060a, #ff3ea5 52%, #ff8ac8)" },
+  { id: "fc-wonyoung-ive", groupId: "ive", artistId: "ive-wonyoung", artist: "Wonyoung", group: "IVE", era: "I AM", show: "Music show", date: "2024 · demo", views: "1.9M", likes: "388K", sort: "recent", description: "Visual focus elegante con close-ups suaves y concepto premium.", mediaUrl: getDemoDropMedia(4), colors: "linear-gradient(160deg, #fff1f9, #ff8ac8 48%, #8b5cf6)" },
+  { id: "fc-yeonjun-txt", groupId: "txt", artistId: "txt-yeonjun", artist: "Yeonjun", group: "TXT", era: "Sugar Rush", show: "Stage cam", date: "2024 · demo", views: "1.2M", likes: "244K", sort: "recent", description: "Performance cam con transiciones rapidas y presencia escenica.", mediaUrl: getDemoDropMedia(5), colors: "linear-gradient(160deg, #65e4ff, #77f4c7 52%, #0f172a)" },
+  { id: "fc-karina-aespa", groupId: "aespa", artistId: "aespa-karina", artist: "Karina", group: "aespa", era: "Cyber Seoul", show: "Stage focus", date: "2024 · demo", views: "2.1M", likes: "410K", sort: "trending", description: "Fancam futurista con glow azul, movimientos precisos y concepto cyber.", mediaUrl: getDemoDropMedia(6), colors: "linear-gradient(160deg, #06131a, #65e4ff 46%, #d946ef)" },
+  { id: "fc-hoshi-svt", groupId: "svt", artistId: "svt-hoshi", artist: "Hoshi", group: "SEVENTEEN", era: "Performance unit", show: "Concert focus", date: "2023 · demo", views: "980K", likes: "190K", sort: "recent", description: "Focus de performance con energia CARAT y coreografia sincronizada.", mediaUrl: getDemoDropMedia(7), colors: "linear-gradient(160deg, #f7cadf, #9ad7ff 50%, #07101f)" },
+  { id: "fc-san-ateez", groupId: "ateez", artistId: "ateez-san", artist: "San", group: "ATEEZ", era: "Bouncy", show: "Festival focus", date: "2024 · demo", views: "1.4M", likes: "276K", sort: "trending", description: "Stage cam poderosa, expresiones intensas y luces de festival.", mediaUrl: getDemoDropMedia(8), colors: "linear-gradient(160deg, #ffb703, #ff2d55 48%, #111827)" },
 ];
+
+fancamVideos.forEach((fancam, index) => {
+  const mediaUrl = getDemoDropMedia(index + 1);
+  fancam.imageUrl = mediaUrl;
+  fancam.coverUrl = mediaUrl;
+  fancam.mediaUrl = mediaUrl;
+  fancam.mediaType = "image";
+});
 
 const events = [
   {
@@ -2708,7 +2969,14 @@ async function initApp() {
   }
   const savedUser = storage.get("hallyuHubUser", null);
   const savedSession = storage.get("hallyuHubSession", false);
-  state.user = savedUser || defaultUser;
+  state.user = {
+    ...defaultUser,
+    ...(savedUser || {}),
+    avatarUrl: savedUser?.avatarUrl || defaultUser.avatarUrl || getDemoUserImage(0),
+    imageUrl: savedUser?.imageUrl || defaultUser.imageUrl || getDemoUserImage(0),
+    coverUrl: savedUser?.coverUrl || defaultUser.coverUrl || getDemoPostImage(0),
+    mediaUrl: savedUser?.mediaUrl || defaultUser.mediaUrl || getDemoStoryImage(0),
+  };
   const savedLocalPosts = storage.get("hallyuHubUserPosts", []);
   if (Array.isArray(savedLocalPosts) && savedLocalPosts.length) {
     userPosts.unshift(...savedLocalPosts.filter((post) => !userPosts.some((item) => item.id === post.id)));
@@ -3334,10 +3602,9 @@ async function startPrivateMessage(recipientId, body) {
 }
 
 function renderAvatarElement(className, avatarId, imageUrl) {
-  if (imageUrl) {
-    return `<span class="avatar-photo ${className}" style="background-image:url('${escapeAttr(imageUrl)}')"></span>`;
-  }
-  return `<span class="plush-avatar ${className}" style="--avatar:${getAvatarGradient(avatarId)}"><span></span></span>`;
+  const safeUrl = imageUrl || getDemoUserImage(getStableAssetIndex(`${className}-${avatarId || "demo"}`, DEMO_USER_IMAGES.length));
+  const fallbackUrl = getDemoUserImage(getStableAssetIndex(`${safeUrl}-fallback`, DEMO_USER_IMAGES.length));
+  return `<img class="avatar-photo ${className}" src="${escapeAttr(safeUrl)}" alt="Avatar de usuario" loading="lazy" onerror="this.onerror=null;this.src='${escapeAttr(fallbackUrl)}';" />`;
 }
 
 function getDemoAssetPath(folder, prefix, index, count) {
@@ -3355,15 +3622,19 @@ function getStableAssetIndex(seed, count) {
 }
 
 function getDemoUserImage(index) {
-  return getDemoAssetPath("demo-users", "user", index, demoAssetCounts.users);
+  return DEMO_USER_IMAGES[((Number(index) || 0) % DEMO_USER_IMAGES.length + DEMO_USER_IMAGES.length) % DEMO_USER_IMAGES.length];
 }
 
 function getDemoPostImage(index) {
-  return getDemoAssetPath("demo-posts", "post", index, demoAssetCounts.posts);
+  return DEMO_POST_IMAGES[((Number(index) || 0) % DEMO_POST_IMAGES.length + DEMO_POST_IMAGES.length) % DEMO_POST_IMAGES.length];
 }
 
 function getDemoStoryImage(index) {
-  return getDemoAssetPath("demo-stories", "story", index, demoAssetCounts.stories);
+  return DEMO_STORY_IMAGES[((Number(index) || 0) % DEMO_STORY_IMAGES.length + DEMO_STORY_IMAGES.length) % DEMO_STORY_IMAGES.length];
+}
+
+function getDemoDropMedia(index) {
+  return DEMO_DROP_MEDIA[((Number(index) || 0) % DEMO_DROP_MEDIA.length + DEMO_DROP_MEDIA.length) % DEMO_DROP_MEDIA.length];
 }
 
 function getDemoUser(identifier) {
@@ -3754,7 +4025,7 @@ function renderHome() {
     <div class="stories-row" aria-label="Historias de personas que sigo">
       <button class="story-item own-story-item" data-own-story>
         <span class="story-ring own-ring ${state.ownStory ? "has-story" : "empty-story"}">
-          ${state.ownStory ? `<span class="plush-avatar story-avatar" style="--avatar:${getAvatarGradient(state.user?.avatar || "berry")}"><span></span></span>` : `<span class="story-plus">+</span>`}
+          ${state.ownStory ? renderAvatarElement("story-avatar", state.user?.avatar || "berry", state.user?.avatarUrl || getDemoUserImage(0)) : `<span class="story-plus">+</span>`}
         </span>
         <strong>${state.ownStory ? "Tu historia" : "Crear"}</strong>
         <small>${state.ownStory ? `${state.ownStory.stars}★ · ${state.ownStory.views} vistas` : "Subir"}</small>
@@ -3924,10 +4195,11 @@ function renderStoryViewer() {
 }
 
 function renderStoryMedia(story) {
-  if (!story.mediaUrl) return "";
+  const mediaUrl = story.mediaUrl || story.imageUrl || getDemoStoryImage(getStableAssetIndex(story.user, DEMO_STORY_IMAGES.length));
+  const fallbackUrl = getDemoStoryImage(getStableAssetIndex(`${story.user}-fallback`, DEMO_STORY_IMAGES.length));
   return story.mediaType === "video"
-    ? `<video class="story-full-media" src="${story.mediaUrl}" autoplay muted loop playsinline></video>`
-    : `<img class="story-full-media" src="${story.mediaUrl}" alt="Historia subida por ${escapeAttr(story.user)}" />`;
+    ? `<video class="story-full-media" src="${escapeAttr(mediaUrl)}" autoplay muted loop playsinline></video>`
+    : `<img class="story-full-media" src="${escapeAttr(mediaUrl)}" alt="Historia subida por ${escapeAttr(story.user)}" loading="lazy" onerror="this.onerror=null;this.src='${escapeAttr(fallbackUrl)}';" />`;
 }
 
 function renderStoryLayers(elements) {
@@ -3949,7 +4221,8 @@ function renderStoryLayer(element, editable = false) {
 function renderSocialPost(post, index, options = {}) {
   const expanded = Boolean(options.expanded || state.expandedPosts[post.id]);
   const isFeatured = !options.compactHome && (options.featured || post.type === "trending" || post.type === "event");
-  const postMediaUrl = post.mediaUrl || post.imageUrl;
+  const postMediaUrl = post.mediaUrl || post.imageUrl || getDemoPostImage(index);
+  const postFallbackUrl = getDemoPostImage(index + 4);
   const caption = post.caption || "";
   const hasLongCaption = caption.length > 112;
   const hasExtraMeta = Boolean(post.location || post.date || post.hour || post.taggedPeople || post.taggedPlace || (post.hashtags || []).length > 2);
@@ -3982,8 +4255,8 @@ function renderSocialPost(post, index, options = {}) {
           postMediaUrl
             ? post.mediaType === "video"
               ? `<video class="post-media real-media" src="${postMediaUrl}" controls playsinline></video>`
-              : `<img class="post-media real-media" src="${postMediaUrl}" alt="Publicacion de ${post.user}" />`
-            : `<div class="post-media" style="--art:${post.art || art[index % art.length]}"></div>`
+              : `<img class="post-media real-media" src="${escapeAttr(postMediaUrl)}" alt="Publicacion de ${escapeAttr(post.user)}" loading="lazy" onerror="this.onerror=null;this.src='${escapeAttr(postFallbackUrl)}';" />`
+            : `<img class="post-media real-media" src="${escapeAttr(postFallbackUrl)}" alt="Publicacion de ${escapeAttr(post.user)}" loading="lazy" />`
         }
         </button>
         <p class="post-caption ${expanded ? "expanded" : ""}">${escapeHtml(caption)}</p>
@@ -4679,6 +4952,8 @@ function renderTrends() {
 function renderDropCard(trend, index) {
   const id = getDropId(trend, index);
   const demoUser = getDemoUser(trend.user);
+  const mediaUrl = trend.mediaUrl || trend.imageUrl || getDemoDropMedia(index);
+  const fallbackUrl = getDemoDropMedia(index + 3);
   const liked = Boolean(state.dropLiked[id]);
   const followed = Boolean(state.dropFollowed[id]);
   const saved = Boolean(state.dropSaved[id]);
@@ -4687,6 +4962,7 @@ function renderDropCard(trend, index) {
   const feedback = state.dropFeedback[id];
   return `
           <article class="trend-card premium-drop-card effect-${state.dropEffect} ${state.dropPaused[id] ? "paused" : ""}" style="--art:${trend.colors}">
+            <img class="drop-video-media" src="${escapeAttr(mediaUrl)}" alt="${escapeAttr(trend.challenge)}" loading="lazy" onerror="this.onerror=null;this.src='${escapeAttr(fallbackUrl)}';" />
             <button class="drop-play-toggle" data-drop-toggle="${id}" aria-label="${state.dropPaused[id] ? "Reproducir Drop" : "Pausar Drop"}"></button>
             ${feedback ? `<div class="drop-center-feedback ${feedback === "star" ? "starburst" : ""}">${feedback === "star" ? "★" : state.dropPaused[id] ? "▶" : "Ⅱ"}</div>` : ""}
             <div class="video-quick-controls">
@@ -5082,11 +5358,14 @@ function renderFancamCard(fancam, index = 0, options = {}) {
   const paused = Boolean(state.fancamPaused[fancam.id]);
   const expanded = Boolean(state.expandedPosts[`fancam-${fancam.id}`]);
   const longDescription = fancam.description.length > 76;
+  const mediaUrl = fancam.mediaUrl || fancam.imageUrl || getDemoDropMedia(index + 2);
+  const fallbackUrl = getDemoDropMedia(index + 5);
+  const artistAvatar = getDemoUserImage(getStableAssetIndex(fancam.artist, DEMO_USER_IMAGES.length));
   return `
     <article class="fancam-card ${options.compact ? "compact" : ""} ${paused ? "paused" : ""}" style="--art:${fancam.colors}">
       <button class="fancam-play-area" data-fancam-toggle="${fancam.id}" aria-label="${paused ? "Reproducir fancam" : "Pausar fancam"}"></button>
       ${state.fancamFeedback[fancam.id] ? `<div class="drop-center-feedback">${paused ? "▶" : "Ⅱ"}</div>` : ""}
-      ${fancam.mediaUrl ? `<img class="fancam-media" src="${escapeAttr(fancam.mediaUrl)}" alt="Fancam de ${escapeAttr(fancam.artist)}" />` : ""}
+      <img class="fancam-media" src="${escapeAttr(mediaUrl)}" alt="Fancam de ${escapeAttr(fancam.artist)}" loading="lazy" onerror="this.onerror=null;this.src='${escapeAttr(fallbackUrl)}';" />
       <div class="video-quick-controls">
         <button class="video-sound-button ${state.videoMuted ? "muted" : ""}" data-toggle-video-sound aria-label="${state.videoMuted ? "Activar audio" : "Silenciar"}">♪</button>
         <button class="video-fullscreen-button" data-open-video-fullscreen="fancam:${fancam.id}" aria-label="Ver en pantalla completa"></button>
@@ -5094,7 +5373,7 @@ function renderFancamCard(fancam, index = 0, options = {}) {
       <div class="fancam-shade"></div>
       <div class="fancam-info">
         <button class="fancam-artist-link" data-open-video-profile="fancam:${fancam.id}">
-          <span class="fancam-avatar">${getInitials(fancam.artist)}</span>
+          ${renderAvatarElement("mini fancam-avatar", "berry", artistAvatar)}
           <div>
             <strong>${escapeHtml(fancam.artist)}</strong>
             <small>${escapeHtml(fancam.group)} · ${escapeHtml(fancam.show)}</small>
@@ -5272,7 +5551,9 @@ function renderVideoFullscreenOverlay() {
   const title = isDrop ? item.user : item.artist;
   const audio = isDrop ? item.song : `${item.group} · ${item.show}`;
   const description = item.description;
-  const media = !isDrop && item.mediaUrl ? `<img class="video-fullscreen-media" src="${escapeAttr(item.mediaUrl)}" alt="${escapeAttr(title)}" />` : "";
+  const mediaUrl = item.mediaUrl || item.imageUrl || getDemoDropMedia(getStableAssetIndex(id, DEMO_DROP_MEDIA.length));
+  const fallbackUrl = getDemoDropMedia(getStableAssetIndex(`${id}-fallback`, DEMO_DROP_MEDIA.length));
+  const media = `<img class="video-fullscreen-media" src="${escapeAttr(mediaUrl)}" alt="${escapeAttr(title)}" loading="lazy" onerror="this.onerror=null;this.src='${escapeAttr(fallbackUrl)}';" />`;
   return `
     <section class="video-fullscreen-overlay" style="--art:${item.colors}" aria-label="Video en pantalla completa">
       <button class="story-close video-profile-close" data-close-video-fullscreen aria-label="Cerrar">X</button>
@@ -5302,7 +5583,7 @@ function renderPublish() {
         <button class="story-mini-button" data-story-editor-open>Historia</button>
       </div>
       <div class="post-head publish-author">
-        <div class="plush-avatar mini" style="--avatar:${getAvatarGradient(state.user.avatar)}"><span></span></div>
+        ${renderAvatarElement("mini", state.user.avatar || "berry", state.user.avatarUrl || getDemoUserImage(0))}
         <div><h3>${state.user.name}</h3><p class="muted">@${state.user.username}</p></div>
       </div>
       <label class="publish-field">Tipo de contenido
@@ -5941,7 +6222,7 @@ function renderSettings() {
   return `
     <button class="ghost-button back-button" data-go-view="profile">Volver al perfil</button>
     <section class="settings-header">
-      <div class="plush-avatar hero" style="--avatar:${activeAvatar.gradient}"><span></span></div>
+      ${renderAvatarElement("hero", activeAvatar.id, state.user.avatarUrl || getDemoUserImage(0))}
       <div>
         <p class="eyebrow">Configuración</p>
         <h2>Centro de cuenta</h2>
@@ -6103,7 +6384,7 @@ function renderSettingsPanelBody(panel, activeAvatar, activeAmbience, premiumLab
           .map(
             (avatar) => `
             <button class="avatar-choice ${state.user.avatar === avatar.id ? "active" : ""}" data-avatar="${avatar.id}">
-              <div class="plush-avatar pick" style="--avatar:${avatar.gradient}"><span></span></div>
+              ${renderAvatarElement("pick", avatar.id, getDemoUserImage(getStableAssetIndex(avatar.id, DEMO_USER_IMAGES.length)))}
               <strong>${avatar.name}</strong>
             </button>`,
           )
@@ -6359,7 +6640,7 @@ function renderProfileEditor() {
             const unlocked = isUnlocked(avatar);
             return `
             <button class="avatar-choice ${(state.selectedAvatar || state.user.avatar) === avatar.id ? "active" : ""} ${unlocked ? "" : "locked"} ${getRarityClass(avatar)}" ${unlocked ? `data-avatar="${avatar.id}"` : "disabled"}>
-              <div class="plush-avatar pick" style="--avatar:${avatar.gradient}"><span></span></div>
+              ${renderAvatarElement("pick", avatar.id, getDemoUserImage(getStableAssetIndex(avatar.id, DEMO_USER_IMAGES.length)))}
               <strong>${avatar.name}</strong>
               <small class="rarity-chip">${avatar.rarity}</small>
               <em>${unlocked ? avatar.reward : `Nivel ${avatar.minLevel}`}</em>
