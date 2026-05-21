@@ -1662,6 +1662,18 @@ h1 {
   transition: transform 180ms ease, filter 180ms ease;
 }
 
+.story-ring.viewed {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.08));
+  box-shadow: none;
+  opacity: 0.68;
+  animation: none;
+}
+
+.story-ring.unviewed,
+.story-ring.has-story:not(.viewed) {
+  box-shadow: 0 0 20px rgba(251, 188, 219, 0.34), 0 0 28px rgba(101, 228, 255, 0.18);
+}
+
 .story-item:active .story-ring {
   transform: scale(0.94);
   filter: brightness(1.12);
@@ -2710,13 +2722,13 @@ video.post-media.real-media {
   width: 100vw;
   height: 100dvh;
   z-index: 99999;
-  background: #000;
+  background: var(--story-art), #000;
   border-radius: 0;
   margin: 0;
   padding: 0;
   overflow: hidden;
   display: block;
-  animation: storyViewerIn 120ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: storyViewerIn 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   touch-action: manipulation;
 }
 
@@ -2819,11 +2831,11 @@ video.post-media.real-media {
   height: 100dvh;
   border-radius: 0;
   overflow: hidden;
-  background: #000;
+  background: var(--art), #000;
   padding: 0;
   display: block;
   box-shadow: none;
-  animation: storySlideIn 120ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: storySlideIn 210ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   will-change: transform, opacity;
   pointer-events: none;
 }
@@ -2957,17 +2969,20 @@ video.post-media.real-media {
 .story-interactions {
   left: max(12px, env(safe-area-inset-left));
   right: max(12px, env(safe-area-inset-right));
-  bottom: max(20px, calc(env(safe-area-inset-bottom) + 14px));
+  bottom: calc(env(safe-area-inset-bottom) + 18px);
+  width: min(430px, calc(100vw - 24px));
+  margin: 0 auto;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   border: 0;
   border-radius: 0;
   background: transparent;
   backdrop-filter: none;
   padding: 0;
-  position: relative;
-  z-index: 4;
+  position: absolute;
+  z-index: 100006;
 }
 
 @media (min-width: 520px) {

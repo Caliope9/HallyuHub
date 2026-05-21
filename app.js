@@ -129,6 +129,7 @@ const state = {
   selectedProfileBg: "army",
   activeStory: null,
   likedStories: {},
+  viewedStories: {},
   storyDirection: 1,
   storyComposerOpen: false,
   storyEditorOpen: false,
@@ -777,6 +778,7 @@ const DEMO_STORIES = [
   { user: "Emi Sol", avatar: "anime", label: "fashion", time: "Hace 7 h", music: "BLACKPINK · fashion cut", title: "Street fashion", detail: "Look inspirado en concierto y cafe.", stars: 740, colors: "linear-gradient(160deg, #09060a, #ff3ea5 52%, #ff8ac8)" },
 ].map((story, index) => ({
   ...story,
+  id: story.id || `demo-story-${index}-${normalizeProfileKey(story.user)}-${normalizeProfileKey(story.time)}`,
   avatarUrl: getDemoUser(index).avatarUrl,
   imageUrl: getDemoStoryImage(index),
   coverUrl: getDemoStoryImage(index),
@@ -2116,6 +2118,83 @@ function mountGlobalStoryViewer() {
   document.body.insertAdjacentHTML("beforeend", `<div id="global-story-viewer">${renderStoryViewer()}</div>`);
 }
 
+function getStoryKey(index) {
+  if (index === -1) {
+    const stamp = state.ownStory?.createdAt || state.ownStory?.mediaUrl || state.ownStory?.time || "own";
+    return `own-story-${normalizeProfileKey(stamp)}`;
+  }
+  const story = followingStories[index];
+  return story ? story.id || `story-${index}-${normalizeProfileKey(story.user)}-${normalizeProfileKey(story.time)}` : "";
+}
+
+function isStoryViewed(index) {
+  const key = getStoryKey(index);
+  return Boolean(key && state.viewedStories[key]);
+}
+
+function markStoryViewed(index) {
+  if (index === null || index === undefined) return;
+  const key = getStoryKey(index);
+  if (!key || state.viewedStories[key]) return;
+  state.viewedStories = { ...state.viewedStories, [key]: true };
+  storage.set("hallyuHubViewedStories", state.viewedStories);
+}
+
+function getFirstUnviewedStoryIndex(startIndex = 0) {
+  if (!followingStories.length) return null;
+  for (let offset = 0; offset < followingStories.length; offset += 1) {
+    const index = (Math.max(0, startIndex) + offset) % followingStories.length;
+    if (!isStoryViewed(index)) return index;
+  }
+  return null;
+}
+
+function getStoryOpenIndex(requestedIndex = 0) {
+  if (!isStoryViewed(requestedIndex)) return requestedIndex;
+  const nextUnviewed = getFirstUnviewedStoryIndex(requestedIndex);
+  return nextUnviewed === null ? requestedIndex : nextUnviewed;
+}
+
+function advanceStory(direction = 1, options = {}) {
+  if (state.activeStory === null) return;
+  if (options.completed || direction > 0) markStoryViewed(state.activeStory);
+  state.storyDirection = direction;
+  let nextIndex = null;
+  if (direction > 0) {
+    const start = state.activeStory === -1 ? 0 : state.activeStory + 1;
+    for (let index = start; index < followingStories.length; index += 1) {
+      if (!isStoryViewed(index)) {
+        nextIndex = index;
+        break;
+      }
+    }
+    if (nextIndex === null) {
+      closeStoryViewer();
+      return;
+    }
+  } else {
+    const previous = state.activeStory === -1 ? null : state.activeStory - 1;
+    if (previous !== null && previous >= 0) nextIndex = previous;
+    else if (state.ownStory) nextIndex = -1;
+    else {
+      closeStoryViewer();
+      return;
+    }
+  }
+  state.activeStory = nextIndex;
+  state.storyComposerOpen = false;
+  state.ownStoryStatsOpen = false;
+  render();
+}
+
+function closeStoryViewer() {
+  state.activeStory = null;
+  state.storyComposerOpen = false;
+  state.ownStoryStatsOpen = false;
+  clearStoryAutoplay();
+  render();
+}
+
 function clearStoryAutoplay() {
   if (storyAutoTimer) {
     clearTimeout(storyAutoTimer);
@@ -2127,12 +2206,7 @@ function scheduleStoryAutoplay() {
   clearStoryAutoplay();
   if (state.view !== "home" || state.activeStory === null) return;
   storyAutoTimer = setTimeout(() => {
-    const total = followingStories.length + (state.ownStory ? 1 : 0);
-    const current = state.ownStory ? state.activeStory + 1 : state.activeStory;
-    const next = (current + 1) % total;
-    state.storyDirection = 1;
-    state.activeStory = state.ownStory ? next - 1 : next;
-    render();
+    advanceStory(1, { completed: true });
   }, 4200);
 }
 
@@ -2529,7 +2603,7 @@ function bindDynamicActions() {
 
   document.querySelectorAll("[data-story-index]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.activeStory = Number(button.dataset.storyIndex);
+      state.activeStory = getStoryOpenIndex(Number(button.dataset.storyIndex));
       state.storyDirection = 1;
       state.storyComposerOpen = false;
       state.ownStoryStatsOpen = false;
@@ -2541,6 +2615,7 @@ function bindDynamicActions() {
     button.addEventListener("click", () => {
       if (state.ownStory) {
         state.activeStory = -1;
+        markStoryViewed(-1);
         state.storyDirection = 1;
       } else {
         state.storyEditorOpen = true;
@@ -3181,6 +3256,7 @@ function bindDynamicActions() {
 
   document.querySelectorAll("[data-story-close]").forEach((button) => {
     button.addEventListener("click", () => {
+      markStoryViewed(state.activeStory);
       state.activeStory = null;
       state.storyComposerOpen = false;
       state.ownStoryStatsOpen = false;
@@ -3192,14 +3268,7 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-story-nav]").forEach((button) => {
     button.addEventListener("click", () => {
       const direction = Number(button.dataset.storyNav);
-      const total = followingStories.length + (state.ownStory ? 1 : 0);
-      const current = state.ownStory ? state.activeStory + 1 : state.activeStory;
-      const next = (current + direction + total) % total;
-      state.storyDirection = direction;
-      state.activeStory = state.ownStory ? next - 1 : next;
-      state.storyComposerOpen = false;
-      state.ownStoryStatsOpen = false;
-      render();
+      advanceStory(direction, { completed: direction > 0 });
     });
   });
 
@@ -3609,6 +3678,7 @@ async function initApp() {
   state.newsLastUpdated = savedNews?.updatedAt || null;
   state.ownStory = storage.get("hallyuHubOwnStory", null);
   state.storyInbox = storage.get("hallyuHubStoryInbox", []);
+  state.viewedStories = storage.get("hallyuHubViewedStories", {});
   state.soundEnabled = storage.get("hallyuHubSoundEnabled", true);
   state.hiddenPosts = storage.get("hallyuHubHiddenPosts", {});
   state.hiddenFanContent = storage.get("hallyuHubHiddenFanContent", {});
@@ -4295,6 +4365,8 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
   };
   if (category === "stories") {
     state.ownStory = {
+      id,
+      createdAt: base.createdAt,
       user: state.user.name,
       avatarUrl: state.user.avatarUrl || getDemoUserImage(0),
       label: "story",
@@ -4313,6 +4385,12 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
       filter,
     };
     storage.set("hallyuHubOwnStory", state.ownStory);
+    const storyKey = getStoryKey(-1);
+    if (storyKey) {
+      state.viewedStories = { ...state.viewedStories };
+      delete state.viewedStories[storyKey];
+      storage.set("hallyuHubViewedStories", state.viewedStories);
+    }
     return { id, type: category, label: "Story", mediaUrl, mediaType, filter };
   }
   if (category === "trends") {
@@ -5454,7 +5532,10 @@ function playStoryMusicPreview(name) {
 function createOwnStory(style = "Neon pastel") {
   const draft = state.storyDraft || {};
   const elements = getStoryDraftElements();
+  const storyId = `own-${Date.now()}`;
   state.ownStory = {
+    id: storyId,
+    createdAt: new Date().toISOString(),
     user: state.user?.name || "Mi historia",
     avatar: state.user?.avatar || "berry",
     label: "mi historia",
@@ -5474,6 +5555,12 @@ function createOwnStory(style = "Neon pastel") {
     elements,
   };
   storage.set("hallyuHubOwnStory", state.ownStory);
+  const storyKey = getStoryKey(-1);
+  if (storyKey) {
+    state.viewedStories = { ...state.viewedStories };
+    delete state.viewedStories[storyKey];
+    storage.set("hallyuHubViewedStories", state.viewedStories);
+  }
   state.storyEditorOpen = false;
   state.activeStory = -1;
   state.storyDirection = 1;
@@ -5546,7 +5633,7 @@ function renderHome() {
     ${renderHomeHighlights()}
     <div class="stories-row" aria-label="Historias de personas que sigo">
       <button class="story-item own-story-item" data-own-story>
-        <span class="story-ring own-ring ${state.ownStory ? "has-story" : "empty-story"}">
+        <span class="story-ring own-ring ${state.ownStory ? "has-story" : "empty-story"} ${state.ownStory && isStoryViewed(-1) ? "viewed" : ""}">
           ${state.ownStory ? renderAvatarElement("story-avatar", state.user?.avatar || "berry", state.user?.avatarUrl || getDemoUserImage(0)) : `<span class="story-plus">+</span>`}
         </span>
         <strong>${state.ownStory ? "Tu historia" : "Crear"}</strong>
@@ -5556,7 +5643,7 @@ function renderHome() {
         .map(
           (story, index) => `
           <button class="story-item" data-story-index="${index}">
-            <span class="story-ring">
+            <span class="story-ring ${isStoryViewed(index) ? "viewed" : "unviewed"}">
               ${renderAvatarElement("story-avatar", story.avatar, story.avatarUrl)}
             </span>
             <strong>${story.user}</strong>
