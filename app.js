@@ -2029,6 +2029,8 @@ function setView(nextView) {
     button.classList.toggle("active", button.dataset.view === nextView);
   });
   const appScreen = document.querySelector(".app-screen");
+  document.body?.classList.toggle("story-open", state.activeStory !== null);
+  document.body?.classList.toggle("share-open", Boolean(state.sharePostTarget));
   appScreen.classList.toggle("profile-mode", nextView === "profile");
   appScreen.classList.toggle("auth-mode", nextView === "auth");
   appScreen.classList.toggle("home-mode", nextView === "home");
@@ -2478,6 +2480,31 @@ function bindDynamicActions() {
     button.addEventListener("click", () => {
       state.sharePostTarget = null;
       render();
+    });
+  });
+
+  document.querySelectorAll("[data-share-sheet]").forEach((sheet) => {
+    let startY = 0;
+    let currentY = 0;
+    sheet.addEventListener("pointerdown", (event) => {
+      startY = event.clientY;
+      currentY = event.clientY;
+      sheet.dataset.dragging = "true";
+    });
+    sheet.addEventListener("pointermove", (event) => {
+      if (sheet.dataset.dragging !== "true") return;
+      currentY = event.clientY;
+      const distance = Math.max(0, currentY - startY);
+      sheet.style.transform = `translateY(${Math.min(distance, 120)}px)`;
+    });
+    sheet.addEventListener("pointerup", () => {
+      const shouldClose = currentY - startY > 64;
+      sheet.dataset.dragging = "false";
+      sheet.style.transform = "";
+      if (shouldClose) {
+        state.sharePostTarget = null;
+        render();
+      }
     });
   });
 
@@ -5778,7 +5805,7 @@ function renderPostShareSheet(post) {
   return `
     <section class="post-share-backdrop" aria-label="Compartir publicacion">
       <button class="post-share-dismiss" type="button" data-close-post-share aria-label="Cerrar compartir"></button>
-      <div class="post-share-sheet" role="dialog" aria-label="Opciones para compartir">
+      <div class="post-share-sheet" role="dialog" aria-label="Opciones para compartir" data-share-sheet>
         <div class="sheet-handle"></div>
         <div class="composer-head">
           <strong>Compartir publicación</strong>
