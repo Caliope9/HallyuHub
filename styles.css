@@ -70,6 +70,19 @@ body.story-open .topbar {
   display: none !important;
 }
 
+#global-story-viewer {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  z-index: 99999;
+  background: #000;
+  border-radius: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
 body.share-open .app-screen {
   overflow: visible;
 }
@@ -2692,19 +2705,18 @@ video.post-media.real-media {
 .story-viewer {
   position: fixed;
   inset: 0;
+  top: 0;
+  left: 0;
   width: 100vw;
   height: 100dvh;
-  z-index: 130;
-  background:
-    linear-gradient(180deg, rgba(1, 1, 6, 0.92), rgba(1, 1, 6, 0.94)),
-    var(--story-art);
-  background-size: cover;
-  backdrop-filter: blur(4px) saturate(1.04);
-  display: grid;
-  place-items: center;
+  z-index: 99999;
+  background: #000;
+  border-radius: 0;
+  margin: 0;
   padding: 0;
-  animation: storyViewerIn 120ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   overflow: hidden;
+  display: block;
+  animation: storyViewerIn 120ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   touch-action: manipulation;
 }
 
@@ -2717,7 +2729,7 @@ video.post-media.real-media {
   border-radius: 999px;
   display: flex;
   gap: 5px;
-  z-index: 6;
+  z-index: 100003;
 }
 
 .story-progress span {
@@ -2777,7 +2789,7 @@ video.post-media.real-media {
   background: rgba(0, 0, 0, 0.26);
   color: white;
   font-weight: 1000;
-  z-index: 7;
+  z-index: 100004;
   backdrop-filter: blur(14px);
 }
 
@@ -2788,7 +2800,7 @@ video.post-media.real-media {
   width: 50%;
   border: 0;
   background: transparent;
-  z-index: 1;
+  z-index: 100001;
 }
 
 .story-tap-zone.left {
@@ -2800,19 +2812,16 @@ video.post-media.real-media {
 }
 
 .story-full-card {
-  position: relative;
-  z-index: 2;
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
   width: 100vw;
   height: 100dvh;
   border-radius: 0;
   overflow: hidden;
-  background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.42), transparent 20%, transparent 60%, rgba(0, 0, 0, 0.7)),
-    var(--art);
-  padding: max(40px, calc(env(safe-area-inset-top) + 32px)) 13px max(18px, env(safe-area-inset-bottom));
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  background: #000;
+  padding: 0;
+  display: block;
   box-shadow: none;
   animation: storySlideIn 120ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   will-change: transform, opacity;
@@ -2833,19 +2842,22 @@ video.post-media.real-media {
   inset: 0;
   pointer-events: none;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.46), transparent 22%, transparent 64%, rgba(0, 0, 0, 0.68));
-  z-index: 0;
+  z-index: 1;
 }
 
 .story-full-head,
 .story-full-copy,
 .story-interactions,
 .story-composer-sheet {
-  position: relative;
-  z-index: 4;
+  position: absolute;
+  z-index: 100002;
   pointer-events: auto;
 }
 
 .story-full-head {
+  top: max(20px, calc(env(safe-area-inset-top) + 14px));
+  left: max(12px, env(safe-area-inset-left));
+  right: 54px;
   display: flex;
   align-items: center;
   gap: 7px;
@@ -2853,8 +2865,10 @@ video.post-media.real-media {
 }
 
 .story-music-pill {
-  position: relative;
-  z-index: 4;
+  position: absolute;
+  z-index: 100002;
+  top: max(62px, calc(env(safe-area-inset-top) + 54px));
+  left: max(12px, env(safe-area-inset-left));
   width: fit-content;
   max-width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.16);
@@ -2915,6 +2929,8 @@ video.post-media.real-media {
 }
 
 .story-full-copy {
+  left: max(12px, env(safe-area-inset-left));
+  bottom: max(112px, calc(env(safe-area-inset-bottom) + 100px));
   width: fit-content;
   max-width: min(78%, 300px);
   border-radius: 16px;
@@ -2939,6 +2955,9 @@ video.post-media.real-media {
 }
 
 .story-interactions {
+  left: max(12px, env(safe-area-inset-left));
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(20px, calc(env(safe-area-inset-bottom) + 14px));
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2953,10 +2972,10 @@ video.post-media.real-media {
 
 @media (min-width: 520px) {
   .story-full-card {
-    width: min(100vw, 430px);
-    height: min(100dvh, 780px);
-    border-radius: 28px;
-    box-shadow: 0 0 70px rgba(0, 0, 0, 0.42);
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
   }
 }
 
@@ -3000,7 +3019,7 @@ video.post-media.real-media {
   left: 12px;
   right: 12px;
   bottom: 84px;
-  z-index: 1;
+  z-index: 100003;
   display: grid;
   gap: 10px;
   border: 1px solid rgba(255, 255, 255, 0.14);

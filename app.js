@@ -2058,9 +2058,11 @@ function scrollActiveViewToTop() {
 function render() {
   const view = document.getElementById("view");
   const appScreen = document.querySelector(".app-screen");
+  syncStoryFullscreenState();
   appScreen.dataset.ambience = state.ambience;
   appScreen.classList.toggle("auth-mode", state.view === "auth");
   appScreen.classList.toggle("home-mode", state.view === "home");
+  appScreen.classList.toggle("story-mode", state.activeStory !== null);
   appScreen.classList.toggle("light-mode", state.user?.mode === "light");
   appScreen.style.setProperty("--user-accent", state.user?.accent || "#fbbcdb");
   document.querySelector("[data-toggle-app-sound]")?.classList.toggle("active", state.soundEnabled);
@@ -2069,6 +2071,7 @@ function render() {
   document.querySelector(".topbar").classList.toggle("hidden", !state.isAuthenticated || state.view === "profile" || state.view === "publish" || state.storyEditorOpen || state.activeStory !== null);
   if (!state.isAuthenticated) {
     view.innerHTML = renderAuth();
+    mountGlobalStoryViewer();
     bindDynamicActions();
     return;
   }
@@ -2076,6 +2079,7 @@ function render() {
     document.querySelector(".bottom-nav").classList.add("hidden");
     document.querySelector(".topbar").classList.add("hidden");
     view.innerHTML = renderOnboarding();
+    mountGlobalStoryViewer();
     bindDynamicActions();
     return;
   }
@@ -2097,8 +2101,19 @@ function render() {
     profile: renderProfile,
   };
   view.innerHTML = templates[state.view]() + renderPermissionPrompt() + (state.reportTarget ? renderReportSheet() : "") + renderMediaEmbedModal();
+  mountGlobalStoryViewer();
   bindDynamicActions();
   scheduleStoryAutoplay();
+}
+
+function syncStoryFullscreenState() {
+  document.body?.classList.toggle("story-open", state.activeStory !== null);
+}
+
+function mountGlobalStoryViewer() {
+  document.getElementById("global-story-viewer")?.remove();
+  if (state.activeStory === null) return;
+  document.body.insertAdjacentHTML("beforeend", `<div id="global-story-viewer">${renderStoryViewer()}</div>`);
 }
 
 function clearStoryAutoplay() {
@@ -5580,7 +5595,6 @@ function renderHome() {
         <strong>Cargando más momentos fandom...</strong>
       </div>
     </div>
-    ${renderStoryViewer()}
     ${state.storyEditorOpen ? renderStoryEditor() : ""}
     ${state.toast ? `<div class="app-toast">${state.toast}</div>` : ""}
   `;
