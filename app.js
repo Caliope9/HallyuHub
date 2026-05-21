@@ -27,6 +27,7 @@ const state = {
   likedPosts: {},
   savedPosts: {},
   sharedPosts: {},
+  sharePostTarget: null,
   settingsPanel: null,
   viewedProfile: null,
   followedProfiles: {},
@@ -45,6 +46,8 @@ const state = {
   dropPaused: {},
   dropFeedback: {},
   videoProfileOverlay: null,
+  videoFullscreen: null,
+  videoMuted: true,
   fancamGroupFilter: "all",
   fancamArtistFilter: "all",
   fancamSort: "recommended",
@@ -478,6 +481,16 @@ const homeBanners = [
   { title: "Trade de photocards", meta: "Marketplace seguro", colors: "linear-gradient(135deg, #fff1f9, #ff8ac8 48%, #8b5cf6)" },
   { title: "Top fancams del dia", meta: "Fancams premium", colors: "linear-gradient(135deg, #65e4ff, #77f4c7 52%, #0f172a)" },
 ];
+
+function getBannerActionAttrs(banner) {
+  const title = normalizeProfileKey(`${banner.title} ${banner.meta}`);
+  if (title.includes("noticia")) return `data-go-view="news"`;
+  if (title.includes("fancam")) return `data-go-view="fancams"`;
+  if (title.includes("drop") || title.includes("challenge")) return `data-go-view="trends"`;
+  if (title.includes("evento")) return `data-home-filter="events"`;
+  if (title.includes("trade") || title.includes("publicidad") || title.includes("market")) return `data-go-view="market"`;
+  return `data-home-filter="all"`;
+}
 
 const homeHighlightStories = [
   { label: "Viral", detail: "Top posts", avatar: "neon", filter: "viral", colors: "linear-gradient(160deg, #65e4ff, #d946ef)" },
@@ -1596,7 +1609,18 @@ function setView(nextView) {
   appScreen.dataset.ambience = state.ambience;
   document.getElementById("screen-title").textContent = titleByView[nextView];
   render();
+  scrollActiveViewToTop();
   if (nextView === "news") loadKpopNews(false);
+}
+
+function scrollActiveViewToTop() {
+  const view = document.getElementById("view");
+  const screen = document.querySelector(".app-screen");
+  if (view) view.scrollTop = 0;
+  if (screen) screen.scrollTop = 0;
+  requestAnimationFrame(() => {
+    if (view) view.scrollTop = 0;
+  });
 }
 
 function render() {
@@ -1607,7 +1631,7 @@ function render() {
   appScreen.classList.toggle("home-mode", state.view === "home");
   appScreen.classList.toggle("light-mode", state.user?.mode === "light");
   appScreen.style.setProperty("--user-accent", state.user?.accent || "#fbbcdb");
-  document.querySelector(".bottom-nav").classList.toggle("hidden", !state.isAuthenticated || state.storyEditorOpen || state.activeStory !== null || state.dropSearchOpen || state.dropCreatorOpen || state.videoProfileOverlay);
+  document.querySelector(".bottom-nav").classList.toggle("hidden", !state.isAuthenticated || state.storyEditorOpen || state.activeStory !== null || state.dropSearchOpen || state.dropCreatorOpen || state.videoProfileOverlay || state.videoFullscreen);
   document.querySelector(".topbar").classList.toggle("hidden", !state.isAuthenticated || state.view === "profile" || state.storyEditorOpen || state.activeStory !== null);
   if (!state.isAuthenticated) {
     view.innerHTML = renderAuth();
@@ -1865,9 +1889,10 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-save-post]").forEach((button) => {
     button.addEventListener("click", () => {
       const id = button.dataset.savePost;
-      state.savedPosts[id] = !state.savedPosts[id];
+      const baseId = getBasePostId(id);
+      state.savedPosts[baseId] = !state.savedPosts[baseId];
       storage.set("hallyuHubSavedPosts", state.savedPosts);
-      showToast(state.savedPosts[id] ? "Publicacion guardada" : "Publicacion quitada de guardados");
+      showToast(state.savedPosts[baseId] ? "Publicacion guardada" : "Publicacion quitada de guardados");
       render();
     });
   });
@@ -1875,8 +1900,16 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-share-post]").forEach((button) => {
     button.addEventListener("click", () => {
       const id = button.dataset.sharePost;
-      state.sharedPosts[id] = !state.sharedPosts[id];
+      state.sharePostTarget = state.sharePostTarget === id ? null : id;
+      state.sharedPosts[id] = true;
       storage.set("hallyuHubSharedPosts", state.sharedPosts);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-close-post-share]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.sharePostTarget = null;
       render();
     });
   });
@@ -2193,6 +2226,29 @@ function bindDynamicActions() {
     });
   });
 
+  document.querySelectorAll("[data-open-video-fullscreen]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.videoFullscreen = button.dataset.openVideoFullscreen;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-close-video-fullscreen]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.videoFullscreen = null;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-toggle-video-sound]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.videoMuted = !state.videoMuted;
+      storage.set("hallyuHubVideoMuted", state.videoMuted);
+      showToast(state.videoMuted ? "Audio silenciado" : "Audio activado");
+      render();
+    });
+  });
+
   document.querySelectorAll("[data-fancam-search-input]").forEach((input) => {
     input.addEventListener("input", () => {
       state.fancamSearchQuery = input.value;
@@ -2209,6 +2265,14 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-toggle-fancam-filter]").forEach((button) => {
     button.addEventListener("click", () => {
       state.fancamFilterOpen = !state.fancamFilterOpen;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-toggle-fancam-text]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.toggleFancamText;
+      state.expandedPosts[`fancam-${id}`] = !state.expandedPosts[`fancam-${id}`];
       render();
     });
   });
@@ -2660,6 +2724,7 @@ async function initApp() {
   state.likedPosts = storage.get("hallyuHubLikedPosts", {});
   state.savedPosts = storage.get("hallyuHubSavedPosts", {});
   state.sharedPosts = storage.get("hallyuHubSharedPosts", {});
+  state.videoMuted = storage.get("hallyuHubVideoMuted", true);
   state.isAuthenticated = Boolean(savedSession);
   state.selectedAvatar = state.user.avatar || "berry";
   state.selectedProfileBg = state.user.profileBg || "army";
@@ -3711,14 +3776,10 @@ function renderHome() {
         ${[...homeBanners, ...homeBanners]
           .map(
             (banner, index) => `
-            <article class="home-banner" style="--art:${banner.colors}">
+            <button type="button" class="home-banner" style="--art:${banner.colors}" ${getBannerActionAttrs(banner)}>
               <span>${banner.meta}</span>
               <strong>${banner.title}</strong>
-              <div class="banner-actions">
-                <button type="button" ${index % 3 === 0 ? `data-go-view="news"` : index % 3 === 1 ? `data-home-filter="viral"` : `data-home-filter="events"`}>${index % 3 === 0 ? "Ver noticia" : index % 3 === 1 ? "Ver viral" : "Explorar"}</button>
-                <button type="button" data-save-post="banner-${index}">Guardar</button>
-              </div>
-            </article>`,
+            </button>`,
           )
           .join("")}
       </div>
@@ -3893,9 +3954,10 @@ function renderSocialPost(post, index, options = {}) {
   const hasLongCaption = caption.length > 112;
   const hasExtraMeta = Boolean(post.location || post.date || post.hour || post.taggedPeople || post.taggedPlace || (post.hashtags || []).length > 2);
   const canExpand = hasLongCaption || hasExtraMeta;
-  const liked = Boolean(state.likedPosts[getBasePostId(post.id)]);
-  const shared = Boolean(state.sharedPosts[post.id]);
-  const saved = Boolean(state.savedPosts[post.id]);
+  const baseId = getBasePostId(post.id);
+  const liked = Boolean(state.likedPosts[baseId]);
+  const shared = Boolean(state.sharedPosts[post.id] || state.sharePostTarget === post.id);
+  const saved = Boolean(state.savedPosts[baseId]);
   return `
     <article class="post-card ${options.compact ? "profile-feed-post" : ""} ${isFeatured ? "featured-post" : ""} ${expanded ? "expanded-post" : ""}">
       <div class="post-head modern-post-head">
@@ -3934,7 +3996,7 @@ function renderSocialPost(post, index, options = {}) {
           <button class="post-action-share ${shared ? "active" : ""}" data-share-post="${post.id}"><span></span><strong>${post.shares || index + 24}</strong></button>
           <button class="post-action-save ${saved ? "active" : ""}" data-save-post="${post.id}"><span></span><strong>${post.saves || index + 12}</strong></button>
         </div>
-        ${shared ? renderPostShareSheet(post) : ""}
+        ${state.sharePostTarget === post.id ? renderPostShareSheet(post) : ""}
         ${state.openComments[post.id] ? renderCommentsPanel(post) : ""}
       </div>
     </article>`;
@@ -3961,11 +4023,19 @@ function renderPostMenu(post) {
 
 function renderPostShareSheet(post) {
   return `
-    <div class="post-share-sheet">
-      <button type="button" data-demo-action="Enlace copiado de ${escapeAttr(post.user)}">Copiar enlace</button>
-      <button type="button" data-demo-action="Compartido por mensaje en modo demo">Mensaje</button>
-      <button type="button" data-demo-action="Compartido en historia demo">Historia</button>
-    </div>
+    <section class="post-share-sheet" aria-label="Compartir publicacion">
+      <div class="sheet-handle"></div>
+      <div class="composer-head">
+        <strong>Compartir publicación</strong>
+        <button type="button" data-close-post-share aria-label="Cerrar">X</button>
+      </div>
+      <div class="share-option-grid">
+        <button type="button" data-demo-action="Compartido en historia demo"><span class="nav-icon plus-icon"></span><strong>Historia</strong><small>Publicar como story</small></button>
+        <button type="button" data-demo-action="Enviado por chat demo"><span class="nav-icon chat-icon"></span><strong>Chat</strong><small>Enviar a un fan</small></button>
+        <button type="button" data-demo-action="Enlace copiado de ${escapeAttr(post.user)}"><span class="share-dot"></span><strong>Copiar</strong><small>Copiar enlace</small></button>
+        <button type="button" data-demo-action="Compartir fuera de la app en modo demo"><span class="nav-icon spark-icon"></span><strong>Fuera</strong><small>Compartir externo</small></button>
+      </div>
+    </section>
   `;
 }
 
@@ -4579,7 +4649,6 @@ function handleDropAction(action, id) {
 
 function renderTrends() {
   const drops = getFilteredDrops();
-  const activeFilter = getActiveDropFilter();
   return `
     <div class="drop-tools-row">
       <div class="trend-tabs premium-drop-tabs">
@@ -4592,11 +4661,6 @@ function renderTrends() {
       </div>
     </div>
     ${state.dropSearchSelection ? `<div class="drop-search-chip"><span>Resultados para ${state.dropSearchSelection}</span><button data-clear-drop-search>Limpiar</button></div>` : ""}
-    <div class="drop-active-filter-pill">
-      <span>Filtro activo</span>
-      <strong>${escapeHtml(activeFilter.name)}</strong>
-      <small>${escapeHtml(activeFilter.category)} · ${escapeHtml(activeFilter.uses)} usos</small>
-    </div>
     <section class="trends-feed" aria-label="Drops estilo reels">
       ${drops
         .map(
@@ -4606,7 +4670,9 @@ function renderTrends() {
     </section>
     ${state.dropSearchOpen ? renderDropSearchOverlay() : ""}
     ${state.dropCreatorOpen ? renderDropCreator() : ""}
+    ${renderOpenDropCommentsSheet()}
     ${state.videoProfileOverlay?.startsWith("drop:") ? renderVideoProfileOverlay() : ""}
+    ${state.videoFullscreen?.startsWith("drop:") ? renderVideoFullscreenOverlay() : ""}
   `;
 }
 
@@ -4619,12 +4685,14 @@ function renderDropCard(trend, index) {
   const expanded = Boolean(state.expandedPosts[`drop-${id}`]);
   const longDescription = trend.description.length > 68;
   const feedback = state.dropFeedback[id];
-  const activeFilter = getActiveDropFilter();
   return `
           <article class="trend-card premium-drop-card effect-${state.dropEffect} ${state.dropPaused[id] ? "paused" : ""}" style="--art:${trend.colors}">
-            <span class="drop-filter-tag">${escapeHtml(activeFilter.name)}</span>
             <button class="drop-play-toggle" data-drop-toggle="${id}" aria-label="${state.dropPaused[id] ? "Reproducir Drop" : "Pausar Drop"}"></button>
             ${feedback ? `<div class="drop-center-feedback ${feedback === "star" ? "starburst" : ""}">${feedback === "star" ? "★" : state.dropPaused[id] ? "▶" : "Ⅱ"}</div>` : ""}
+            <div class="video-quick-controls">
+              <button class="video-sound-button ${state.videoMuted ? "muted" : ""}" data-toggle-video-sound aria-label="${state.videoMuted ? "Activar audio" : "Silenciar"}">${state.videoMuted ? "♪" : "♪"}</button>
+              <button class="video-fullscreen-button" data-open-video-fullscreen="drop:${id}" aria-label="Ver en pantalla completa"></button>
+            </div>
             <div class="trend-overlay">
               <div class="trend-copy">
                 <div class="drop-info-card">
@@ -4635,7 +4703,6 @@ function renderDropCard(trend, index) {
                       <span>♪ ${escapeHtml(trend.song)}</span>
                     </div>
                   </div>
-                  <h2>${escapeHtml(trend.challenge)}</h2>
                   <p class="drop-description ${expanded ? "expanded" : ""}">${escapeHtml(trend.description)}</p>
                   ${longDescription ? `<button class="drop-more-link" data-toggle-drop-text="${id}">${expanded ? "Ver menos" : "Ver más"}</button>` : ""}
                 </div>
@@ -4656,16 +4723,7 @@ function renderDropCard(trend, index) {
 
 function renderDropPanel(trend, id) {
   if (state.dropCommentsOpen[id]) {
-    return `
-      <div class="drop-mini-panel drop-comments-panel">
-        <strong>Comentarios</strong>
-        <p><b>@luna.stay</b> Este paso queda perfecto para random dance.</p>
-        <p><b>@vale.multi</b> Necesito tutorial corto.</p>
-        <div class="drop-comment-input">
-          <input placeholder="Comentar este Drop..." aria-label="Comentar Drop" />
-          <button data-drop-comment-send="${id}">Enviar</button>
-        </div>
-      </div>`;
+    return "";
   }
   if (state.dropShareOpen[id]) {
     return `
@@ -4684,6 +4742,75 @@ function renderDropPanel(trend, id) {
       </div>`;
   }
   return "";
+}
+
+function renderOpenDropCommentsSheet() {
+  const entry = trendVideos
+    .map((trend, index) => [trend, getDropId(trend, index)])
+    .find(([, id]) => state.dropCommentsOpen[id]);
+  if (!entry) return "";
+  const [trend, id] = entry;
+  return renderVideoCommentsSheet({
+    id,
+    title: trend.challenge,
+    subtitle: `Drop de ${trend.user}`,
+    type: "drop",
+    sendAttr: `data-drop-comment-send="${id}"`,
+  });
+}
+
+function renderOpenFancamCommentsSheet() {
+  const fancam = fancamVideos.find((item) => state.fancamCommentsOpen[item.id]);
+  if (!fancam) return "";
+  return renderVideoCommentsSheet({
+    id: fancam.id,
+    title: `${fancam.artist} fancam`,
+    subtitle: `${fancam.group} · ${fancam.show}`,
+    type: "fancam",
+    sendAttr: `data-fancam-comment-send="${fancam.id}"`,
+  });
+}
+
+function renderVideoCommentsSheet({ id, title, subtitle, type, sendAttr }) {
+  const demoComments = [
+    { user: "Luna Hallyu", username: "luna.hallyu", avatar: "berry", time: "2m", body: "Ese momento quedó increíble para verlo en loop.", likes: 24 },
+    { user: "Cami.STAY", username: "cami.stay", avatar: "star", time: "8m", body: "Necesito tutorial y audio guardado ✨", likes: 17 },
+  ];
+  return `
+    <section class="video-comments-sheet" aria-label="Comentarios de ${escapeAttr(title)}">
+      <div class="sheet-handle"></div>
+      <div class="composer-head">
+        <div><strong>Comentarios</strong><small>${escapeHtml(subtitle)}</small></div>
+        <button type="button" ${type === "drop" ? `data-drop-action="comment:${id}"` : `data-fancam-action="comment:${id}"`} aria-label="Cerrar comentarios">X</button>
+      </div>
+      <div class="video-comment-list">
+        ${demoComments
+          .map(
+            (comment) => `
+            <div class="comment-item">
+              ${renderAvatarElement("mini comment-avatar", comment.avatar)}
+              <div class="comment-main">
+                <div class="comment-meta">
+                  <button type="button" data-open-feed-profile="${escapeAttr(comment.username)}">${escapeHtml(comment.user)}</button>
+                  <span>${comment.time}</span>
+                </div>
+                <p class="comment-text">${escapeHtml(comment.body)}</p>
+                <div class="comment-tools">
+                  <button type="button" data-demo-action="Respondiendo a ${escapeAttr(comment.user)} en modo demo">Responder</button>
+                </div>
+              </div>
+              <button class="comment-like" type="button" data-demo-action="Like al comentario en modo demo"><span>★</span><strong>${comment.likes}</strong></button>
+            </div>`,
+          )
+          .join("")}
+      </div>
+      <div class="comment-composer video-comment-composer">
+        ${renderAvatarElement("mini comment-input-avatar", state.user?.avatar || "berry", state.user?.avatarUrl)}
+        <input placeholder="Comentar..." aria-label="Escribir comentario" />
+        <button class="comment-send-button" type="button" ${sendAttr}>Enviar</button>
+      </div>
+    </section>
+  `;
 }
 
 function getFilteredDrops() {
@@ -4941,7 +5068,9 @@ function renderFancams() {
     <section class="fancam-feed" aria-label="Feed vertical de fancams">
       ${fancams.length ? fancams.map((fancam, index) => renderFancamCard(fancam, index, { fullscreen: true })).join("") : `<article class="settings-demo-box">No hay fancams con estos filtros.</article>`}
     </section>
+    ${renderOpenFancamCommentsSheet()}
     ${state.videoProfileOverlay?.startsWith("fancam:") ? renderVideoProfileOverlay() : ""}
+    ${state.videoFullscreen?.startsWith("fancam:") ? renderVideoFullscreenOverlay() : ""}
   `;
 }
 
@@ -4951,11 +5080,17 @@ function renderFancamCard(fancam, index = 0, options = {}) {
   const followed = Boolean(state.followedArtists[fancam.artistId]);
   const commentsOpen = Boolean(state.fancamCommentsOpen[fancam.id]);
   const paused = Boolean(state.fancamPaused[fancam.id]);
+  const expanded = Boolean(state.expandedPosts[`fancam-${fancam.id}`]);
+  const longDescription = fancam.description.length > 76;
   return `
     <article class="fancam-card ${options.compact ? "compact" : ""} ${paused ? "paused" : ""}" style="--art:${fancam.colors}">
       <button class="fancam-play-area" data-fancam-toggle="${fancam.id}" aria-label="${paused ? "Reproducir fancam" : "Pausar fancam"}"></button>
       ${state.fancamFeedback[fancam.id] ? `<div class="drop-center-feedback">${paused ? "▶" : "Ⅱ"}</div>` : ""}
       ${fancam.mediaUrl ? `<img class="fancam-media" src="${escapeAttr(fancam.mediaUrl)}" alt="Fancam de ${escapeAttr(fancam.artist)}" />` : ""}
+      <div class="video-quick-controls">
+        <button class="video-sound-button ${state.videoMuted ? "muted" : ""}" data-toggle-video-sound aria-label="${state.videoMuted ? "Activar audio" : "Silenciar"}">♪</button>
+        <button class="video-fullscreen-button" data-open-video-fullscreen="fancam:${fancam.id}" aria-label="Ver en pantalla completa"></button>
+      </div>
       <div class="fancam-shade"></div>
       <div class="fancam-info">
         <button class="fancam-artist-link" data-open-video-profile="fancam:${fancam.id}">
@@ -4965,8 +5100,8 @@ function renderFancamCard(fancam, index = 0, options = {}) {
             <small>${escapeHtml(fancam.group)} · ${escapeHtml(fancam.show)}</small>
           </div>
         </button>
-        <p>${escapeHtml(fancam.description)}</p>
-        <div class="fancam-meta-line"><span>${escapeHtml(fancam.era)}</span><span>${escapeHtml(fancam.date)}</span><span>${escapeHtml(fancam.views)} vistas</span></div>
+        <p class="fancam-description ${expanded ? "expanded" : ""}">${escapeHtml(fancam.description)}</p>
+        ${longDescription ? `<button class="drop-more-link fancam-more-link" data-toggle-fancam-text="${fancam.id}">${expanded ? "Ver menos" : "Ver más"}</button>` : ""}
       </div>
       <div class="fancam-actions">
         <button data-fancam-action="profile:${fancam.id}" aria-label="Abrir perfil"><span>@</span><small>Perfil</small></button>
@@ -4977,7 +5112,6 @@ function renderFancamCard(fancam, index = 0, options = {}) {
         <button class="${saved ? "active" : ""}" data-fancam-action="save:${fancam.id}" aria-label="Guardar"><span class="save-mark"></span><small>Guardar</small></button>
         <button class="${state.fancamMusicOpen[fancam.id] ? "active" : ""}" data-fancam-action="music:${fancam.id}" aria-label="Audio"><span>♪</span><small>Audio</small></button>
       </div>
-      ${commentsOpen ? renderFancamComments(fancam) : ""}
       ${state.fancamShareOpen[fancam.id] ? renderFancamSharePanel(fancam) : ""}
       ${state.fancamMusicOpen[fancam.id] ? renderFancamMusicPanel(fancam) : ""}
     </article>
@@ -5125,6 +5259,33 @@ function renderVideoProfileOverlay() {
           <button class="ghost-button" data-close-video-profile>Volver a Fancams</button>
         </div>
       </article>
+    </section>
+  `;
+}
+
+function renderVideoFullscreenOverlay() {
+  if (!state.videoFullscreen) return "";
+  const [type, id] = state.videoFullscreen.split(":");
+  const isDrop = type === "drop";
+  const item = isDrop ? trendVideos.find((trend, index) => getDropId(trend, index) === id) : fancamVideos.find((fancam) => fancam.id === id);
+  if (!item) return "";
+  const title = isDrop ? item.user : item.artist;
+  const audio = isDrop ? item.song : `${item.group} · ${item.show}`;
+  const description = item.description;
+  const media = !isDrop && item.mediaUrl ? `<img class="video-fullscreen-media" src="${escapeAttr(item.mediaUrl)}" alt="${escapeAttr(title)}" />` : "";
+  return `
+    <section class="video-fullscreen-overlay" style="--art:${item.colors}" aria-label="Video en pantalla completa">
+      <button class="story-close video-profile-close" data-close-video-fullscreen aria-label="Cerrar">X</button>
+      ${media}
+      <div class="video-fullscreen-art"></div>
+      <div class="video-fullscreen-controls">
+        <button class="video-sound-button ${state.videoMuted ? "muted" : ""}" data-toggle-video-sound aria-label="${state.videoMuted ? "Activar audio" : "Silenciar"}">♪</button>
+      </div>
+      <div class="video-fullscreen-copy">
+        <strong>${escapeHtml(title)}</strong>
+        <span>♪ ${escapeHtml(audio)}</span>
+        <p>${escapeHtml(description)}</p>
+      </div>
     </section>
   `;
 }
@@ -6104,24 +6265,29 @@ function renderProfile() {
       <div class="profile-hero-top">
         ${renderAvatarElement(`profile-avatar premium-avatar ${getRarityClass(avatarMeta)}`, profileUser.avatar, profileUser.avatarUrl)}
         <div class="profile-name-block">
-          <div class="profile-title-line"><h1>${profileUser.name}</h1><span class="verified-badge">${isPlus ? "Plus" : "Verificado"}</span></div>
-          <p>@${profileUser.username} · ${profileUser.country || "Chile 🇨🇱"}</p>
+          <div class="profile-title-line"><h1>${profileUser.name}</h1><span class="verified-badge">${isPlus ? "Plus" : avatarMeta.rarity}</span></div>
+          <p class="profile-handle-line">@${profileUser.username} · ${profileUser.country || "Chile 🇨🇱"}</p>
           <p class="profile-bio-line">${profileUser.bio || profileUser.phrase || "Fan K-pop en HallyuHub."}</p>
-          <div class="fandom-line"><span>${profileUser.fandom || "ARMY 💜"}</span><span>Bias: ${profileUser.bias || "Jungkook"}</span></div>
-          <div class="fandom-line"><span>${profileUser.favoriteGroup || "BTS"}</span><span>${profileUser.fandomLevel || "Level 18 Fandom"}</span></div>
         </div>
       </div>
-      <div class="premium-stats">
+      <div class="premium-stats compact-profile-stats" aria-label="Estadísticas del perfil">
         <div><strong>${profileUser.posts}</strong><span>posts</span></div>
         <div><strong>${profileUser.followers}</strong><span>seguidores</span></div>
         <div><strong>${profileUser.following}</strong><span>siguiendo</span></div>
         <div><strong>${profileUser.starsReceived || "32.8K"}</strong><span>estrellas</span></div>
       </div>
-      <div class="profile-progress-card">
+      <div class="profile-fandom-strip" aria-label="Datos fandom">
+        <span>${profileUser.fandom || "ARMY 💜"}</span>
+        <span>Bias: ${profileUser.bias || "Jungkook"}</span>
+        <span>${profileUser.favoriteGroup || "BTS"}</span>
+        <span>Level ${progress.level}</span>
+        <span>${isPlus ? "Plus" : avatarMeta.rarity}</span>
+      </div>
+      <div class="profile-progress-card compact-level-card" aria-label="Nivel fandom">
         <div>
-          <span>Level ${progress.level}</span>
-          <strong>${avatarMeta.rarity} · ${avatarMeta.name}</strong>
-          <small>${progress.stars.toLocaleString("es")} estrellas acumuladas</small>
+          <span>Nivel fandom ${progress.level}</span>
+          <strong>${avatarMeta.name} · ${avatarMeta.rarity}</strong>
+          <small>${progress.stars.toLocaleString("es")} estrellas para desbloquear estilo</small>
         </div>
         <div class="progress-ring" style="--progress:${progress.percent}%"><span></span></div>
       </div>
@@ -6135,12 +6301,12 @@ function renderProfile() {
         }
       </div>
     </section>
-    <section class="highlight-row">
+    <section class="highlight-row profile-highlight-row">
       ${profileHighlights
         .map(
           (item, index) => `
-          <button data-demo-action="Historia destacada abierta">
-            <span class="highlight-orb" style="--art:${art[index % art.length]}"></span>
+          <button data-demo-action="Historia destacada abierta" style="--art:${art[index % art.length]}">
+            <span class="highlight-orb"></span>
             <strong>${item}</strong>
           </button>`,
         )
@@ -6214,6 +6380,10 @@ function renderProfileEditor() {
 
 function renderProfileFeed(tab, profileUser) {
   const ownUser = !state.viewedProfile || profileUser.username === state.user.username;
+  if (tab === "saved") {
+    const savedFeed = userPosts.filter((post) => state.savedPosts[post.id] || state.savedPosts[getBasePostId(post.id)]);
+    if (savedFeed.length) return savedFeed.map((post, index) => renderSocialPost(post, index, { compact: true })).join("");
+  }
   const localPosts = ownUser ? userPosts.filter((post) => (post.category || "posts") === tab) : [];
   const posts = localPosts.length ? localPosts : getProfileDemoPosts(tab, profileUser);
   return posts.map((post, index) => renderSocialPost(post, index, { compact: true })).join("");
