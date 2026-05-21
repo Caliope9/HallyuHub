@@ -99,6 +99,8 @@ const state = {
     allowComments: true,
     rightsConfirmed: false,
     vertical: true,
+    loading: false,
+    error: "",
     result: null,
   },
   publishDraft: {
@@ -2029,6 +2031,8 @@ function setView(nextView) {
   appScreen.classList.toggle("profile-mode", nextView === "profile");
   appScreen.classList.toggle("auth-mode", nextView === "auth");
   appScreen.classList.toggle("home-mode", nextView === "home");
+  appScreen.classList.toggle("story-mode", state.activeStory !== null);
+  appScreen.classList.toggle("comments-open-mode", Object.values(state.openComments).some(Boolean) || Object.values(state.dropCommentsOpen).some(Boolean) || Object.values(state.fancamCommentsOpen).some(Boolean));
   appScreen.classList.toggle("light-mode", state.user?.mode === "light");
   appScreen.style.setProperty("--user-accent", state.user?.accent || "#fbbcdb");
   appScreen.dataset.ambience = state.ambience;
@@ -2597,12 +2601,36 @@ function bindDynamicActions() {
     input.addEventListener("change", () => {
       const file = input.files?.[0];
       if (!file) return;
+      if (!file.type.startsWith("video")) {
+        showToast("Elegí un video para publicar");
+        return;
+      }
+      const maxSize = 18 * 1024 * 1024;
+      if (file.size > maxSize) {
+        state.videoEditorDraft.error = "El video es muy pesado para esta demo. Probá con uno más corto.";
+        state.videoEditorDraft.loading = false;
+        state.videoEditorDraft.mediaUrl = "";
+        showToast("Video demasiado pesado para cargar en mobile");
+        render();
+        return;
+      }
+      state.videoEditorDraft.loading = true;
+      state.videoEditorDraft.error = "";
+      render();
       const reader = new FileReader();
       reader.onload = () => {
         state.videoEditorDraft.mediaUrl = reader.result || "";
         state.videoEditorDraft.mediaType = file.type.startsWith("video") ? "video" : "image";
         state.videoEditorDraft.mediaName = file.name;
+        state.videoEditorDraft.loading = false;
+        state.videoEditorDraft.error = "";
         state.videoEditorDraft.result = null;
+        render();
+      };
+      reader.onerror = () => {
+        state.videoEditorDraft.loading = false;
+        state.videoEditorDraft.error = "No pudimos cargar el video. Probá con otro archivo.";
+        showToast("No pudimos cargar el video");
         render();
       };
       reader.readAsDataURL(file);
@@ -3909,6 +3937,8 @@ function resetVideoEditorDraft(kind = "trends") {
     allowComments: true,
     rightsConfirmed: false,
     vertical: true,
+    loading: false,
+    error: "",
     result: null,
   };
 }
@@ -3938,6 +3968,10 @@ function isVideoEditorLong(kind, endValue) {
 function publishVideoEditorContent() {
   syncVideoEditorDraftFromDom();
   const draft = state.videoEditorDraft;
+  if (draft.loading) {
+    showToast("Esperá a que termine de cargar el video");
+    return;
+  }
   if (!draft.mediaUrl) {
     showToast("Subí un video antes de publicar");
     return;
@@ -5556,17 +5590,19 @@ function renderPostMenu(post) {
 
 function renderPostShareSheet(post) {
   return `
-    <section class="post-share-sheet" aria-label="Compartir publicacion">
-      <div class="sheet-handle"></div>
-      <div class="composer-head">
-        <strong>Compartir publicación</strong>
-        <button type="button" data-close-post-share aria-label="Cerrar">X</button>
-      </div>
-      <div class="share-option-grid">
-        <button type="button" data-demo-action="Compartido en historia demo"><span class="nav-icon plus-icon"></span><strong>Historia</strong><small>Publicar como story</small></button>
-        <button type="button" data-demo-action="Enviado por chat demo"><span class="nav-icon chat-icon"></span><strong>Chat</strong><small>Enviar a un fan</small></button>
-        <button type="button" data-demo-action="Enlace copiado de ${escapeAttr(post.user)}"><span class="share-dot"></span><strong>Copiar</strong><small>Copiar enlace</small></button>
-        <button type="button" data-demo-action="Compartir fuera de la app en modo demo"><span class="nav-icon spark-icon"></span><strong>Fuera</strong><small>Compartir externo</small></button>
+    <section class="post-share-backdrop" aria-label="Compartir publicacion">
+      <button class="post-share-dismiss" type="button" data-close-post-share aria-label="Cerrar compartir"></button>
+      <div class="post-share-sheet" role="dialog" aria-label="Opciones para compartir">
+        <div class="sheet-handle"></div>
+        <div class="composer-head">
+          <strong>Compartir publicación</strong>
+          <button type="button" data-close-post-share aria-label="Cerrar">X</button>
+        </div>
+        <div class="share-option-grid">
+          <button type="button" data-demo-action="Compartido en historia demo"><span class="nav-icon plus-icon"></span><strong>Compartir en historia</strong></button>
+          <button type="button" data-demo-action="Enviado por chat demo"><span class="nav-icon chat-icon"></span><strong>Enviar por chat</strong></button>
+          <button type="button" data-demo-action="Enlace copiado de ${escapeAttr(post.user)}"><span class="share-dot"></span><strong>Copiar enlace</strong></button>
+        </div>
       </div>
     </section>
   `;
@@ -6275,13 +6311,13 @@ function renderDropCard(trend, index) {
                       <button type="button" data-open-video-profile="drop:${id}">${escapeHtml(trend.user)}</button>
                       <span>♪ ${escapeHtml(trend.song)}</span>
                     </div>
+                    <button class="drop-follow-inline ${followed ? "active" : ""}" data-drop-action="follow:${id}" aria-label="${followed ? "Siguiendo" : "Seguir"}">${followed ? "Siguiendo" : "Seguir"}</button>
                   </div>
                   <p class="drop-description ${expanded ? "expanded" : ""}">${escapeHtml(trend.description)}</p>
                   ${longDescription ? `<button class="drop-more-link" data-toggle-drop-text="${id}">${expanded ? "Ver menos" : "Ver más"}</button>` : ""}
                 </div>
               </div>
               <div class="trend-actions">
-                <button class="${followed ? "active" : ""}" data-drop-action="follow:${id}" aria-label="${followed ? "Siguiendo" : "Seguir"}"><span class="drop-action-symbol">${followed ? "✓" : "+"}</span><small>${followed ? "Siguiendo" : "Seguir"}</small></button>
                 <button class="${liked ? "active liked" : ""}" data-drop-action="like:${id}" aria-label="Estrella"><span class="drop-action-symbol star">★</span><small>${liked ? "Listo" : "Like"}</small></button>
                 <button class="${state.dropCommentsOpen[id] ? "active" : ""}" data-drop-action="comment:${id}" aria-label="Comentar"><span class="nav-icon chat-icon"></span><small>${trend.comments || "0"}</small></button>
                 <button class="${state.dropShareOpen[id] ? "active" : ""}" data-drop-action="share:${id}" aria-label="Compartir"><span class="share-dot"></span><small>Compartir</small></button>
@@ -6578,7 +6614,9 @@ function renderVideoUploadEditor(kind) {
         <div class="video-editor-body">
           <section class="video-editor-preview-card ${filterClass}">
             ${
-              draft.mediaUrl
+              draft.loading
+                ? `<div class="video-upload-stage video-loading-state"><span class="video-upload-plus">...</span><strong>Cargando video</strong><small>Preparando preview para mobile</small></div>`
+                : draft.mediaUrl
                 ? `<video class="video-editor-preview" src="${escapeAttr(draft.mediaUrl)}" controls playsinline ${draft.muted ? "muted" : ""}></video>`
                 : `<button class="video-upload-stage" type="button" data-protected-file="${fileInputId}" data-permission-source="gallery" data-permission-mic="true">
                     <span class="video-upload-plus">+</span>
@@ -6586,6 +6624,7 @@ function renderVideoUploadEditor(kind) {
                     <small>Galería, cámara o grabación</small>
                   </button>`
             }
+            ${draft.error ? `<p class="video-upload-error">${escapeHtml(draft.error)}</p>` : ""}
             ${draft.overlayText ? `<div class="video-editor-overlay-text">${escapeHtml(draft.overlayText)}</div>` : ""}
             ${draft.sticker ? `<div class="video-editor-sticker">${escapeHtml(draft.sticker)}</div>` : ""}
             <div class="video-editor-media-actions">
