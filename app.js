@@ -7,6 +7,7 @@ const state = {
   groupSearch: "",
   groupFilter: "all",
   selectedArtist: null,
+  fanContentFilter: "recent",
   activityTab: "activity",
   profileTab: "posts",
   profileEditorOpen: false,
@@ -16,7 +17,9 @@ const state = {
   expandedPosts: {},
   openPostMenu: null,
   reportTarget: null,
+  mediaEmbed: null,
   hiddenPosts: {},
+  hiddenFanContent: {},
   mutedUsers: {},
   socialReports: [],
   toast: null,
@@ -82,6 +85,9 @@ const state = {
     group: "",
     artist: "",
     show: "",
+    city: "",
+    eventDate: "",
+    location: "",
     start: "0",
     end: "60",
     muted: false,
@@ -91,6 +97,7 @@ const state = {
     filter: "original",
     privacy: "Seguidores",
     allowComments: true,
+    rightsConfirmed: false,
     vertical: true,
     result: null,
   },
@@ -102,11 +109,17 @@ const state = {
     caption: "",
     hashtags: "",
     taggedPeople: "",
+    taggedGroup: "",
+    taggedArtist: "",
+    taggedShow: "",
+    city: "",
+    eventDate: "",
     location: "",
     taggedPlace: "",
     audio: "",
     privacy: "Seguidores",
     allowComments: true,
+    rightsConfirmed: false,
     filter: "original",
     result: null,
   },
@@ -159,6 +172,10 @@ const state = {
 };
 
 let storyAutoTimer = null;
+let swipeStart = null;
+let swipeSuppressClickUntil = 0;
+
+const swipeNavigationViews = ["home", "search", "trends", "fancams", "profile"];
 
 const titleByView = {
   home: "Tu universo K-pop latino",
@@ -1445,6 +1462,57 @@ const artistVisualAssets = {
   },
 };
 
+const officialVideoEmbeds = [
+  {
+    title: "Dynamite · Official MV",
+    artist: "BTS",
+    group: "BTS",
+    groupId: "bts",
+    artistId: "bts-jungkook",
+    youtubeId: "gdZLi9oWNZg",
+    thumbnail: "https://img.youtube.com/vi/gdZLi9oWNZg/hqdefault.jpg",
+    source: "YouTube oficial de BTS",
+    audioTitle: "Audio oficial externo",
+    previewUrl: "",
+  },
+  {
+    title: "Butter · Official MV",
+    artist: "BTS",
+    group: "BTS",
+    groupId: "bts",
+    artistId: "bts-jungkook",
+    youtubeId: "WMweEpGlu_U",
+    thumbnail: "https://img.youtube.com/vi/WMweEpGlu_U/hqdefault.jpg",
+    source: "YouTube oficial de BTS",
+    audioTitle: "Audio oficial externo",
+    previewUrl: "",
+  },
+  {
+    title: "DDU-DU DDU-DU · Official MV",
+    artist: "BLACKPINK",
+    group: "BLACKPINK",
+    groupId: "bp",
+    artistId: "bp-lisa",
+    youtubeId: "IHNzOHi8sJs",
+    thumbnail: "https://img.youtube.com/vi/IHNzOHi8sJs/hqdefault.jpg",
+    source: "YouTube oficial de BLACKPINK",
+    audioTitle: "Audio oficial externo",
+    previewUrl: "",
+  },
+  {
+    title: "Given-Taken · Official MV",
+    artist: "ENHYPEN",
+    group: "ENHYPEN",
+    groupId: "enhypen",
+    artistId: "enhypen-jungwon",
+    youtubeId: "nQ6wLuYvGd4",
+    thumbnail: "https://img.youtube.com/vi/nQ6wLuYvGd4/hqdefault.jpg",
+    source: "YouTube oficial de ENHYPEN",
+    audioTitle: "Audio oficial externo",
+    previewUrl: "",
+  },
+];
+
 const localVisuals = {
   groupCover: "assets/visuals/hallyu-group-cover.svg",
   idolCard: "assets/visuals/hallyu-idol-card.svg",
@@ -1847,7 +1915,13 @@ const profileTabs = [
 
 const fandomBadges = ["Army 💜", "Blink 🖤💖", "Once 🍭", "Stay ⭐", "Tokki 🐰"];
 
-const reportReasons = ["Spam", "Acoso", "Contenido ofensivo", "Derechos de autor", "Otro"];
+const reportReasons = ["Copyright", "Spam", "Acoso", "Contenido ofensivo", "Contenido sexual", "Grabación no permitida", "Fake", "Otro"];
+
+const legalAudioSources = [
+  { audioTitle: "Drop dance · demo loop", artist: "HallyuHub", source: "Audio propio demo", previewUrl: "" },
+  { audioTitle: "Idol sparkle · safe preview", artist: "HallyuHub", source: "Preview corto libre", previewUrl: "" },
+  { audioTitle: "Fan upload audio", artist: "Usuario", source: "Audio subido por usuario", previewUrl: "" },
+];
 
 const publishTypes = [
   ["posts", "Publicación"],
@@ -1999,7 +2073,7 @@ function render() {
     messages: renderMessages,
     profile: renderProfile,
   };
-  view.innerHTML = templates[state.view]() + renderPermissionPrompt();
+  view.innerHTML = templates[state.view]() + renderPermissionPrompt() + (state.reportTarget ? renderReportSheet() : "") + renderMediaEmbedModal();
   bindDynamicActions();
   scheduleStoryAutoplay();
 }
@@ -2217,7 +2291,15 @@ function bindDynamicActions() {
 
   document.querySelectorAll("[data-report-post]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.reportTarget = button.dataset.reportPost;
+      state.reportTarget = `post:${button.dataset.reportPost}`;
+      state.openPostMenu = null;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-report-content]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.reportTarget = button.dataset.reportContent;
       state.openPostMenu = null;
       render();
     });
@@ -2230,6 +2312,35 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-report-close]").forEach((button) => {
     button.addEventListener("click", () => {
       state.reportTarget = null;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-open-artist-video]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const video = officialVideoEmbeds.find((item) => item.youtubeId === button.dataset.openArtistVideo);
+      if (!video) return;
+      state.mediaEmbed = video;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-close-media-embed]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.mediaEmbed = null;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-admin-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const [action, reportId] = button.dataset.adminAction.split(":");
+      const exists = state.socialReports.some((report) => report.id === reportId);
+      state.socialReports = exists
+        ? state.socialReports.map((report) => (report.id === reportId ? { ...report, status: action } : report))
+        : [{ id: reportId, targetType: "demo", targetId: reportId, user: "Reporte demo", reason: "Moderación demo", status: action, createdAt: new Date().toISOString() }, ...state.socialReports];
+      storage.set("hallyuHubReports", state.socialReports);
+      showToast(`Moderación demo: ${action}`);
       render();
     });
   });
@@ -3197,6 +3308,32 @@ function bindDynamicActions() {
     });
   });
 
+  document.querySelectorAll("[data-fan-content-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.fanContentFilter = button.dataset.fanContentFilter;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-hide-fan-content]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.hiddenFanContent[button.dataset.hideFanContent] = true;
+      storage.set("hallyuHubHiddenFanContent", state.hiddenFanContent);
+      showToast("Contenido fan ocultado");
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-block-fan-user]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const username = button.dataset.blockFanUser;
+      state.mutedUsers[normalizeProfileKey(username)] = true;
+      storage.set("hallyuHubMutedUsers", state.mutedUsers);
+      showToast(`Usuario bloqueado: ${username}`);
+      render();
+    });
+  });
+
   document.querySelectorAll("[data-artist-profile]").forEach((button) => {
     button.addEventListener("click", () => {
       openArtistProfile(button.dataset.artistProfile);
@@ -3220,6 +3357,51 @@ function openArtistProfile(artistId) {
   if (group) state.selectedGroup = group.id;
   state.selectedArtist = artistId;
   render();
+}
+
+function setupSwipeNavigation() {
+  const view = document.getElementById("view");
+  if (!view || view.dataset.swipeReady === "true") return;
+  view.dataset.swipeReady = "true";
+  view.addEventListener("touchstart", (event) => {
+    if (isSwipeNavigationBlocked(event.target)) return;
+    const touch = event.touches?.[0];
+    if (!touch) return;
+    swipeStart = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+  }, { passive: true });
+  view.addEventListener("touchend", (event) => {
+    if (!swipeStart || isSwipeNavigationBlocked(event.target)) {
+      swipeStart = null;
+      return;
+    }
+    const touch = event.changedTouches?.[0];
+    if (!touch) return;
+    const deltaX = touch.clientX - swipeStart.x;
+    const deltaY = touch.clientY - swipeStart.y;
+    const fastEnough = Date.now() - swipeStart.time < 720;
+    swipeStart = null;
+    if (!fastEnough || Math.abs(deltaX) < 72 || Math.abs(deltaX) < Math.abs(deltaY) * 1.35) return;
+    const currentIndex = swipeNavigationViews.indexOf(state.view);
+    if (currentIndex < 0) return;
+    const nextIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1;
+    if (nextIndex < 0 || nextIndex >= swipeNavigationViews.length) return;
+    swipeSuppressClickUntil = Date.now() + 420;
+    setView(swipeNavigationViews[nextIndex]);
+  }, { passive: true });
+  view.addEventListener("click", (event) => {
+    if (Date.now() < swipeSuppressClickUntil) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }, true);
+}
+
+function isSwipeNavigationBlocked(target) {
+  if (!state.isAuthenticated) return true;
+  if (!swipeNavigationViews.includes(state.view)) return true;
+  if (state.activeStory !== null || state.storyEditorOpen || state.dropSearchOpen || state.dropCreatorOpen || state.fancamCreatorOpen || state.videoProfileOverlay || state.videoFullscreen || state.mediaEmbed || state.reportTarget || state.settingsPanel || state.profileEditorOpen) return true;
+  const element = target?.closest?.("input, textarea, select, iframe, .stories-row, .group-story-row, .artist-media-row, .artist-fancam-row, .fancam-filter-row, .drop-result-list, .video-comment-list, .comments-list");
+  return Boolean(element);
 }
 
 async function initSupabase() {
@@ -3301,6 +3483,7 @@ async function initApp() {
   state.storyInbox = storage.get("hallyuHubStoryInbox", []);
   state.soundEnabled = storage.get("hallyuHubSoundEnabled", true);
   state.hiddenPosts = storage.get("hallyuHubHiddenPosts", {});
+  state.hiddenFanContent = storage.get("hallyuHubHiddenFanContent", {});
   state.mutedUsers = storage.get("hallyuHubMutedUsers", {});
   state.socialReports = storage.get("hallyuHubReports", []);
   state.likedPosts = storage.get("hallyuHubLikedPosts", {});
@@ -3598,6 +3781,11 @@ async function createPost() {
     location: draft.location.trim(),
     taggedPeople: draft.taggedPeople.trim(),
     taggedPlace: draft.taggedPlace.trim(),
+    taggedGroup: draft.taggedGroup.trim(),
+    taggedArtist: draft.taggedArtist.trim(),
+    taggedShow: draft.taggedShow.trim(),
+    city: draft.city.trim(),
+    eventDate: draft.eventDate.trim(),
   };
   const hashtags = (draft.hashtags || "")
     .split(/[,\s]+/)
@@ -3606,6 +3794,10 @@ async function createPost() {
     .map((tag) => (tag.startsWith("#") ? tag : `#${tag}`));
   const mediaUrl = draft.mediaUrl || getDemoPostImage(userPosts.length + 2);
   const mediaType = draft.mediaType || "image";
+  if (!draft.rightsConfirmed) {
+    showToast("Confirmá que tenés permiso para subir este contenido");
+    return;
+  }
   if (state.backendMode !== "supabase") {
     const created = createLocalPublishedContent({
       category,
@@ -3618,6 +3810,7 @@ async function createPost() {
       audio: draft.audio,
       privacy: draft.privacy,
       allowComments: draft.allowComments,
+      rightsConfirmed: draft.rightsConfirmed,
     });
     sortPostsByRecentInPlace(userPosts);
     state.publishDraft.result = created;
@@ -3672,6 +3865,9 @@ function resetVideoEditorDraft(kind = "trends") {
     group: "",
     artist: "",
     show: "",
+    city: "",
+    eventDate: "",
+    location: "",
     start: "0",
     end: kind === "fancams" ? "180" : "60",
     muted: false,
@@ -3681,6 +3877,7 @@ function resetVideoEditorDraft(kind = "trends") {
     filter: "original",
     privacy: "Seguidores",
     allowComments: true,
+    rightsConfirmed: false,
     vertical: true,
     result: null,
   };
@@ -3715,14 +3912,23 @@ function publishVideoEditorContent() {
     showToast("Subí un video antes de publicar");
     return;
   }
+  if (!draft.rightsConfirmed) {
+    showToast("Confirmá que este contenido fue creado por vos o tenés permiso");
+    return;
+  }
   if (isVideoEditorLong(draft.kind, draft.end)) {
     showToast("Tu video es muy largo, recortalo antes de publicar");
     return;
   }
   const optionalFields = {
     location: "",
+    taggedGroup: draft.group || "",
+    taggedArtist: draft.artist || "",
+    taggedShow: draft.show || "",
+    city: draft.city || "",
+    eventDate: draft.eventDate || "",
     taggedPeople: draft.artist ? `@${draft.artist.replace(/^@/, "")}` : "",
-    taggedPlace: draft.show || "",
+    taggedPlace: draft.show || draft.location || "",
   };
   const created = createLocalPublishedContent({
     category: draft.kind,
@@ -3735,6 +3941,7 @@ function publishVideoEditorContent() {
     audio: draft.music,
     privacy: draft.privacy,
     allowComments: draft.allowComments,
+    rightsConfirmed: draft.rightsConfirmed,
   });
   state.videoEditorDraft.result = created;
   state.dropCreatorOpen = false;
@@ -3745,7 +3952,7 @@ function publishVideoEditorContent() {
   render();
 }
 
-function createLocalPublishedContent({ category, caption, hashtags, optionalFields, mediaUrl, mediaType, filter, audio, privacy, allowComments }) {
+function createLocalPublishedContent({ category, caption, hashtags, optionalFields, mediaUrl, mediaType, filter, audio, privacy, allowComments, rightsConfirmed }) {
   const id = `local-${category}-${Date.now()}`;
   const label = getPostCategoryLabel(category);
   const base = {
@@ -3774,6 +3981,9 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
     audio,
     privacy,
     allowComments,
+    rightsConfirmed: Boolean(rightsConfirmed),
+    moderationStatus: rightsConfirmed ? "publicado" : "pendiente revisión",
+    fanContentStatus: rightsConfirmed ? "publicado" : "pendiente revisión",
     ...optionalFields,
   };
   if (category === "stories") {
@@ -3816,6 +4026,14 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
       hashtags: base.hashtags,
       audio,
       comments: allowComments ? "0" : "Cerrados",
+      rightsConfirmed: base.rightsConfirmed,
+      moderationStatus: base.moderationStatus,
+      taggedGroup: base.taggedGroup,
+      taggedArtist: base.taggedArtist,
+      taggedShow: base.taggedShow,
+      city: base.city,
+      eventDate: base.eventDate,
+      location: base.location,
     };
     trendVideos.unshift(drop);
     userPosts.unshift({ ...base, type: "trending" });
@@ -3849,6 +4067,14 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
       hashtags: base.hashtags,
       audio,
       comments: allowComments ? "0" : "Cerrados",
+      rightsConfirmed: base.rightsConfirmed,
+      moderationStatus: base.moderationStatus,
+      taggedGroup: base.taggedGroup,
+      taggedArtist: base.taggedArtist,
+      taggedShow: base.taggedShow,
+      city: base.city,
+      eventDate: base.eventDate,
+      location: base.location,
     };
     fancamVideos.unshift(fancam);
     userPosts.unshift({ ...base, type: "popular" });
@@ -3886,11 +4112,17 @@ function resetPublishDraft() {
     caption: "",
     hashtags: "",
     taggedPeople: "",
+    taggedGroup: "",
+    taggedArtist: "",
+    taggedShow: "",
+    city: "",
+    eventDate: "",
     location: "",
     taggedPlace: "",
     audio: "",
     privacy: "Seguidores",
     allowComments: true,
+    rightsConfirmed: false,
     filter: "original",
     result: null,
   };
@@ -4123,13 +4355,19 @@ async function requestNotificationPermissionWhenNeeded() {
 }
 
 function savePostReport(key) {
-  const [postId, reason] = key.split("|");
-  const post = findPostById(postId);
+  const separator = key.lastIndexOf("|");
+  const target = separator >= 0 ? key.slice(0, separator) : key;
+  const reason = separator >= 0 ? key.slice(separator + 1) : "Otro";
+  const parsed = parseReportTarget(target);
+  const post = parsed.type === "post" ? findPostById(parsed.id) : null;
   state.socialReports = [
     {
       id: `report-${Date.now()}`,
-      postId: getBasePostId(postId),
-      user: post?.user || "Usuario",
+      target,
+      targetType: parsed.type,
+      targetId: parsed.id,
+      postId: parsed.type === "post" ? getBasePostId(parsed.id) : "",
+      user: post?.user || parsed.label || "Usuario",
       reason,
       status: "pendiente",
       createdAt: new Date().toISOString(),
@@ -4140,6 +4378,12 @@ function savePostReport(key) {
   state.reportTarget = null;
   showToast("Reporte enviado para revision");
   render();
+}
+
+function parseReportTarget(target) {
+  const [type, ...rest] = String(target || "").split(":");
+  if (rest.length) return { type, id: rest.join(":"), label: rest.join(":") };
+  return { type: "post", id: target, label: target };
 }
 
 function hidePost(postId, message = "Publicacion ocultada") {
@@ -4955,7 +5199,6 @@ function renderHome() {
     </div>
     ${renderStoryViewer()}
     ${state.storyEditorOpen ? renderStoryEditor() : ""}
-    ${state.reportTarget ? renderReportSheet() : ""}
     ${state.toast ? `<div class="app-toast">${state.toast}</div>` : ""}
   `;
 }
@@ -5194,21 +5437,38 @@ function renderPostShareSheet(post) {
 }
 
 function renderReportSheet() {
-  const post = findPostById(state.reportTarget);
+  const parsed = parseReportTarget(state.reportTarget);
+  const post = parsed.type === "post" ? findPostById(parsed.id) : null;
+  const targetLabel = post ? `Publicacion de ${post.user}` : getReportTargetLabel(parsed);
   return `
     <section class="report-sheet" aria-label="Reportar publicacion">
       <div class="sheet-handle"></div>
       <div class="composer-head">
-        <strong>Reportar publicacion</strong>
+        <strong>${parsed.type === "copyright" ? "Reportar copyright" : "Reportar contenido"}</strong>
         <button type="button" data-report-close aria-label="Cerrar">X</button>
       </div>
-      <p>Elegí un motivo. Queda guardado como pendiente para revisión del administrador.</p>
+      <p>${parsed.type === "copyright" ? "Si sos dueño del contenido y creés que se publicó sin autorización, podés reportarlo." : "Elegí un motivo. Queda guardado como pendiente para revisión del administrador."}</p>
       <div class="report-reason-list">
         ${reportReasons.map((reason) => `<button type="button" data-report-reason="${state.reportTarget}|${reason}">${reason}</button>`).join("")}
       </div>
-      <small>${post ? `Publicacion de ${post.user}` : "Publicacion seleccionada"}</small>
+      <button class="ghost-button danger-button" type="button" data-report-reason="copyright:${parsed.id}|Copyright">Reportar copyright</button>
+      <small>${targetLabel}</small>
     </section>
   `;
+}
+
+function getReportTargetLabel(parsed) {
+  const labels = {
+    post: "Publicación seleccionada",
+    comment: "Comentario seleccionado",
+    drop: "Drop seleccionado",
+    fancam: "Fancam seleccionada",
+    profile: "Perfil seleccionado",
+    artist: "Artista seleccionado",
+    group: "Grupo seleccionado",
+    copyright: "Contenido con posible infracción",
+  };
+  return labels[parsed.type] || "Contenido seleccionado";
 }
 
 function renderCommentsPanel(post) {
@@ -5257,13 +5517,14 @@ function renderCommentItem(postId, comment, isReply = false) {
         <p class="comment-text">${renderMentionedText(comment.body || "")}</p>
         <div class="comment-tools">
           <button type="button" data-reply-comment="${postId}:${comment.id}:${escapeAttr(comment.username || normalizeProfileKey(comment.user))}">Responder</button>
+          <button type="button" data-report-content="comment:${postId}:${comment.id}">Reportar</button>
+          <button class="comment-like ${liked ? "active" : ""}" type="button" data-like-comment="${key}" aria-label="Dar estrella al comentario">
+            <span>★</span>
+            <strong>${Number(comment.likes || 0)}</strong>
+          </button>
         </div>
-        ${(comment.replies || []).map((reply) => renderCommentItem(postId, reply, true)).join("")}
+        ${(comment.replies || []).length ? `<div class="comment-replies">${(comment.replies || []).map((reply) => renderCommentItem(postId, reply, true)).join("")}</div>` : ""}
       </div>
-      <button class="comment-like ${liked ? "active" : ""}" type="button" data-like-comment="${key}" aria-label="Dar estrella al comentario">
-        <span>★</span>
-        <strong>${Number(comment.likes || 0)}</strong>
-      </button>
     </div>
   `;
 }
@@ -5882,6 +6143,7 @@ function renderDropCard(trend, index) {
                 <button class="${state.dropShareOpen[id] ? "active" : ""}" data-drop-action="share:${id}" aria-label="Compartir"><span class="share-dot"></span><small>Compartir</small></button>
                 <button class="${saved ? "active saved" : ""}" data-drop-action="save:${id}" aria-label="Guardar"><span class="save-mark"></span><small>${saved ? "Guardado" : "Guardar"}</small></button>
                 <button class="${state.dropMusicOpen[id] ? "active" : ""}" data-drop-action="music:${id}" aria-label="Música"><span class="drop-action-symbol">♪</span><small>Música</small></button>
+                <button data-report-content="drop:${id}" aria-label="Reportar Drop"><span class="drop-action-symbol">!</span><small>Reportar</small></button>
               </div>
               ${renderDropPanel(trend, id)}
             </div>
@@ -5983,13 +6245,14 @@ function renderVideoCommentItem(type, id, comment, isReply = false) {
         <p class="comment-text">${renderMentionedText(comment.body || "")}</p>
         <div class="comment-tools">
           <button type="button" data-video-comment-reply="${sheetKey}|${comment.id}|${escapeAttr(comment.username || normalizeProfileKey(comment.user))}">Responder</button>
+          <button type="button" data-report-content="comment:${sheetKey}:${comment.id}">Reportar</button>
+          <button class="comment-like ${liked ? "active" : ""}" type="button" data-video-comment-like="${likeKey}" aria-label="Dar estrella al comentario">
+            <span>★</span>
+            <strong>${Number(comment.likes || 0)}</strong>
+          </button>
         </div>
-        ${(comment.replies || []).map((reply) => renderVideoCommentItem(type, id, reply, true)).join("")}
+        ${(comment.replies || []).length ? `<div class="comment-replies">${(comment.replies || []).map((reply) => renderVideoCommentItem(type, id, reply, true)).join("")}</div>` : ""}
       </div>
-      <button class="comment-like ${liked ? "active" : ""}" type="button" data-video-comment-like="${likeKey}" aria-label="Dar estrella al comentario">
-        <span>★</span>
-        <strong>${Number(comment.likes || 0)}</strong>
-      </button>
     </div>
   `;
 }
@@ -6157,19 +6420,19 @@ function renderVideoUploadEditor(kind) {
               <label>Descripción<textarea data-video-editor-field="description" placeholder="${isFancam ? "Describe la fancam..." : "Describe tu Drop..."}">${escapeHtml(draft.description)}</textarea></label>
               <label>Hashtags<input data-video-editor-field="hashtags" value="${escapeAttr(draft.hashtags)}" placeholder="#HallyuHub #KpopLatam" /></label>
               <label>Música/audio<input data-video-editor-field="music" value="${escapeAttr(draft.music)}" placeholder="Elegí o escribí audio seguro" /></label>
-              ${
-                isFancam
-                  ? `<div class="video-editor-grid-fields">
-                      <label>Grupo<input data-video-editor-field="group" value="${escapeAttr(draft.group)}" placeholder="BTS, ENHYPEN..." /></label>
-                      <label>Artista<input data-video-editor-field="artist" value="${escapeAttr(draft.artist)}" placeholder="Jung Kook, Jungwon..." /></label>
-                      <label>Show/evento<input data-video-editor-field="show" value="${escapeAttr(draft.show)}" placeholder="Music show, concierto..." /></label>
-                    </div>`
-                  : ""
-              }
+              <div class="video-editor-grid-fields">
+                <label>Grupo<input data-video-editor-field="group" value="${escapeAttr(draft.group)}" placeholder="BTS, ENHYPEN..." /></label>
+                <label>Artista<input data-video-editor-field="artist" value="${escapeAttr(draft.artist)}" placeholder="Jung Kook, Jungwon..." /></label>
+                <label>Show/evento<input data-video-editor-field="show" value="${escapeAttr(draft.show)}" placeholder="Music show, concierto..." /></label>
+                <label>Ciudad<input data-video-editor-field="city" value="${escapeAttr(draft.city)}" placeholder="Buenos Aires, Santiago..." /></label>
+                <label>Fecha<input data-video-editor-field="eventDate" value="${escapeAttr(draft.eventDate)}" placeholder="2026-05-21" /></label>
+                <label>Ubicación opcional<input data-video-editor-field="location" value="${escapeAttr(draft.location)}" placeholder="Estadio, teatro, fan meeting..." /></label>
+              </div>
               <label>Texto sobre video<input data-video-editor-field="overlayText" value="${escapeAttr(draft.overlayText)}" placeholder="Texto corto opcional" /></label>
               <div class="video-editor-toggle-row">
                 <label><input type="checkbox" data-video-editor-field="allowComments" ${draft.allowComments ? "checked" : ""} /> Permitir comentarios</label>
                 <label><input type="checkbox" data-video-editor-field="vertical" ${draft.vertical ? "checked" : ""} /> Ajustar 9:16</label>
+                <label><input type="checkbox" data-video-editor-field="rightsConfirmed" ${draft.rightsConfirmed ? "checked" : ""} /> Confirmo que este contenido fue grabado o creado por mí, o que tengo permiso para subirlo.</label>
               </div>
             </div>
 
@@ -6203,6 +6466,7 @@ function renderVideoUploadEditor(kind) {
               <button class="video-cover-button" type="button" data-protected-file="${coverInputId}" data-permission-source="gallery">${draft.coverName ? `Cambiar portada · ${escapeHtml(draft.coverName)}` : "Elegir portada/thumbnail"}</button>
               ${draft.coverUrl ? `<img class="video-cover-preview" src="${escapeAttr(draft.coverUrl)}" alt="Portada elegida" />` : ""}
             </div>
+            <p class="legal-note">Al publicar confirmás que tenés permiso para subir este contenido. No uses videos oficiales completos ni música protegida sin autorización.</p>
           </section>
         </div>
       </div>
@@ -6379,6 +6643,7 @@ function renderFancamCard(fancam, index = 0, options = {}) {
         <button class="${state.fancamShareOpen[fancam.id] ? "active" : ""}" data-fancam-action="share:${fancam.id}" aria-label="Compartir"><span class="share-dot"></span><small>Compartir</small></button>
         <button class="${saved ? "active" : ""}" data-fancam-action="save:${fancam.id}" aria-label="Guardar"><span class="save-mark"></span><small>Guardar</small></button>
         <button class="${state.fancamMusicOpen[fancam.id] ? "active" : ""}" data-fancam-action="music:${fancam.id}" aria-label="Audio"><span>♪</span><small>Audio</small></button>
+        <button data-report-content="fancam:${fancam.id}" aria-label="Reportar fancam"><span>!</span><small>Reportar</small></button>
       </div>
       ${state.fancamShareOpen[fancam.id] ? renderFancamSharePanel(fancam) : ""}
       ${state.fancamMusicOpen[fancam.id] ? renderFancamMusicPanel(fancam) : ""}
@@ -6492,6 +6757,7 @@ function renderVideoProfileOverlay() {
           <div class="video-profile-actions">
             <button class="primary-button" data-drop-action="follow:${id}">${followed ? "Siguiendo" : "Seguir creador"}</button>
             <button class="ghost-button" data-drop-action="music:${id}">Audio</button>
+            <button class="ghost-button" data-report-content="profile:${escapeAttr(trend.user)}">Reportar perfil</button>
             <button class="ghost-button" data-close-video-profile>Volver al Drop</button>
           </div>
         </article>
@@ -6526,6 +6792,7 @@ function renderVideoProfileOverlay() {
         <div class="video-profile-actions">
           <button class="primary-button" data-fancam-action="follow:${fancam.id}">${followed ? "Siguiendo" : "Seguir artista"}</button>
           <button class="ghost-button" data-fancam-action="music:${fancam.id}">Audio/show</button>
+          <button class="ghost-button" data-report-content="artist:${fancam.artistId}">Reportar artista</button>
           <button class="ghost-button" data-close-video-profile>Volver a Fancams</button>
         </div>
       </article>
@@ -6617,6 +6884,11 @@ function renderPublish() {
         <div class="publish-field-grid">
           <label>Hashtags<input data-publish-draft="hashtags" value="${escapeAttr(draft.hashtags)}" placeholder="#KpopLatam #Comeback" /></label>
           <label>Etiquetar personas<input data-publish-draft="taggedPeople" value="${escapeAttr(draft.taggedPeople)}" placeholder="@cami @mika" /></label>
+          <label>Grupo<input data-publish-draft="taggedGroup" value="${escapeAttr(draft.taggedGroup)}" placeholder="BTS, BLACKPINK, ENHYPEN" /></label>
+          <label>Artista/integrante<input data-publish-draft="taggedArtist" value="${escapeAttr(draft.taggedArtist)}" placeholder="Jung Kook, Lisa, Jungwon" /></label>
+          <label>Show/evento<input data-publish-draft="taggedShow" value="${escapeAttr(draft.taggedShow)}" placeholder="Music show, concierto, cupsleeve" /></label>
+          <label>Ciudad<input data-publish-draft="city" value="${escapeAttr(draft.city)}" placeholder="Buenos Aires, Santiago" /></label>
+          <label>Fecha<input data-publish-draft="eventDate" value="${escapeAttr(draft.eventDate)}" placeholder="2026-05-21" /></label>
           <label>Ubicación<input data-publish-draft="location" value="${escapeAttr(draft.location)}" placeholder="Buenos Aires, Argentina" /></label>
           <label>Etiquetar lugar<input data-publish-draft="taggedPlace" value="${escapeAttr(draft.taggedPlace)}" placeholder="Cupsleeve, show, café" /></label>
           <label>Música / audio<input data-publish-draft="audio" value="${escapeAttr(draft.audio)}" placeholder="K-pop safe loop, fan audio..." /></label>
@@ -6631,11 +6903,17 @@ function renderPublish() {
           <span></span>
           Permitir comentarios
         </label>
+        <label class="publish-switch rights-confirm-switch">
+          <input type="checkbox" data-publish-draft="rightsConfirmed" ${draft.rightsConfirmed ? "checked" : ""} />
+          <span></span>
+          Confirmo que este contenido fue grabado o creado por mí, o que tengo permiso para subirlo.
+        </label>
       </div>
       <div class="publish-bottom-actions">
         <button class="ghost-button" type="button" data-publish-cancel>Cancelar</button>
         <button class="primary-button" type="button" data-create-post>Publicar</button>
       </div>
+      <p class="legal-note">El usuario es responsable del contenido que sube. HallyuHub puede remover contenido reportado o que infrinja derechos.</p>
     </section>
   `;
 }
@@ -6677,6 +6955,27 @@ function renderPermissionPrompt() {
         </div>
         <small>Este aviso se recuerda por 30 días y no vuelve a aparecer cada vez que subís algo.</small>
       </div>
+    </section>
+  `;
+}
+
+function renderMediaEmbedModal() {
+  if (!state.mediaEmbed) return "";
+  const video = state.mediaEmbed;
+  return `
+    <section class="media-embed-modal" aria-label="Reproductor oficial">
+      <button class="story-close media-embed-close" data-close-media-embed aria-label="Cerrar">X</button>
+      <article class="media-embed-card">
+        <div class="media-embed-frame">
+          <iframe src="https://www.youtube.com/embed/${escapeAttr(video.youtubeId)}" title="${escapeAttr(video.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+        </div>
+        <div class="media-embed-copy">
+          <span class="tag">Embed oficial</span>
+          <h2>${escapeHtml(video.title)}</h2>
+          <p>${escapeHtml(video.group)} · ${escapeHtml(video.source)}</p>
+          <small>No alojamos videos oficiales protegidos: usamos reproductor embebido o links externos oficiales.</small>
+        </div>
+      </article>
     </section>
   `;
 }
@@ -6896,7 +7195,10 @@ function renderGroups() {
       <p>${activeGroup.style}</p>
       <small class="source-credit">${renderSourceCredit(activeGroup)}</small>
     </article>
-    <button class="primary-button follow-group-button" data-demo-action="Ahora seguís a ${activeGroup.name}">Seguir ${activeGroup.name}</button>
+    <div class="artist-action-row">
+      <button class="primary-button follow-group-button" data-demo-action="Ahora seguís a ${activeGroup.name}">Seguir ${activeGroup.name}</button>
+      <button class="ghost-button" data-report-content="group:${activeGroup.id}">Reportar grupo</button>
+    </div>
     <section class="group-info-grid">
       <div class="info-tile"><span>Empresa</span><strong>${activeGroup.company}</strong></div>
       <div class="info-tile"><span>Debut</span><strong>${activeGroup.debut}</strong></div>
@@ -6931,6 +7233,7 @@ function renderGroups() {
       <h3 class="card-title">Biografia</h3>
       <p>${activeGroup.bio}</p>
     </section>
+    ${renderGroupFanContent(activeGroup)}
     <div class="section-heading"><h2>Artistas</h2><span>${activeGroup.artists.length} perfiles</span></div>
     <div class="artist-list">
       ${activeGroup.artists
@@ -7111,16 +7414,16 @@ function renderArtistProfile(artist, group) {
           <p>${artist.role}</p>
         </div>
       </div>
-      <button class="primary-button follow-group-button" data-demo-action="Ahora seguís a ${artist.name}">Seguir artista</button>
+      <div class="artist-action-row">
+        <button class="primary-button follow-group-button" data-demo-action="Ahora seguís a ${artist.name}">Seguir artista</button>
+        <button class="ghost-button" data-report-content="artist:${artist.id}">Reportar perfil</button>
+      </div>
       <p>${artist.bio}</p>
-      ${renderArtistFancams(artist)}
+      ${renderArtistMediaHub(artist, group)}
+      ${renderArtistFanContent(artist, group)}
       <section class="group-info-grid mini-info-grid">
         ${artistFacts.map(([label, value]) => `<div class="info-tile"><span>${label}</span><strong>${value}</strong></div>`).join("")}
       </section>
-      <div class="official-links-card compact-links">
-        <strong>Redes oficiales del artista/grupo</strong>
-        <div>${(artist.socials || group.officialLinks).map(([label, url]) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`).join("")}</div>
-      </div>
       ${renderImageCredits(artist)}
       <div class="artist-related-card">
         <strong>Noticias y publicaciones relacionadas</strong>
@@ -7133,6 +7436,322 @@ function renderArtistProfile(artist, group) {
         </div>
       </div>
     </section>
+  `;
+}
+
+function renderArtistMediaHub(artist, group) {
+  const photos = getArtistPhotos(artist, group);
+  const videos = getArtistVideos(artist, group);
+  const artistFancams = getFilteredFancams(artist.id);
+  const links = getArtistOfficialLinks(artist, group);
+  return `
+    <section class="artist-media-hub">
+      <div class="section-heading small"><h2>Media oficial y fan</h2><span>Legal ready</span></div>
+      <div class="artist-media-section">
+        <div class="artist-media-title"><strong>Fotos</strong><small>Licenciadas, autorizadas o placeholders</small></div>
+        <div class="artist-media-row">
+          ${photos.map((photo) => renderArtistPhotoTile(photo)).join("")}
+        </div>
+      </div>
+      <div class="artist-media-section">
+        <div class="artist-media-title"><strong>Videos</strong><small>Embeds oficiales de YouTube</small></div>
+        <div class="artist-media-row large-previews">
+          ${
+            videos.length
+              ? videos.map((video) => renderArtistVideoTile(video)).join("")
+              : `<article class="settings-demo-box">Próximamente: embeds oficiales o links externos del artista.</article>`
+          }
+        </div>
+      </div>
+      <div class="artist-media-section">
+        <div class="artist-media-title"><strong>Fancams</strong><small>Contenido de usuarios moderable</small></div>
+        ${
+          artistFancams.length
+            ? `<div class="artist-fancam-row">${artistFancams.map((fancam, index) => renderArtistFancamTile(fancam, index)).join("")}</div>`
+            : `<article class="settings-demo-box">Todavia no hay fancams cargadas para ${escapeHtml(artist.name)}.</article>`
+        }
+      </div>
+      <div class="artist-media-section">
+        <div class="artist-media-title"><strong>Links oficiales</strong><small>No copiamos contenido de plataformas externas</small></div>
+        <div class="artist-official-link-row">
+          ${links.map(([label, url]) => `<a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`).join("")}
+        </div>
+      </div>
+      <p class="legal-note">Los videos oficiales se muestran mediante embeds o enlaces. Fotos y media se reemplazan progresivamente por material con licencia o autorizado.</p>
+    </section>
+  `;
+}
+
+function renderArtistFanContent(artist, group) {
+  const content = getFanContentForEntity({ artist, group, scope: "artist" });
+  return renderFanContentSection({
+    title: "Contenido de fans",
+    subtitle: `${artist.name} · creado por la comunidad`,
+    empty: `Todavía no hay contenido fan etiquetado para ${artist.name}.`,
+    content,
+  });
+}
+
+function renderGroupFanContent(group) {
+  const content = getFanContentForEntity({ group, scope: "group" });
+  return renderFanContentSection({
+    title: "Fans en shows",
+    subtitle: `${group.name} · experiencias, fotos y fancams`,
+    empty: `Todavía no hay experiencias fan etiquetadas para ${group.name}.`,
+    content,
+  });
+}
+
+function renderFanContentSection({ title, subtitle, empty, content }) {
+  const filtered = filterFanContent(content);
+  const fancams = filtered.filter((item) => item.type === "fancam").slice(0, 6);
+  const photos = filtered.filter((item) => item.mediaType === "image" || item.type === "photo").slice(0, 8);
+  const feed = filtered.slice(0, 5);
+  const filters = [
+    ["recent", "Recientes"],
+    ["popular", "Populares"],
+    ["fancams", "Fancams"],
+    ["photos", "Fotos"],
+    ["shows", "Shows"],
+  ];
+  return `
+    <section class="fan-content-section">
+      <div class="section-heading small"><h2>${title}</h2><span>${filtered.length}</span></div>
+      <p class="muted">${subtitle}</p>
+      <div class="fan-filter-row">
+        ${filters.map(([key, label]) => `<button class="${state.fanContentFilter === key ? "active" : ""}" data-fan-content-filter="${key}">${label}</button>`).join("")}
+      </div>
+      ${
+        filtered.length
+          ? `
+            <div class="fan-content-block">
+              <div class="artist-media-title"><strong>Carrusel de fancams</strong><small>Usuarios/fans</small></div>
+              <div class="fan-fancam-row">${(fancams.length ? fancams : filtered.slice(0, 4)).map(renderFanFancamTile).join("")}</div>
+            </div>
+            <div class="fan-content-block">
+              <div class="artist-media-title"><strong>Fotos de conciertos</strong><small>Subidas por fans</small></div>
+              <div class="fan-photo-grid">${(photos.length ? photos : filtered.slice(0, 6)).map(renderFanPhotoTile).join("")}</div>
+            </div>
+            <div class="fan-content-block">
+              <div class="artist-media-title"><strong>Feed fan</strong><small>Experiencias y publicaciones</small></div>
+              <div class="fan-feed-list">${feed.map(renderFanFeedCard).join("")}</div>
+            </div>`
+          : `<article class="settings-demo-box">${empty}</article>`
+      }
+      <p class="legal-note">El usuario es responsable del contenido que sube. HallyuHub podrá remover contenido reportado o que infrinja derechos.</p>
+    </section>
+  `;
+}
+
+function getFanContentForEntity({ artist, group, scope }) {
+  const groupKey = normalizeProfileKey(group?.name);
+  const groupId = normalizeProfileKey(group?.id);
+  const fandomKey = normalizeProfileKey(group?.fandom);
+  const artistKey = normalizeProfileKey(artist?.name);
+  const artistId = normalizeProfileKey(artist?.id);
+  const postItems = userPosts.map((post, index) => ({
+    id: post.id || `post-${index}`,
+    type: post.mediaType === "video" ? "video" : "post",
+    mediaType: post.mediaType || "image",
+    title: post.group || "Publicación fan",
+    caption: post.caption || post.text || "Experiencia fan compartida en HallyuHub.",
+    user: post.user || "Hallyu fan",
+    username: post.username || normalizeProfileKey(post.user),
+    mediaUrl: post.mediaUrl || post.imageUrl || getDemoPostImage(index),
+    likes: post.likes || "0",
+    comments: post.comments || "0",
+    status: post.fanContentStatus || post.moderationStatus || "publicado",
+    taggedGroup: post.taggedGroup || post.group || "",
+    taggedArtist: post.taggedArtist || post.taggedPeople || "",
+    taggedShow: post.taggedShow || post.taggedPlace || "",
+    city: post.city || post.location || "",
+    eventDate: post.eventDate || "",
+    hashtags: post.hashtags || [],
+    createdAt: post.createdAt || new Date().toISOString(),
+  }));
+  const fancamItems = fancamVideos.map((fancam, index) => ({
+    id: fancam.id,
+    type: "fancam",
+    mediaType: fancam.mediaType || "image",
+    title: `${fancam.artist} fancam`,
+    caption: fancam.description,
+    user: fancam.user || state.user?.name || "Fan upload",
+    username: fancam.username || state.user?.username || "fan",
+    mediaUrl: fancam.mediaUrl || fancam.imageUrl || getDemoDropMedia(index),
+    likes: fancam.likes || "0",
+    comments: fancam.comments || "0",
+    status: fancam.fanContentStatus || fancam.moderationStatus || "publicado",
+    taggedGroup: fancam.taggedGroup || fancam.group || "",
+    taggedArtist: fancam.taggedArtist || fancam.artist || "",
+    taggedShow: fancam.taggedShow || fancam.show || "",
+    city: fancam.city || fancam.location || "",
+    eventDate: fancam.eventDate || fancam.date || "",
+    hashtags: fancam.hashtags || [],
+    createdAt: fancam.createdAt || new Date().toISOString(),
+  }));
+  return [...postItems, ...fancamItems]
+    .filter((item) => !state.hiddenFanContent[item.id] && !state.mutedUsers[normalizeProfileKey(item.user)])
+    .filter((item) => item.status !== "oculto" && item.status !== "eliminado")
+    .filter((item) => {
+      const haystack = normalizeProfileKey([
+        item.title,
+        item.caption,
+        item.taggedGroup,
+        item.taggedArtist,
+        item.taggedShow,
+        item.city,
+        ...(item.hashtags || []),
+      ].join(" "));
+      const groupMatch = groupKey && (haystack.includes(groupKey) || haystack.includes(groupId) || haystack.includes(fandomKey));
+      const artistMatch = artistKey && (haystack.includes(artistKey) || haystack.includes(artistId));
+      return scope === "artist" ? artistMatch || groupMatch : groupMatch;
+    })
+    .sort((a, b) => getPostTimeValue(b) - getPostTimeValue(a));
+}
+
+function filterFanContent(content) {
+  const filter = state.fanContentFilter || "recent";
+  if (filter === "fancams") return content.filter((item) => item.type === "fancam" || item.mediaType === "video");
+  if (filter === "photos") return content.filter((item) => item.mediaType === "image");
+  if (filter === "shows") return content.filter((item) => item.taggedShow || item.city || item.eventDate);
+  if (filter === "popular") return [...content].sort((a, b) => getEngagementNumber(b.likes) - getEngagementNumber(a.likes));
+  return content;
+}
+
+function renderFanFancamTile(item) {
+  return `
+    <article class="fan-fancam-tile">
+      <img src="${escapeAttr(item.mediaUrl)}" alt="${escapeAttr(item.title)}" loading="lazy" />
+      <div>
+        <strong>${escapeHtml(item.title)}</strong>
+        <small>${escapeHtml(item.taggedShow || item.city || "Fan upload")} · ${escapeHtml(item.status)}</small>
+      </div>
+      <div class="fan-safety-actions compact">
+        <button data-report-content="${item.type}:${item.id}">Reportar</button>
+        <button data-report-content="copyright:${item.id}">Copyright</button>
+        <button data-hide-fan-content="${item.id}">Ocultar</button>
+      </div>
+    </article>
+  `;
+}
+
+function renderFanPhotoTile(item) {
+  return `
+    <article class="fan-photo-tile">
+      <img src="${escapeAttr(item.mediaUrl)}" alt="${escapeAttr(item.title)}" loading="lazy" />
+      <span>${escapeHtml(item.status)}</span>
+      <div class="fan-photo-actions">
+        <button data-report-content="${item.type}:${item.id}">Reportar</button>
+        <button data-report-content="copyright:${item.id}">Copyright</button>
+      </div>
+    </article>
+  `;
+}
+
+function renderFanFeedCard(item) {
+  return `
+    <article class="fan-feed-card">
+      <img src="${escapeAttr(item.mediaUrl)}" alt="${escapeAttr(item.title)}" loading="lazy" />
+      <div>
+        <div class="fan-feed-head">
+          <strong>${escapeHtml(item.user)}</strong>
+          <span>${escapeHtml(formatRelativeTime(item.createdAt))}</span>
+        </div>
+        <p>${escapeHtml(item.caption)}</p>
+        <div class="fan-meta-line">
+          ${item.taggedGroup ? `<span>${escapeHtml(item.taggedGroup)}</span>` : ""}
+          ${item.taggedArtist ? `<span>${escapeHtml(item.taggedArtist)}</span>` : ""}
+          ${item.taggedShow ? `<span>${escapeHtml(item.taggedShow)}</span>` : ""}
+          ${item.city ? `<span>${escapeHtml(item.city)}</span>` : ""}
+        </div>
+        <div class="fan-safety-actions">
+          <button data-report-content="${item.type}:${item.id}">Reportar</button>
+          <button data-report-content="copyright:${item.id}">Reportar copyright</button>
+          <button data-hide-fan-content="${item.id}">Ocultar</button>
+          <button data-block-fan-user="${escapeAttr(item.username || item.user)}">Bloquear usuario</button>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function getArtistPhotos(artist, group) {
+  return [
+    {
+      title: `${artist.name} perfil`,
+      imageUrl: artist.imageUrl,
+      sourceCredit: artist.sourceCredit,
+      license: artist.license,
+      sourceUrl: artist.sourceUrl,
+    },
+    {
+      title: `${group.name} portada`,
+      imageUrl: group.coverUrl || group.imageUrl,
+      sourceCredit: group.sourceCredit,
+      license: group.license,
+      sourceUrl: group.sourceUrl,
+    },
+    {
+      title: "Placeholder autorizado",
+      imageUrl: localVisuals.idolCard,
+      sourceCredit: placeholderCredit.sourceCredit,
+      license: placeholderCredit.license,
+      sourceUrl: "",
+    },
+  ];
+}
+
+function getArtistVideos(artist, group) {
+  const artistKey = normalizeProfileKey(artist.name);
+  return officialVideoEmbeds
+    .filter((video) => video.artistId === artist.id || video.groupId === group.id || normalizeProfileKey(video.artist).includes(artistKey))
+    .slice(0, 4);
+}
+
+function getArtistOfficialLinks(artist, group) {
+  const base = artist.socials || group.officialLinks || [];
+  const required = [
+    ["YouTube oficial", artist.youtubeUrl || group.youtubeUrl],
+    ["Instagram oficial", artist.instagramUrl || group.instagramUrl],
+    ["TikTok oficial", artist.tiktokUrl || group.tiktokUrl],
+    ["Weverse oficial", artist.weverseUrl || group.weverseUrl],
+    ["Spotify oficial", artist.spotifyUrl || group.spotifyUrl],
+  ].filter(([, url]) => url);
+  const seen = new Set();
+  return [...base, ...required].filter(([label, url]) => {
+    const key = normalizeProfileKey(`${label}-${url}`);
+    if (!url || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function renderArtistPhotoTile(photo) {
+  return `
+    <article class="artist-photo-tile">
+      <img src="${escapeAttr(photo.imageUrl || localVisuals.idolCard)}" alt="${escapeAttr(photo.title)}" loading="lazy" />
+      <div>
+        <strong>${escapeHtml(photo.title)}</strong>
+        <small>${escapeHtml(photo.license || "Licencia pendiente")}</small>
+        ${photo.sourceUrl ? `<a href="${escapeAttr(photo.sourceUrl)}" target="_blank" rel="noopener noreferrer">Crédito</a>` : `<span>${escapeHtml(photo.sourceCredit || "Placeholder")}</span>`}
+      </div>
+    </article>
+  `;
+}
+
+function renderArtistVideoTile(video) {
+  return `
+    <article class="artist-video-tile">
+      <button type="button" data-open-artist-video="${escapeAttr(video.youtubeId)}">
+        <img src="${escapeAttr(video.thumbnail)}" alt="${escapeAttr(video.title)}" loading="lazy" />
+        <span>▶</span>
+      </button>
+      <div>
+        <strong>${escapeHtml(video.title)}</strong>
+        <small>${escapeHtml(video.source)}</small>
+      </div>
+      <button class="tag" type="button" data-report-content="copyright:${escapeAttr(video.youtubeId)}">Reportar copyright</button>
+    </article>
   `;
 }
 
@@ -7380,6 +7999,7 @@ function getSettingsGroups() {
         { key: "community-rules", label: "Normas de comunidad", detail: "Convivencia fandom", icon: "NC" },
         { key: "copyright", label: "Copyright", detail: "Derechos de autor", icon: "©" },
         { key: "fan-policy", label: "Política de contenido fan", detail: "UGC y fan edits", icon: "FN" },
+        { key: "legal-moderation", label: "Moderación legal", detail: "Reportes y acciones admin", icon: "MD" },
         { key: "delete-account", label: "Eliminar cuenta", detail: "Accion sensible", icon: "×" },
       ],
     },
@@ -7415,6 +8035,7 @@ function renderSettingsPanel(panel, activeAvatar, activeAmbience, premiumLabel) 
     "community-rules": "Normas de comunidad",
     copyright: "Copyright",
     "fan-policy": "Politica de contenido fan",
+    "legal-moderation": "Moderación legal",
     "report-problem": "Reportar problema",
     "delete-account": "Eliminar cuenta",
   };
@@ -7508,17 +8129,57 @@ function renderSettingsPanelBody(panel, activeAvatar, activeAmbience, premiumLab
   if (panel === "logout") return `<p class="muted">Cierra la sesion actual en este dispositivo.</p><button class="ghost-button danger-button" data-logout>Cerrar sesion</button>`;
   if (panel === "delete-account") return `<p class="muted">Esta pantalla demo muestra la opcion visible para eliminar cuenta, requerida para apps con usuarios.</p><button class="ghost-button danger-button" data-demo-action="Solicitud de eliminacion enviada">Solicitar eliminacion de cuenta</button>`;
   if (panel === "report-problem") return `<div class="form-stack"><label>Describe el problema<textarea>Quiero reportar contenido o usuario...</textarea></label></div><button class="primary-button" data-demo-action="Reporte enviado">Enviar reporte demo</button>`;
+  if (panel === "legal-moderation") return renderLegalModerationPanel();
   const legalText = {
     "privacy-policy": "Explicamos que HallyuHub protege datos personales, usa localStorage en modo demo y luego Supabase para sesiones reales.",
-    terms: "Reglas demo de uso: respeto, seguridad, nada de acoso, spam, suplantacion ni contenido ilegal.",
+    terms: "El usuario es responsable del contenido que sube a HallyuHub. HallyuHub puede remover contenido reportado o que infrinja derechos, normas de comunidad o leyes aplicables.",
     "community-rules": "Normas: cuidar a fans menores, no doxxing, no bullying, no ventas inseguras y reportar contenido riesgoso.",
-    copyright: "Respeto por derechos de autor, marcas, fancams, fotos oficiales y contenido de terceros.",
-    "fan-policy": "Contenido fan permitido si respeta creditos, privacidad, derechos y normas de comunidad.",
+    copyright: "Si sos dueño del contenido y creés que se publicó sin autorización, podés reportarlo. HallyuHub revisará reportes de copyright y podrá ocultar, remover o restringir contenido en modo real.",
+    "fan-policy": "Contenido fan permitido si respeta creditos, privacidad, derechos y normas de comunidad. No se alojan canciones completas protegidas: se usan previews seguros, audios propios, audio de usuarios o links externos.",
     "payment-methods": "Metodo de pago demo: tarjeta terminada en 4242. No se procesa dinero real.",
     "payment-history": "Historial demo: HallyuHub Plus - pendiente de activar.",
     "cancel-subscription": "Puedes cancelar la suscripcion demo en cualquier momento desde esta pantalla.",
   };
   return `<p class="muted">${legalText[panel] || "Configuracion demo lista para conectarse a funciones reales mas adelante."}</p><div class="settings-demo-box">Pantalla funcional demo sin acciones reales todavia.</div>`;
+}
+
+function renderLegalModerationPanel() {
+  const reports = state.socialReports || [];
+  const demoReports = reports.length
+    ? reports
+    : [
+        { id: "demo-report-post", targetType: "post", targetId: "demo", user: "Demo user", reason: "Copyright", status: "pendiente", createdAt: new Date().toISOString() },
+        { id: "demo-report-fancam", targetType: "fancam", targetId: "fc-jungkook-seven", user: "Fancam demo", reason: "Contenido ofensivo", status: "pendiente", createdAt: new Date().toISOString() },
+      ];
+  const counts = ["post", "fancam", "comment", "profile"].map((type) => [type, demoReports.filter((report) => report.targetType === type).length]);
+  return `
+    <section class="legal-moderation-panel">
+      <p class="muted">Sistema demo/admin para revisar contenido reportado antes de conectar un panel real.</p>
+      <div class="moderation-stats">
+        ${counts.map(([type, count]) => `<span><strong>${count}</strong>${type}</span>`).join("")}
+      </div>
+      <div class="moderation-report-list">
+        ${demoReports
+          .map(
+            (report) => `
+            <article>
+              <div>
+                <span class="tag">${escapeHtml(report.targetType || "contenido")}</span>
+                <strong>${escapeHtml(report.reason || "Otro")}</strong>
+                <small>${escapeHtml(report.user || report.targetId || "Usuario")} · ${escapeHtml(report.status || "pendiente")}</small>
+              </div>
+              <div class="moderation-actions">
+                <button data-admin-action="ocultar:${report.id}">Ocultar</button>
+                <button data-admin-action="eliminar:${report.id}">Eliminar</button>
+                <button data-admin-action="advertir:${report.id}">Advertir</button>
+                <button data-admin-action="suspender:${report.id}">Suspender</button>
+              </div>
+            </article>`,
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
 }
 
 function renderOnboarding() {
@@ -7642,7 +8303,8 @@ function renderProfile() {
             ? `<button class="primary-button profile-create-action" data-go-view="publish" aria-label="Crear publicacion"><span class="nav-icon plus-icon"></span><span>Crear</span></button>
                <button class="ghost-button profile-edit-action" data-profile-edit-open>Editar perfil</button>`
             : `<button class="primary-button profile-main-action" data-profile-follow="${profileUser.id || profileUser.username}">${isFollowing ? "Siguiendo" : "Seguir"}</button>
-               <button class="ghost-button profile-share-action" data-demo-action="Perfil listo para compartir">Compartir perfil</button>`
+               <button class="ghost-button profile-share-action" data-demo-action="Perfil listo para compartir">Compartir perfil</button>
+               <button class="ghost-button profile-report-action" data-report-content="profile:${profileUser.id || profileUser.username}">Reportar</button>`
         }
       </div>
     </section>
@@ -7785,4 +8447,5 @@ document.querySelectorAll("[data-go-view]").forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.goView));
 });
 
+setupSwipeNavigation();
 initApp();
