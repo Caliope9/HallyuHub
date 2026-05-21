@@ -61,6 +61,22 @@ const state = {
   fancamMusicOpen: {},
   fancamPaused: {},
   fancamFeedback: {},
+  publishDraft: {
+    type: "posts",
+    mediaUrl: "",
+    mediaType: "",
+    mediaName: "",
+    caption: "",
+    hashtags: "",
+    taggedPeople: "",
+    location: "",
+    taggedPlace: "",
+    audio: "",
+    privacy: "Seguidores",
+    allowComments: true,
+    filter: "original",
+    result: null,
+  },
   selectedProfileBg: "army",
   activeStory: null,
   likedStories: {},
@@ -1799,6 +1815,27 @@ const fandomBadges = ["Army 💜", "Blink 🖤💖", "Once 🍭", "Stay ⭐", "T
 
 const reportReasons = ["Spam", "Acoso", "Contenido ofensivo", "Derechos de autor", "Otro"];
 
+const publishTypes = [
+  ["posts", "Publicación"],
+  ["trends", "Drop"],
+  ["fancams", "Fancam"],
+  ["stories", "Story"],
+  ["outfits", "Outfit"],
+  ["photocards", "Photocard"],
+];
+
+const publishFilters = [
+  ["original", "Original"],
+  ["neon-idol", "Neon Idol"],
+  ["seoul-night", "Seoul Night"],
+  ["lightstick-glow", "Lightstick Glow"],
+  ["pastel-comeback", "Pastel Comeback"],
+  ["fancam-vhs", "Fancam VHS"],
+  ["dark-concept", "Dark Concept"],
+  ["concert-lights", "Concert Lights"],
+  ["soft-kpop", "Soft K-pop"],
+];
+
 const storyMusicLibrary = [
   { level: 1, category: "Viral", name: "Basic beat · safe loop", detail: "Sonido corto libre para historias nuevas", tone: 523 },
   { level: 1, category: "Cute", name: "Idol sparkle · demo", detail: "Preview original HallyuHub", tone: 659 },
@@ -1892,8 +1929,8 @@ function render() {
   appScreen.classList.toggle("home-mode", state.view === "home");
   appScreen.classList.toggle("light-mode", state.user?.mode === "light");
   appScreen.style.setProperty("--user-accent", state.user?.accent || "#fbbcdb");
-  document.querySelector(".bottom-nav").classList.toggle("hidden", !state.isAuthenticated || state.storyEditorOpen || state.activeStory !== null || state.dropSearchOpen || state.dropCreatorOpen || state.videoProfileOverlay || state.videoFullscreen);
-  document.querySelector(".topbar").classList.toggle("hidden", !state.isAuthenticated || state.view === "profile" || state.storyEditorOpen || state.activeStory !== null);
+  document.querySelector(".bottom-nav").classList.toggle("hidden", !state.isAuthenticated || state.view === "publish" || state.storyEditorOpen || state.activeStory !== null || state.dropSearchOpen || state.dropCreatorOpen || state.videoProfileOverlay || state.videoFullscreen);
+  document.querySelector(".topbar").classList.toggle("hidden", !state.isAuthenticated || state.view === "profile" || state.view === "publish" || state.storyEditorOpen || state.activeStory !== null);
   if (!state.isAuthenticated) {
     view.innerHTML = renderAuth();
     bindDynamicActions();
@@ -1992,6 +2029,80 @@ function bindDynamicActions() {
 
   document.querySelectorAll("[data-create-post]").forEach((button) => {
     button.addEventListener("click", createPost);
+  });
+
+  document.querySelectorAll("[data-publish-type]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.publishDraft.type = button.dataset.publishType;
+      state.publishDraft.result = null;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-publish-draft]").forEach((field) => {
+    field.addEventListener("input", () => {
+      const key = field.dataset.publishDraft;
+      if (field.type === "checkbox") {
+        state.publishDraft[key] = field.checked;
+      } else {
+        state.publishDraft[key] = field.value;
+      }
+    });
+    field.addEventListener("change", () => {
+      const key = field.dataset.publishDraft;
+      state.publishDraft[key] = field.type === "checkbox" ? field.checked : field.value;
+    });
+  });
+
+  document.querySelectorAll("[data-publish-file-trigger]").forEach((button) => {
+    button.addEventListener("click", () => document.getElementById("publish-media-input")?.click());
+  });
+
+  document.querySelectorAll("[data-publish-change-file]").forEach((button) => {
+    button.addEventListener("click", () => document.getElementById("publish-media-input")?.click());
+  });
+
+  document.querySelectorAll("[data-publish-remove-media]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.publishDraft.mediaUrl = "";
+      state.publishDraft.mediaType = "";
+      state.publishDraft.mediaName = "";
+      render();
+    });
+  });
+
+  document.querySelectorAll("#publish-media-input").forEach((input) => {
+    input.addEventListener("change", () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        state.publishDraft.mediaUrl = reader.result || "";
+        state.publishDraft.mediaType = file.type.startsWith("video") ? "video" : "image";
+        state.publishDraft.mediaName = file.name;
+        state.publishDraft.result = null;
+        render();
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+
+  document.querySelectorAll("[data-publish-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.publishDraft.filter = button.dataset.publishFilter;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-publish-cancel]").forEach((button) => {
+    button.addEventListener("click", () => {
+      resetPublishDraft();
+      setView("profile");
+    });
+  });
+
+  document.querySelectorAll("[data-view-created]").forEach((button) => {
+    button.addEventListener("click", () => openPublishedContent(button.dataset.viewCreated));
   });
 
   document.querySelectorAll("[data-news-filter]").forEach((button) => {
@@ -2981,6 +3092,14 @@ async function initApp() {
   if (Array.isArray(savedLocalPosts) && savedLocalPosts.length) {
     userPosts.unshift(...savedLocalPosts.filter((post) => !userPosts.some((item) => item.id === post.id)));
   }
+  const savedLocalDrops = storage.get("hallyuHubUserDrops", []);
+  if (Array.isArray(savedLocalDrops) && savedLocalDrops.length) {
+    trendVideos.unshift(...savedLocalDrops.filter((drop) => !trendVideos.some((item, index) => getDropId(item, index) === drop.id || item.id === drop.id)));
+  }
+  const savedLocalFancams = storage.get("hallyuHubUserFancams", []);
+  if (Array.isArray(savedLocalFancams) && savedLocalFancams.length) {
+    fancamVideos.unshift(...savedLocalFancams.filter((fancam) => !fancamVideos.some((item) => item.id === fancam.id)));
+  }
   const savedNews = storage.get("hallyuHubNewsCache", null);
   state.newsItems = savedNews?.items?.length ? mergeNewsStatuses(savedNews.items, news) : news;
   state.newsLastUpdated = savedNews?.updatedAt || null;
@@ -3268,6 +3387,244 @@ async function loadProfiles() {
 }
 
 async function createPost() {
+  syncPublishDraftFromDom();
+  const draft = state.publishDraft;
+  const caption = draft.caption.trim();
+  const file = document.getElementById("publish-media-input")?.files?.[0];
+  const category = draft.type || "posts";
+  const optionalFields = {
+    location: draft.location.trim(),
+    taggedPeople: draft.taggedPeople.trim(),
+    taggedPlace: draft.taggedPlace.trim(),
+  };
+  const hashtags = (draft.hashtags || "")
+    .split(/[,\s]+/)
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .map((tag) => (tag.startsWith("#") ? tag : `#${tag}`));
+  const mediaUrl = draft.mediaUrl || getDemoPostImage(userPosts.length + 2);
+  const mediaType = draft.mediaType || "image";
+  if (state.backendMode !== "supabase") {
+    const created = createLocalPublishedContent({
+      category,
+      caption,
+      hashtags,
+      optionalFields,
+      mediaUrl,
+      mediaType,
+      filter: draft.filter,
+      audio: draft.audio,
+      privacy: draft.privacy,
+      allowComments: draft.allowComments,
+    });
+    state.publishDraft.result = created;
+    showToast("Publicado correctamente");
+    render();
+    return;
+  }
+  const uploadedMediaUrl = file ? await uploadMedia(file, supabaseBuckets.posts) : mediaUrl;
+  const uploadedMediaType = file?.type?.startsWith("video") ? "video" : file ? "image" : mediaType;
+  const { error } = await state.supabase.from("posts").insert({
+    user_id: state.session.user.id,
+    caption,
+    media_url: uploadedMediaUrl,
+    media_type: uploadedMediaType,
+    category: getPostCategoryLabel(category),
+  });
+  if (error) {
+    alert(error.message);
+    return;
+  }
+  await loadPosts();
+  state.publishDraft.result = {
+    id: `supabase-${Date.now()}`,
+    type: category,
+    label: getPostCategoryLabel(category),
+    mediaUrl: uploadedMediaUrl,
+    mediaType: uploadedMediaType,
+    filter: draft.filter,
+  };
+  render();
+}
+
+function syncPublishDraftFromDom() {
+  document.querySelectorAll("[data-publish-draft]").forEach((field) => {
+    const key = field.dataset.publishDraft;
+    state.publishDraft[key] = field.type === "checkbox" ? field.checked : field.value;
+  });
+}
+
+function createLocalPublishedContent({ category, caption, hashtags, optionalFields, mediaUrl, mediaType, filter, audio, privacy, allowComments }) {
+  const id = `local-${category}-${Date.now()}`;
+  const label = getPostCategoryLabel(category);
+  const base = {
+    id,
+    user: state.user.name,
+    username: state.user.username,
+    avatarUrl: state.user.avatarUrl || getDemoUserImage(0),
+    group: label,
+    category,
+    time: "Ahora",
+    badge: state.user.fandom || "Army 💜",
+    online: true,
+    caption: caption || `Nuevo ${label} en HallyuHub.`,
+    likes: "0",
+    comments: allowComments ? "0" : "Cerrado",
+    commentList: [],
+    hashtags: hashtags.length ? hashtags : ["#HallyuHub", "#KpopLatam"],
+    shares: "0",
+    saves: "0",
+    mediaUrl,
+    imageUrl: mediaUrl,
+    coverUrl: mediaUrl,
+    mediaType,
+    filter,
+    audio,
+    privacy,
+    allowComments,
+    ...optionalFields,
+  };
+  if (category === "stories") {
+    state.ownStory = {
+      user: state.user.name,
+      avatarUrl: state.user.avatarUrl || getDemoUserImage(0),
+      label: "story",
+      time: "Ahora",
+      music: audio || "HallyuHub · safe loop",
+      title: "Tu historia",
+      detail: caption || "Nueva historia publicada.",
+      stars: 0,
+      views: 1,
+      colors: art[0],
+      imageUrl: mediaUrl,
+      coverUrl: mediaUrl,
+      mediaUrl,
+      mediaType,
+      elements: [],
+      filter,
+    };
+    storage.set("hallyuHubOwnStory", state.ownStory);
+    return { id, type: category, label: "Story", mediaUrl, mediaType, filter };
+  }
+  if (category === "trends") {
+    const drop = {
+      id,
+      user: state.user.name,
+      avatarUrl: state.user.avatarUrl || getDemoUserImage(0),
+      challenge: caption ? caption.slice(0, 44) : "Nuevo Drop HallyuHub",
+      song: audio || "HallyuHub · safe loop",
+      description: caption || "Drop nuevo creado en modo demo.",
+      colors: art[1],
+      imageUrl: mediaUrl,
+      coverUrl: mediaUrl,
+      mediaUrl,
+      mediaType,
+      filter,
+      hashtags: base.hashtags,
+    };
+    trendVideos.unshift(drop);
+    userPosts.unshift({ ...base, type: "trending" });
+    storage.set("hallyuHubUserPosts", userPosts.filter((post) => String(post.id || "").startsWith("local-")));
+    storage.set("hallyuHubUserDrops", trendVideos.filter((dropItem) => String(dropItem.id || "").startsWith("local-trends")));
+    return { id, type: category, label: "Drop", mediaUrl, mediaType, filter };
+  }
+  if (category === "fancams") {
+    const taggedArtist = findCatalogArtistFromText(`${optionalFields.taggedPeople} ${caption}`);
+    const fancam = {
+      id,
+      groupId: taggedArtist?.group?.id || normalizeProfileKey(state.user.favoriteGroup || "hallyu"),
+      artistId: taggedArtist?.artist?.id || `local-artist-${Date.now()}`,
+      artist: taggedArtist?.artist?.name || optionalFields.taggedPeople.replace("@", "") || state.user.name,
+      group: taggedArtist?.group?.name || state.user.favoriteGroup || "HallyuHub",
+      era: "Demo upload",
+      show: optionalFields.taggedPlace || "Fan focus",
+      date: "Ahora",
+      views: "0",
+      likes: "0",
+      sort: "recent",
+      description: caption || "Fancam nueva creada en modo demo.",
+      imageUrl: mediaUrl,
+      coverUrl: mediaUrl,
+      mediaUrl,
+      mediaType,
+      colors: art[3],
+      filter,
+    };
+    fancamVideos.unshift(fancam);
+    storage.set("hallyuHubUserFancams", fancamVideos.filter((item) => String(item.id || "").startsWith("local-fancams")));
+    return { id, type: category, label: "Fancam", mediaUrl, mediaType, filter };
+  }
+  userPosts.unshift(base);
+  storage.set("hallyuHubUserPosts", userPosts.filter((post) => String(post.id || "").startsWith("local-")));
+  return { id, type: category, label, mediaUrl, mediaType, filter };
+}
+
+function findCatalogArtistFromText(text) {
+  const normalized = normalizeProfileKey(String(text || "").replace(/@/g, " "));
+  if (!normalized) return null;
+  for (const group of kpopGroups) {
+    for (const artist of group.artists || []) {
+      const names = [artist.name, artist.realName, artist.id].filter(Boolean).map(normalizeProfileKey);
+      if (names.some((name) => name && normalized.includes(name))) {
+        return { group, artist };
+      }
+    }
+  }
+  return null;
+}
+
+function resetPublishDraft() {
+  state.publishDraft = {
+    type: "posts",
+    mediaUrl: "",
+    mediaType: "",
+    mediaName: "",
+    caption: "",
+    hashtags: "",
+    taggedPeople: "",
+    location: "",
+    taggedPlace: "",
+    audio: "",
+    privacy: "Seguidores",
+    allowComments: true,
+    filter: "original",
+    result: null,
+  };
+}
+
+function openPublishedContent(type) {
+  const result = state.publishDraft.result;
+  if (type === "trends") {
+    resetPublishDraft();
+    setView("trends");
+    return;
+  }
+  if (type === "fancams") {
+    resetPublishDraft();
+    setView("fancams");
+    return;
+  }
+  if (type === "stories") {
+    resetPublishDraft();
+    setView("home");
+    state.activeStory = -1;
+    render();
+    return;
+  }
+  if (["outfits", "photocards", "favorites", "posts"].includes(type)) {
+    const nextTab = type === "posts" ? "posts" : type;
+    resetPublishDraft();
+    state.profileTab = nextTab;
+    setView("profile");
+    return;
+  }
+  if (result) {
+    resetPublishDraft();
+    setView("profile");
+  }
+}
+
+async function createLegacySupabasePost() {
   const caption = document.getElementById("post-caption")?.value.trim() || "";
   const file = document.getElementById("post-media")?.files?.[0];
   const category = document.getElementById("post-category")?.value || "posts";
@@ -3322,6 +3679,7 @@ function getPostCategoryLabel(category) {
   const labels = {
     posts: "Publicacion",
     trends: "Drop",
+    fancams: "Fancam",
     outfits: "Outfit",
     photocards: "Photocard",
     saved: "Guardado",
@@ -4249,7 +4607,7 @@ function renderSocialPost(post, index, options = {}) {
           ${state.openPostMenu === post.id ? renderPostMenu(post) : ""}
         </div>
       </div>
-      <div class="post-body-card">
+      <div class="post-body-card filter-${post.filter || "original"}">
         <button class="post-open-button" data-toggle-post-more="${post.id}" aria-label="${expanded ? "Contraer publicacion" : "Expandir publicacion"}">
         ${
           postMediaUrl
@@ -4961,7 +5319,7 @@ function renderDropCard(trend, index) {
   const longDescription = trend.description.length > 68;
   const feedback = state.dropFeedback[id];
   return `
-          <article class="trend-card premium-drop-card effect-${state.dropEffect} ${state.dropPaused[id] ? "paused" : ""}" style="--art:${trend.colors}">
+          <article class="trend-card premium-drop-card effect-${state.dropEffect} filter-${trend.filter || "original"} ${state.dropPaused[id] ? "paused" : ""}" style="--art:${trend.colors}">
             <img class="drop-video-media" src="${escapeAttr(mediaUrl)}" alt="${escapeAttr(trend.challenge)}" loading="lazy" onerror="this.onerror=null;this.src='${escapeAttr(fallbackUrl)}';" />
             <button class="drop-play-toggle" data-drop-toggle="${id}" aria-label="${state.dropPaused[id] ? "Reproducir Drop" : "Pausar Drop"}"></button>
             ${feedback ? `<div class="drop-center-feedback ${feedback === "star" ? "starburst" : ""}">${feedback === "star" ? "★" : state.dropPaused[id] ? "▶" : "Ⅱ"}</div>` : ""}
@@ -5362,7 +5720,7 @@ function renderFancamCard(fancam, index = 0, options = {}) {
   const fallbackUrl = getDemoDropMedia(index + 5);
   const artistAvatar = getDemoUserImage(getStableAssetIndex(fancam.artist, DEMO_USER_IMAGES.length));
   return `
-    <article class="fancam-card ${options.compact ? "compact" : ""} ${paused ? "paused" : ""}" style="--art:${fancam.colors}">
+    <article class="fancam-card filter-${fancam.filter || "original"} ${options.compact ? "compact" : ""} ${paused ? "paused" : ""}" style="--art:${fancam.colors}">
       <button class="fancam-play-area" data-fancam-toggle="${fancam.id}" aria-label="${paused ? "Reproducir fancam" : "Pausar fancam"}"></button>
       ${state.fancamFeedback[fancam.id] ? `<div class="drop-center-feedback">${paused ? "▶" : "Ⅱ"}</div>` : ""}
       <img class="fancam-media" src="${escapeAttr(mediaUrl)}" alt="Fancam de ${escapeAttr(fancam.artist)}" loading="lazy" onerror="this.onerror=null;this.src='${escapeAttr(fallbackUrl)}';" />
@@ -5515,7 +5873,7 @@ function renderVideoProfileOverlay() {
       <button class="story-close video-profile-close" data-close-video-profile aria-label="Cerrar">X</button>
       <article class="video-profile-card fancam-profile-card" style="--art:${fancam.colors}">
         <div class="video-profile-hero">
-          <span class="video-profile-avatar text-avatar">${getInitials(fancam.artist)}</span>
+          ${renderAvatarElement("video-profile-avatar", "berry", fancam.imageUrl || getDemoUserImage(getStableAssetIndex(fancam.artist, DEMO_USER_IMAGES.length)))}
           <div>
             <span class="eyebrow">Focus idol</span>
             <h2>${escapeHtml(fancam.artist)}</h2>
@@ -5572,47 +5930,102 @@ function renderVideoFullscreenOverlay() {
 }
 
 function renderPublish() {
+  const draft = state.publishDraft;
+  const selectedType = publishTypes.find(([key]) => key === draft.type) || publishTypes[0];
+  const selectedFilter = publishFilters.find(([key]) => key === draft.filter) || publishFilters[0];
+  if (draft.result) return renderPublishSuccess(draft.result);
   return `
-    <section class="publish-card refined-publish-card">
-      <div class="publish-header">
-        <button class="ghost-button publish-back" data-go-view="profile">Volver</button>
+    <section class="publish-studio" aria-label="Editor universal HallyuHub">
+      <div class="publish-studio-top">
+        <button class="publish-icon-close" data-publish-cancel aria-label="Cerrar editor">×</button>
         <div>
           <p class="eyebrow">Crear</p>
-          <h2>Nueva publicación</h2>
+          <h2>${selectedType[1]}</h2>
         </div>
-        <button class="story-mini-button" data-story-editor-open>Historia</button>
+        <button class="publish-primary-mini" data-create-post>Publicar</button>
       </div>
-      <div class="post-head publish-author">
-        ${renderAvatarElement("mini", state.user.avatar || "berry", state.user.avatarUrl || getDemoUserImage(0))}
-        <div><h3>${state.user.name}</h3><p class="muted">@${state.user.username}</p></div>
+      <input id="publish-media-input" class="publish-file-input" type="file" accept="image/*,video/*" />
+      <div class="publish-preview-shell filter-${draft.filter}">
+        ${
+          draft.mediaUrl
+            ? `<div class="publish-preview-media">
+                ${
+                  draft.mediaType === "video"
+                    ? `<video src="${escapeAttr(draft.mediaUrl)}" controls playsinline></video>`
+                    : `<img src="${escapeAttr(draft.mediaUrl)}" alt="Preview de ${selectedType[1]}" />`
+                }
+                <div class="publish-preview-actions">
+                  <button type="button" data-publish-change-file>Cambiar</button>
+                  <button type="button" data-publish-remove-media>Eliminar</button>
+                </div>
+                <span class="publish-filter-badge">${selectedFilter[1]}</span>
+              </div>`
+            : `<button type="button" class="publish-upload-hero" data-publish-file-trigger>
+                <span>+</span>
+                <strong>Subir foto o video</strong>
+                <small>Imagen o video para Publicación, Drop, Fancam, Story, Outfit o Photocard</small>
+              </button>`
+        }
       </div>
-      <label class="publish-field">Tipo de contenido
-        <select id="post-category">
-          <option value="posts">Publicacion</option>
-          <option value="trends">Drop</option>
-          <option value="outfits">Outfit</option>
-          <option value="photocards">Photocard</option>
-          <option value="favorites">Favorito</option>
-          <option value="stories">Historia</option>
-        </select>
-      </label>
-      <label class="publish-field">Texto o descripción<textarea id="post-caption" placeholder="Comparte un momento fandom, outfit, trade o Drop..."></textarea></label>
-      <div class="upload-zone">
-        <span class="nav-icon plus-icon"></span>
-        <strong>Subir foto o video</strong>
-        <input id="post-media" type="file" accept="image/*,video/*" />
-        <small>${state.backendMode === "supabase" ? "Se sube a Supabase Storage." : "Modo demo local."}</small>
+      <div class="publish-type-tabs" aria-label="Tipo de contenido">
+        ${publishTypes.map(([key, label]) => `<button type="button" class="${draft.type === key ? "active" : ""}" data-publish-type="${key}">${label}</button>`).join("")}
       </div>
-      <details class="optional-post-fields">
-        <summary>Agregar datos opcionales</summary>
-        <div class="optional-field-grid">
-          <label>Ubicación<input id="post-location" placeholder="Santiago, Chile" /></label>
-          <label>Etiquetar personas<input id="post-tagged-people" placeholder="@cami, @mika" /></label>
-          <label>Etiquetar lugares<input id="post-tagged-place" placeholder="Cupsleeve, evento, local" /></label>
-          <label>Hashtags<input id="post-hashtags" placeholder="#BTS #KpopLatam" /></label>
+      <section class="publish-filter-row" aria-label="Filtros visuales">
+        ${publishFilters.map(([key, label]) => `<button type="button" class="${draft.filter === key ? "active" : ""}" data-publish-filter="${key}"><span class="filter-dot filter-${key}"></span>${label}</button>`).join("")}
+      </section>
+      <div class="publish-fields-card">
+        <div class="publish-author-row">
+          ${renderAvatarElement("mini", state.user.avatar || "berry", state.user.avatarUrl || getDemoUserImage(0))}
+          <div><strong>${state.user.name}</strong><span>@${state.user.username}</span></div>
         </div>
-      </details>
-      <button class="primary-button" data-create-post>Publicar</button>
+        <label class="publish-field clean">Descripción
+          <textarea data-publish-draft="caption" placeholder="Contá qué estás compartiendo..." rows="3">${escapeHtml(draft.caption)}</textarea>
+        </label>
+        <div class="publish-field-grid">
+          <label>Hashtags<input data-publish-draft="hashtags" value="${escapeAttr(draft.hashtags)}" placeholder="#KpopLatam #Comeback" /></label>
+          <label>Etiquetar personas<input data-publish-draft="taggedPeople" value="${escapeAttr(draft.taggedPeople)}" placeholder="@cami @mika" /></label>
+          <label>Ubicación<input data-publish-draft="location" value="${escapeAttr(draft.location)}" placeholder="Buenos Aires, Argentina" /></label>
+          <label>Etiquetar lugar<input data-publish-draft="taggedPlace" value="${escapeAttr(draft.taggedPlace)}" placeholder="Cupsleeve, show, café" /></label>
+          <label>Música / audio<input data-publish-draft="audio" value="${escapeAttr(draft.audio)}" placeholder="K-pop safe loop, fan audio..." /></label>
+          <label>Privacidad
+            <select data-publish-draft="privacy">
+              ${["Público", "Seguidores", "Privado"].map((item) => `<option value="${item}" ${draft.privacy === item ? "selected" : ""}>${item}</option>`).join("")}
+            </select>
+          </label>
+        </div>
+        <label class="publish-switch">
+          <input type="checkbox" data-publish-draft="allowComments" ${draft.allowComments ? "checked" : ""} />
+          <span></span>
+          Permitir comentarios
+        </label>
+      </div>
+      <div class="publish-bottom-actions">
+        <button class="ghost-button" type="button" data-publish-cancel>Cancelar</button>
+        <button class="primary-button" type="button" data-create-post>Publicar</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderPublishSuccess(result) {
+  return `
+    <section class="publish-success-card">
+      <div class="publish-success-art filter-${result.filter || "original"}">
+        ${
+          result.mediaType === "video"
+            ? `<video src="${escapeAttr(result.mediaUrl)}" muted loop playsinline></video>`
+            : `<img src="${escapeAttr(result.mediaUrl)}" alt="Contenido publicado" />`
+        }
+      </div>
+      <div class="publish-success-copy">
+        <span>Publicado correctamente</span>
+        <h2>${result.label}</h2>
+        <p>Tu contenido ya quedó guardado en modo demo y aparece en la sección correspondiente.</p>
+      </div>
+      <div class="publish-success-actions">
+        <button class="primary-button" data-view-created="${result.type}">Ver publicación</button>
+        <button class="ghost-button" data-publish-cancel>Volver al perfil</button>
+      </div>
     </section>
   `;
 }
