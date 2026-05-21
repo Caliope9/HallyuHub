@@ -2206,6 +2206,67 @@ function setStoryPaused(paused) {
     scheduleStoryAutoplay();
   }
   document.getElementById("global-story-viewer")?.classList.toggle("story-paused", paused);
+  document.querySelector(".story-viewer")?.classList.toggle("story-paused", paused);
+  const media = document.querySelector(".story-full-media");
+  if (media?.tagName === "VIDEO") {
+    if (paused) {
+      media.pause();
+    } else {
+      media.play?.().catch(() => {});
+    }
+  }
+}
+
+function bindStoryHoldTarget(element) {
+  let holdStart = 0;
+  const pause = () => {
+    holdStart = Date.now();
+    setStoryPaused(true);
+  };
+  const resume = () => {
+    const heldLongEnough = Date.now() - holdStart > 220;
+    setStoryPaused(false);
+    if (heldLongEnough && element.dataset.storyNav) {
+      element.dataset.suppressStoryNav = "true";
+      setTimeout(() => delete element.dataset.suppressStoryNav, 90);
+    }
+  };
+  element.addEventListener("touchstart", pause, { passive: true });
+  element.addEventListener("touchend", resume, { passive: true });
+  element.addEventListener("touchcancel", resume, { passive: true });
+  element.addEventListener("pointerdown", (event) => {
+    if (event.pointerType === "touch") return;
+    pause();
+  });
+  element.addEventListener("pointerup", (event) => {
+    if (event.pointerType === "touch") return;
+    resume();
+  });
+  element.addEventListener("pointercancel", resume);
+  element.addEventListener("pointerleave", (event) => {
+    if (event.buttons) resume();
+  });
+}
+
+function toggleStoryStar(button) {
+  const index = Number(button.dataset.storyStar);
+  state.likedStories[index] = !state.likedStories[index];
+  const active = Boolean(state.likedStories[index]);
+  button.classList.toggle("active", active);
+  button.classList.add("popped");
+  const story = getActiveStory();
+  const count = Number(story?.stars || 0) + (active ? 1 : 0);
+  const label = button.closest(".story-like-line")?.querySelector("strong");
+  if (label) label.textContent = `${count} estrellas`;
+  playAppSound("like");
+  setTimeout(() => button.classList.remove("popped"), 260);
+}
+
+function focusStoryMessageInput() {
+  setTimeout(() => {
+    const input = document.getElementById("story-message-input");
+    input?.focus({ preventScroll: true });
+  }, 60);
 }
 
 function closeStoryViewer() {
@@ -3292,17 +3353,16 @@ function bindDynamicActions() {
 
   document.querySelectorAll("[data-story-nav]").forEach((button) => {
     button.addEventListener("click", () => {
+      if (button.dataset.suppressStoryNav === "true") {
+        delete button.dataset.suppressStoryNav;
+        return;
+      }
       const direction = Number(button.dataset.storyNav);
       advanceStory(direction, { completed: direction > 0 });
     });
   });
 
-  document.querySelectorAll("[data-story-hold]").forEach((zone) => {
-    zone.addEventListener("pointerdown", () => setStoryPaused(true));
-    zone.addEventListener("pointerup", () => setStoryPaused(false));
-    zone.addEventListener("pointercancel", () => setStoryPaused(false));
-    zone.addEventListener("pointerleave", () => setStoryPaused(false));
-  });
+  document.querySelectorAll("[data-story-hold], [data-story-nav]").forEach(bindStoryHoldTarget);
 
   document.querySelectorAll("[data-own-story-stats]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -3312,27 +3372,44 @@ function bindDynamicActions() {
   });
 
   document.querySelectorAll("[data-story-star]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const index = Number(button.dataset.storyStar);
-      state.likedStories[index] = !state.likedStories[index];
-      button.classList.toggle("active", state.likedStories[index]);
-      button.classList.add("popped");
-      setTimeout(() => button.classList.remove("popped"), 260);
+    button.addEventListener("touchend", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      button.dataset.touchHandled = "true";
+      toggleStoryStar(button);
+      setTimeout(() => delete button.dataset.touchHandled, 80);
+    });
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (button.dataset.touchHandled === "true") return;
+      toggleStoryStar(button);
     });
   });
 
   document.querySelectorAll("[data-story-message-open]").forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
       state.storyComposerOpen = true;
+      state.storyPaused = true;
+      clearStoryAutoplay();
       render();
+      focusStoryMessageInput();
     });
   });
 
   document.querySelectorAll("[data-story-message-close]").forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
       state.storyComposerOpen = false;
+      state.storyPaused = false;
       render();
     });
+  });
+
+  document.querySelectorAll("[data-story-message-input]").forEach((input) => {
+    input.addEventListener("focus", () => setStoryPaused(true));
+    input.addEventListener("touchstart", (event) => event.stopPropagation(), { passive: true });
+    input.addEventListener("pointerdown", (event) => event.stopPropagation());
   });
 
   document.querySelectorAll("[data-story-phrase]").forEach((button) => {
@@ -5628,6 +5705,7 @@ function sendStoryMessage(message) {
   state.storyInbox = [item, ...state.storyInbox].slice(0, 12);
   storage.set("hallyuHubStoryInbox", state.storyInbox);
   state.storyComposerOpen = false;
+  state.storyPaused = false;
   playAppSound("message");
   render();
 }
@@ -6135,7 +6213,7 @@ function renderStoryComposer(story) {
         ${storyDecorations.map((item) => `<button type="button" data-create-own-story="${item}">${item}</button>`).join("")}
       </div>
       <div class="story-comment-box expanded">
-        <input id="story-message-input" placeholder="Escribir texto K-pop..." />
+        <input id="story-message-input" data-story-message-input placeholder="Escribir texto K-pop..." />
         <button data-story-send>Enviar</button>
       </div>
       ${

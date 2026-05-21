@@ -3018,6 +3018,8 @@ video.post-media.real-media {
 }
 
 .story-star {
+  position: relative;
+  z-index: 100008;
   width: 44px;
   height: 44px;
   border: 1px solid rgba(255, 255, 255, 0.22);
@@ -3028,6 +3030,9 @@ video.post-media.real-media {
   font-size: 23px;
   text-shadow: 0 0 18px rgba(255, 255, 255, 0.44);
   transition: transform 180ms ease, color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .story-star.active {
@@ -3124,6 +3129,8 @@ video.post-media.real-media {
 }
 
 .story-reply-trigger {
+  position: relative;
+  z-index: 100008;
   min-height: 38px;
   flex: 1;
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -3135,6 +3142,9 @@ video.post-media.real-media {
   font-size: 12px;
   font-weight: 850;
   backdrop-filter: blur(16px);
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .own-story-actions {
@@ -3215,7 +3225,8 @@ video.post-media.real-media {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: env(safe-area-inset-bottom);
+  z-index: 100009;
   border-radius: 24px 24px 0 0;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background:
@@ -3225,6 +3236,15 @@ video.post-media.real-media {
   padding: 9px 12px 12px;
   box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.34), 0 0 30px rgba(251, 188, 219, 0.11);
   animation: sheetUp 220ms ease-out both;
+  pointer-events: auto;
+  touch-action: auto;
+}
+
+.story-comment-box input {
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .story-composer-sheet .story-decorations,
