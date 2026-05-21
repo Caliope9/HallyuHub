@@ -2770,6 +2770,10 @@ video.post-media.real-media {
   animation: storyProgress 4.2s linear forwards;
 }
 
+.story-paused .story-progress span.active::after {
+  animation-play-state: paused;
+}
+
 @keyframes storyProgress {
   from {
     width: 0;
@@ -2813,6 +2817,14 @@ video.post-media.real-media {
   border: 0;
   background: transparent;
   z-index: 100001;
+}
+
+.story-hold-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 100000;
+  background: transparent;
+  touch-action: none;
 }
 
 .story-tap-zone.left {

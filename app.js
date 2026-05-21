@@ -130,6 +130,7 @@ const state = {
   activeStory: null,
   likedStories: {},
   viewedStories: {},
+  storyPaused: false,
   storyDirection: 1,
   storyComposerOpen: false,
   storyEditorOpen: false,
@@ -2155,10 +2156,19 @@ function getStoryOpenIndex(requestedIndex = 0) {
   return nextUnviewed === null ? requestedIndex : nextUnviewed;
 }
 
+function getOrderedStoryIndexes() {
+  const indexes = followingStories.map((_, index) => index);
+  return [
+    ...indexes.filter((index) => !isStoryViewed(index)),
+    ...indexes.filter((index) => isStoryViewed(index)),
+  ];
+}
+
 function advanceStory(direction = 1, options = {}) {
   if (state.activeStory === null) return;
   if (options.completed || direction > 0) markStoryViewed(state.activeStory);
   state.storyDirection = direction;
+  state.storyPaused = false;
   let nextIndex = null;
   if (direction > 0) {
     const start = state.activeStory === -1 ? 0 : state.activeStory + 1;
@@ -2187,10 +2197,22 @@ function advanceStory(direction = 1, options = {}) {
   render();
 }
 
+function setStoryPaused(paused) {
+  if (state.activeStory === null) return;
+  state.storyPaused = paused;
+  if (paused) {
+    clearStoryAutoplay();
+  } else {
+    scheduleStoryAutoplay();
+  }
+  document.getElementById("global-story-viewer")?.classList.toggle("story-paused", paused);
+}
+
 function closeStoryViewer() {
   state.activeStory = null;
   state.storyComposerOpen = false;
   state.ownStoryStatsOpen = false;
+  state.storyPaused = false;
   clearStoryAutoplay();
   render();
 }
@@ -2204,7 +2226,7 @@ function clearStoryAutoplay() {
 
 function scheduleStoryAutoplay() {
   clearStoryAutoplay();
-  if (state.view !== "home" || state.activeStory === null) return;
+  if (state.view !== "home" || state.activeStory === null || state.storyPaused) return;
   storyAutoTimer = setTimeout(() => {
     advanceStory(1, { completed: true });
   }, 4200);
@@ -2617,11 +2639,13 @@ function bindDynamicActions() {
         state.activeStory = -1;
         markStoryViewed(-1);
         state.storyDirection = 1;
+        state.storyPaused = false;
       } else {
         state.storyEditorOpen = true;
       }
       state.storyComposerOpen = false;
       state.ownStoryStatsOpen = false;
+      state.storyPaused = false;
       render();
     });
   });
@@ -3260,6 +3284,7 @@ function bindDynamicActions() {
       state.activeStory = null;
       state.storyComposerOpen = false;
       state.ownStoryStatsOpen = false;
+      state.storyPaused = false;
       clearStoryAutoplay();
       render();
     });
@@ -3270,6 +3295,13 @@ function bindDynamicActions() {
       const direction = Number(button.dataset.storyNav);
       advanceStory(direction, { completed: direction > 0 });
     });
+  });
+
+  document.querySelectorAll("[data-story-hold]").forEach((zone) => {
+    zone.addEventListener("pointerdown", () => setStoryPaused(true));
+    zone.addEventListener("pointerup", () => setStoryPaused(false));
+    zone.addEventListener("pointercancel", () => setStoryPaused(false));
+    zone.addEventListener("pointerleave", () => setStoryPaused(false));
   });
 
   document.querySelectorAll("[data-own-story-stats]").forEach((button) => {
@@ -5629,6 +5661,7 @@ function renderHome() {
   const filteredFeedPosts = filterHomeFeed(feedPosts);
   const infiniteFeedPosts = buildHomeFeed(filteredFeedPosts);
   const filterLabel = getHomeFilterLabel(state.homeFilter);
+  const orderedStoryIndexes = getOrderedStoryIndexes();
   return `
     ${renderHomeHighlights()}
     <div class="stories-row" aria-label="Historias de personas que sigo">
@@ -5639,15 +5672,18 @@ function renderHome() {
         <strong>${state.ownStory ? "Tu historia" : "Crear"}</strong>
         <small>${state.ownStory ? `${state.ownStory.stars}★ · ${state.ownStory.views} vistas` : "Subir"}</small>
       </button>
-      ${followingStories
+      ${orderedStoryIndexes
         .map(
-          (story, index) => `
+          (index) => {
+            const story = followingStories[index];
+            return `
           <button class="story-item" data-story-index="${index}">
             <span class="story-ring ${isStoryViewed(index) ? "viewed" : "unviewed"}">
               ${renderAvatarElement("story-avatar", story.avatar, story.avatarUrl)}
             </span>
             <strong>${story.user}</strong>
-          </button>`,
+          </button>`;
+          },
         )
         .join("")}
     </div>
@@ -5758,9 +5794,10 @@ function renderStoryViewer() {
   const progressTotal = followingStories.length + (state.ownStory ? 1 : 0);
   const progressIndex = state.ownStory ? state.activeStory + 1 : state.activeStory;
   return `
-    <section class="story-viewer story-slide-${state.storyDirection > 0 ? "next" : "prev"} ${isOwnStory ? "own-story-viewer" : ""}" style="--story-art:${story.colors}" aria-label="Historia abierta">
+    <section class="story-viewer story-slide-${state.storyDirection > 0 ? "next" : "prev"} ${state.storyPaused ? "story-paused" : ""} ${isOwnStory ? "own-story-viewer" : ""}" style="--story-art:${story.colors}" aria-label="Historia abierta">
       <div class="story-progress">${Array.from({ length: progressTotal }, (_, index) => `<span class="${index < progressIndex ? "seen" : ""} ${index === progressIndex ? "active" : ""}"></span>`).join("")}</div>
       <button class="story-close" data-story-close aria-label="Cerrar historia">X</button>
+      <div class="story-hold-layer" data-story-hold aria-hidden="true"></div>
       <button class="story-tap-zone left" data-story-nav="-1" aria-label="Historia anterior"></button>
       <button class="story-tap-zone right" data-story-nav="1" aria-label="Historia siguiente"></button>
       <article class="story-full-card" style="--art:${story.colors}">
