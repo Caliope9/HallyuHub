@@ -156,6 +156,7 @@ const state = {
   },
   ownStoryStatsOpen: false,
   ownStory: null,
+  ownStories: [],
   storyInbox: [],
   authMode: "start",
   isAuthenticated: false,
@@ -2295,6 +2296,26 @@ function focusStoryMessageInput() {
   }, 60);
 }
 
+function openStoryComposer() {
+  state.storyComposerOpen = true;
+  state.storyPaused = true;
+  clearStoryAutoplay();
+  render();
+  focusStoryMessageInput();
+}
+
+function handleMediaUpload(file, type = "media") {
+  if (!file) return null;
+  const mediaType = file.type?.startsWith("video") ? "video" : "image";
+  const mediaUrl = URL.createObjectURL(file);
+  return {
+    mediaUrl,
+    mediaType,
+    mediaName: file.name || `${type}.${mediaType === "video" ? "mp4" : "jpg"}`,
+    file,
+  };
+}
+
 function closeStoryViewer() {
   state.activeStory = null;
   state.storyComposerOpen = false;
@@ -2419,15 +2440,13 @@ function bindDynamicActions() {
     input.addEventListener("change", () => {
       const file = input.files?.[0];
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        state.publishDraft.mediaUrl = reader.result || "";
-        state.publishDraft.mediaType = file.type.startsWith("video") ? "video" : "image";
-        state.publishDraft.mediaName = file.name;
-        state.publishDraft.result = null;
-        render();
-      };
-      reader.readAsDataURL(file);
+      const media = handleMediaUpload(file, "publish");
+      if (!media) return;
+      state.publishDraft.mediaUrl = media.mediaUrl;
+      state.publishDraft.mediaType = media.mediaType;
+      state.publishDraft.mediaName = media.mediaName;
+      state.publishDraft.result = null;
+      render();
     });
   });
 
@@ -2846,11 +2865,11 @@ function bindDynamicActions() {
       state.videoEditorDraft.loading = true;
       state.videoEditorDraft.error = "";
       render();
-      const reader = new FileReader();
-      reader.onload = () => {
-        state.videoEditorDraft.mediaUrl = reader.result || "";
-        state.videoEditorDraft.mediaType = file.type.startsWith("video") ? "video" : "image";
-        state.videoEditorDraft.mediaName = file.name;
+      try {
+        const media = handleMediaUpload(file, state.videoEditorDraft.kind);
+        state.videoEditorDraft.mediaUrl = media.mediaUrl;
+        state.videoEditorDraft.mediaType = "video";
+        state.videoEditorDraft.mediaName = media.mediaName;
         state.videoEditorDraft.start = "0";
         state.videoEditorDraft.end = state.videoEditorDraft.kind === "fancams" ? "180" : "60";
         state.videoEditorDraft.duration = state.videoEditorDraft.kind === "fancams" ? "180" : "60";
@@ -2858,14 +2877,12 @@ function bindDynamicActions() {
         state.videoEditorDraft.error = "";
         state.videoEditorDraft.result = null;
         render();
-      };
-      reader.onerror = () => {
+      } catch {
         state.videoEditorDraft.loading = false;
         state.videoEditorDraft.error = "No pudimos cargar el video. Probá con otro archivo.";
         showToast("No pudimos cargar el video");
         render();
-      };
-      reader.readAsDataURL(file);
+      }
     });
   });
 
@@ -3356,12 +3373,12 @@ function bindDynamicActions() {
         render();
         return;
       }
-      const reader = new FileReader();
-      reader.onload = () => {
-        state.storyDraft.mediaUrl = reader.result || "";
-        render();
-      };
-      reader.readAsDataURL(file);
+      const media = handleMediaUpload(file, "story");
+      if (!media) return;
+      state.storyDraft.mediaUrl = media.mediaUrl;
+      state.storyDraft.mediaType = media.mediaType;
+      state.storyDraft.mediaName = media.mediaName;
+      render();
     });
   });
 
@@ -3418,14 +3435,18 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-story-message-open]").forEach((button) => {
     button.addEventListener("touchstart", (event) => event.stopPropagation(), { passive: true });
     button.addEventListener("pointerdown", (event) => event.stopPropagation());
+    button.addEventListener("touchend", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      button.dataset.touchHandled = "true";
+      openStoryComposer();
+      setTimeout(() => delete button.dataset.touchHandled, 80);
+    });
     button.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      state.storyComposerOpen = true;
-      state.storyPaused = true;
-      clearStoryAutoplay();
-      render();
-      focusStoryMessageInput();
+      if (button.dataset.touchHandled === "true") return;
+      openStoryComposer();
     });
   });
 
@@ -3831,7 +3852,8 @@ async function initApp() {
   const savedNews = storage.get("hallyuHubNewsCache", null);
   state.newsItems = savedNews?.items?.length ? mergeNewsStatuses(savedNews.items, news) : news;
   state.newsLastUpdated = savedNews?.updatedAt || null;
-  state.ownStory = storage.get("hallyuHubOwnStory", null);
+  state.ownStories = storage.get("hallyuHubOwnStories", []);
+  state.ownStory = state.ownStories[0] || storage.get("hallyuHubOwnStory", null);
   state.storyInbox = storage.get("hallyuHubStoryInbox", []);
   state.viewedStories = storage.get("hallyuHubViewedStories", {});
   state.soundEnabled = storage.get("hallyuHubSoundEnabled", true);
@@ -4519,7 +4541,7 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
     ...optionalFields,
   };
   if (category === "stories") {
-    state.ownStory = {
+    const story = {
       id,
       createdAt: base.createdAt,
       user: state.user.name,
@@ -4539,6 +4561,9 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
       elements: [],
       filter,
     };
+    state.ownStories = [story, ...(state.ownStories || [])].slice(0, 20);
+    state.ownStory = story;
+    storage.set("hallyuHubOwnStories", state.ownStories);
     storage.set("hallyuHubOwnStory", state.ownStory);
     const storyKey = getStoryKey(-1);
     if (storyKey) {
@@ -5688,7 +5713,7 @@ function createOwnStory(style = "Neon pastel") {
   const draft = state.storyDraft || {};
   const elements = getStoryDraftElements();
   const storyId = `own-${Date.now()}`;
-  state.ownStory = {
+  const story = {
     id: storyId,
     createdAt: new Date().toISOString(),
     user: state.user?.name || "Mi historia",
@@ -5709,6 +5734,9 @@ function createOwnStory(style = "Neon pastel") {
     musicCategory: draft.musicCategory || "Viral",
     elements,
   };
+  state.ownStories = [story, ...(state.ownStories || [])].slice(0, 20);
+  state.ownStory = story;
+  storage.set("hallyuHubOwnStories", state.ownStories);
   storage.set("hallyuHubOwnStory", state.ownStory);
   const storyKey = getStoryKey(-1);
   if (storyKey) {
@@ -5752,6 +5780,7 @@ function sendStoryMessage(message) {
   storage.set("hallyuHubStoryInbox", state.storyInbox);
   state.storyComposerOpen = false;
   state.storyPaused = false;
+  showToast("Mensaje enviado");
   playAppSound("message");
   render();
 }
@@ -5789,13 +5818,16 @@ function renderHome() {
   return `
     ${renderHomeHighlights()}
     <div class="stories-row" aria-label="Historias de personas que sigo">
-      <button class="story-item own-story-item" data-own-story>
-        <span class="story-ring own-ring ${state.ownStory ? "has-story" : "empty-story"} ${state.ownStory && isStoryViewed(-1) ? "viewed" : ""}">
-          ${state.ownStory ? renderAvatarElement("story-avatar", state.user?.avatar || "berry", state.user?.avatarUrl || getDemoUserImage(0)) : `<span class="story-plus">+</span>`}
-        </span>
+      <div class="story-item own-story-item">
+        <button type="button" class="story-own-main" data-own-story aria-label="${state.ownStory ? "Ver mi historia" : "Crear historia"}">
+          <span class="story-ring own-ring ${state.ownStory ? "has-story" : "empty-story"} ${state.ownStory && isStoryViewed(-1) ? "viewed" : ""}">
+            ${state.ownStory ? renderAvatarElement("story-avatar", state.user?.avatar || "berry", state.user?.avatarUrl || getDemoUserImage(0)) : `<span class="story-plus">+</span>`}
+          </span>
+        </button>
+        ${state.ownStory ? `<button type="button" class="story-add-badge" data-story-editor-open aria-label="Agregar nueva historia">+</button>` : ""}
         <strong>${state.ownStory ? "Tu historia" : "Crear"}</strong>
         <small>${state.ownStory ? `${state.ownStory.stars}★ · ${state.ownStory.views} vistas` : "Subir"}</small>
-      </button>
+      </div>
       ${orderedStoryIndexes
         .map(
           (index) => {
@@ -5967,7 +5999,7 @@ function renderStoryMedia(story) {
   const mediaUrl = story.mediaUrl || story.imageUrl || getDemoStoryImage(getStableAssetIndex(story.user, DEMO_STORY_IMAGES.length));
   const fallbackUrl = getDemoStoryImage(getStableAssetIndex(`${story.user}-fallback`, DEMO_STORY_IMAGES.length));
   return story.mediaType === "video"
-    ? `<video class="story-full-media" src="${escapeAttr(mediaUrl)}" autoplay muted loop playsinline></video>`
+    ? `<video class="story-full-media" src="${escapeAttr(mediaUrl)}" autoplay muted loop playsinline preload="metadata"></video>`
     : `<img class="story-full-media" src="${escapeAttr(mediaUrl)}" alt="Historia subida por ${escapeAttr(story.user)}" loading="lazy" onerror="this.onerror=null;this.src='${escapeAttr(fallbackUrl)}';" />`;
 }
 
@@ -6022,8 +6054,8 @@ function renderSocialPost(post, index, options = {}) {
         <button class="post-open-button" data-toggle-post-more="${post.id}" aria-label="${expanded ? "Contraer publicacion" : "Expandir publicacion"}">
         ${
           postMediaUrl
-            ? post.mediaType === "video"
-              ? `<video class="post-media real-media" src="${postMediaUrl}" controls playsinline></video>`
+              ? post.mediaType === "video"
+              ? `<video class="post-media real-media" src="${postMediaUrl}" controls playsinline muted preload="metadata"></video>`
               : `<img class="post-media real-media" src="${escapeAttr(postMediaUrl)}" alt="Publicacion de ${escapeAttr(post.user)}" loading="lazy" onerror="this.onerror=null;this.src='${escapeAttr(postFallbackUrl)}';" />`
             : `<img class="post-media real-media" src="${escapeAttr(postFallbackUrl)}" alt="Publicacion de ${escapeAttr(post.user)}" loading="lazy" />`
         }
@@ -6290,7 +6322,7 @@ function renderStoryEditor() {
           ${
             draft.mediaUrl
               ? draft.mediaType === "video"
-                ? `<video class="story-editor-media" src="${draft.mediaUrl}" autoplay muted loop playsinline></video>`
+                ? `<video class="story-editor-media" src="${draft.mediaUrl}" autoplay muted loop playsinline preload="metadata"></video>`
                 : `<img class="story-editor-media" src="${draft.mediaUrl}" alt="Vista previa de historia" />`
               : ""
           }
@@ -7092,7 +7124,7 @@ function renderVideoUploadEditor(kind) {
               draft.loading
                 ? `<div class="video-upload-stage video-loading-state"><span class="video-upload-plus">...</span><strong>Cargando video</strong><small>Preparando preview para mobile</small></div>`
                 : draft.mediaUrl
-                ? `<video class="video-editor-preview" data-video-editor-preview src="${escapeAttr(draft.mediaUrl)}" controls playsinline ${draft.muted ? "muted" : ""}></video>`
+                ? `<video class="video-editor-preview" data-video-editor-preview src="${escapeAttr(draft.mediaUrl)}" controls playsinline muted preload="metadata"></video>`
                 : `<button class="video-upload-stage" type="button" data-protected-file="${fileInputId}" data-permission-source="gallery" data-permission-mic="true">
                     <span class="video-upload-plus">+</span>
                     <strong>Subir video</strong>
@@ -7608,7 +7640,7 @@ function renderPublish() {
             ? `<div class="publish-preview-media">
                 ${
                   draft.mediaType === "video"
-                    ? `<video src="${escapeAttr(draft.mediaUrl)}" controls playsinline></video>`
+                    ? `<video src="${escapeAttr(draft.mediaUrl)}" controls playsinline muted preload="metadata"></video>`
                     : `<img src="${escapeAttr(draft.mediaUrl)}" alt="Preview de ${selectedType[1]}" />`
                 }
                 <div class="publish-preview-actions">

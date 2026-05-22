@@ -1652,6 +1652,32 @@ h1 {
   color: var(--text);
   padding: 0;
   text-align: center;
+  position: relative;
+}
+
+.story-own-main {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  width: 100%;
+  display: block;
+}
+
+.story-add-badge {
+  position: absolute;
+  top: 42px;
+  right: 6px;
+  z-index: 3;
+  width: 23px;
+  height: 23px;
+  border: 2px solid rgba(8, 3, 17, 0.96);
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--pink), var(--cyan));
+  color: #12051e;
+  font-weight: 1000;
+  line-height: 1;
+  box-shadow: 0 0 16px rgba(251, 188, 219, 0.35);
 }
 
 .story-ring {
@@ -2826,7 +2852,7 @@ video.post-media.real-media {
 .story-tap-zone {
   position: absolute;
   top: 0;
-  bottom: 0;
+  bottom: max(88px, calc(env(safe-area-inset-bottom) + 76px));
   width: 50%;
   border: 0;
   background: transparent;
@@ -2862,7 +2888,7 @@ video.post-media.real-media {
 .story-full-card {
   position: fixed;
   inset: 0;
-  z-index: 100000;
+  z-index: 100002;
   width: 100vw;
   height: 100dvh;
   border-radius: 0;
@@ -3022,7 +3048,8 @@ video.post-media.real-media {
   backdrop-filter: none;
   padding: 0;
   position: absolute;
-  z-index: 100006;
+  z-index: 100010;
+  pointer-events: auto;
 }
 
 @media (min-width: 520px) {
@@ -3254,7 +3281,7 @@ video.post-media.real-media {
   left: 0;
   right: 0;
   bottom: env(safe-area-inset-bottom);
-  z-index: 100009;
+  z-index: 100011;
   border-radius: 24px 24px 0 0;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background:
@@ -3271,6 +3298,8 @@ video.post-media.real-media {
 }
 
 .story-comment-box input {
+  position: relative;
+  z-index: 100012;
   pointer-events: auto;
   touch-action: manipulation;
   -webkit-user-select: text;
