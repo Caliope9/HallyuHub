@@ -2179,7 +2179,12 @@ function advanceStory(direction = 1, options = {}) {
       }
     }
     if (nextIndex === null) {
-      closeStoryViewer();
+      if (options.closeAtEnd === false) {
+        state.storyPaused = false;
+        scheduleStoryAutoplay();
+      } else {
+        closeStoryViewer();
+      }
       return;
     }
   } else {
@@ -2217,34 +2222,55 @@ function setStoryPaused(paused) {
   }
 }
 
-function bindStoryHoldTarget(element) {
+function isStoryInteractiveTarget(target) {
+  return Boolean(
+    target?.closest?.(
+      "[data-story-star], [data-own-story-stats], [data-story-message-open], [data-story-message-close], [data-story-send], [data-story-phrase], [data-story-message-input], .story-composer-sheet, .story-interactions, .story-close",
+    ),
+  );
+}
+
+function bindStoryTapZone(element) {
   let holdStart = 0;
-  const pause = () => {
+  let handledPointer = false;
+  const pause = (event) => {
+    if (isStoryInteractiveTarget(event.target)) return;
+    event.preventDefault?.();
     holdStart = Date.now();
+    handledPointer = true;
     setStoryPaused(true);
   };
-  const resume = () => {
-    const heldLongEnough = Date.now() - holdStart > 220;
+  const resume = (event) => {
+    if (!handledPointer || isStoryInteractiveTarget(event.target)) return;
+    event.preventDefault?.();
+    const heldLongEnough = Date.now() - holdStart > 250;
+    const direction = Number(element.dataset.storyNav || 0);
     setStoryPaused(false);
-    if (heldLongEnough && element.dataset.storyNav) {
-      element.dataset.suppressStoryNav = "true";
-      setTimeout(() => delete element.dataset.suppressStoryNav, 90);
+    if (!heldLongEnough && direction) {
+      advanceStory(direction, { completed: direction > 0, closeAtEnd: false });
     }
+    element.dataset.suppressStoryNav = "true";
+    setTimeout(() => delete element.dataset.suppressStoryNav, 120);
+    handledPointer = false;
   };
-  element.addEventListener("touchstart", pause, { passive: true });
-  element.addEventListener("touchend", resume, { passive: true });
-  element.addEventListener("touchcancel", resume, { passive: true });
+  const cancel = (event) => {
+    if (!handledPointer) return;
+    event.preventDefault?.();
+    setStoryPaused(false);
+    handledPointer = false;
+  };
+  element.addEventListener("touchstart", pause, { passive: false });
+  element.addEventListener("touchend", resume, { passive: false });
+  element.addEventListener("touchcancel", cancel, { passive: false });
   element.addEventListener("pointerdown", (event) => {
-    if (event.pointerType === "touch") return;
-    pause();
+    pause(event);
   });
   element.addEventListener("pointerup", (event) => {
-    if (event.pointerType === "touch") return;
-    resume();
+    resume(event);
   });
-  element.addEventListener("pointercancel", resume);
+  element.addEventListener("pointercancel", cancel);
   element.addEventListener("pointerleave", (event) => {
-    if (event.buttons) resume();
+    if (event.buttons) cancel(event);
   });
 }
 
@@ -3352,17 +3378,18 @@ function bindDynamicActions() {
   });
 
   document.querySelectorAll("[data-story-nav]").forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
       if (button.dataset.suppressStoryNav === "true") {
         delete button.dataset.suppressStoryNav;
         return;
       }
       const direction = Number(button.dataset.storyNav);
-      advanceStory(direction, { completed: direction > 0 });
+      advanceStory(direction, { completed: direction > 0, closeAtEnd: false });
     });
   });
 
-  document.querySelectorAll("[data-story-hold], [data-story-nav]").forEach(bindStoryHoldTarget);
+  document.querySelectorAll("[data-story-nav]").forEach(bindStoryTapZone);
 
   document.querySelectorAll("[data-own-story-stats]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -3372,6 +3399,8 @@ function bindDynamicActions() {
   });
 
   document.querySelectorAll("[data-story-star]").forEach((button) => {
+    button.addEventListener("touchstart", (event) => event.stopPropagation(), { passive: true });
+    button.addEventListener("pointerdown", (event) => event.stopPropagation());
     button.addEventListener("touchend", (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -3387,7 +3416,10 @@ function bindDynamicActions() {
   });
 
   document.querySelectorAll("[data-story-message-open]").forEach((button) => {
+    button.addEventListener("touchstart", (event) => event.stopPropagation(), { passive: true });
+    button.addEventListener("pointerdown", (event) => event.stopPropagation());
     button.addEventListener("click", (event) => {
+      event.preventDefault();
       event.stopPropagation();
       state.storyComposerOpen = true;
       state.storyPaused = true;
@@ -3398,7 +3430,10 @@ function bindDynamicActions() {
   });
 
   document.querySelectorAll("[data-story-message-close]").forEach((button) => {
+    button.addEventListener("touchstart", (event) => event.stopPropagation(), { passive: true });
+    button.addEventListener("pointerdown", (event) => event.stopPropagation());
     button.addEventListener("click", (event) => {
+      event.preventDefault();
       event.stopPropagation();
       state.storyComposerOpen = false;
       state.storyPaused = false;
@@ -3409,15 +3444,26 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-story-message-input]").forEach((input) => {
     input.addEventListener("focus", () => setStoryPaused(true));
     input.addEventListener("touchstart", (event) => event.stopPropagation(), { passive: true });
+    input.addEventListener("touchend", (event) => event.stopPropagation(), { passive: true });
     input.addEventListener("pointerdown", (event) => event.stopPropagation());
   });
 
   document.querySelectorAll("[data-story-phrase]").forEach((button) => {
-    button.addEventListener("click", () => sendStoryMessage(button.dataset.storyPhrase));
+    button.addEventListener("touchstart", (event) => event.stopPropagation(), { passive: true });
+    button.addEventListener("pointerdown", (event) => event.stopPropagation());
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      sendStoryMessage(button.dataset.storyPhrase);
+    });
   });
 
   document.querySelectorAll("[data-story-send]").forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("touchstart", (event) => event.stopPropagation(), { passive: true });
+    button.addEventListener("pointerdown", (event) => event.stopPropagation());
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       const input = document.getElementById("story-message-input");
       sendStoryMessage(input?.value.trim() || "Saranghae 💜");
     });

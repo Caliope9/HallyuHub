@@ -81,6 +81,11 @@ body.story-open .topbar {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body.share-open .app-screen {
@@ -2730,6 +2735,10 @@ video.post-media.real-media {
   display: block;
   animation: storyViewerIn 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .story-progress {
@@ -2807,6 +2816,11 @@ video.post-media.real-media {
   font-weight: 1000;
   z-index: 100004;
   backdrop-filter: blur(14px);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .story-tap-zone {
@@ -2817,6 +2831,11 @@ video.post-media.real-media {
   border: 0;
   background: transparent;
   z-index: 100001;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .story-hold-layer {
@@ -2824,7 +2843,12 @@ video.post-media.real-media {
   inset: 0;
   z-index: 100000;
   background: transparent;
-  touch-action: none;
+  pointer-events: none;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .story-tap-zone.left {
@@ -2850,6 +2874,10 @@ video.post-media.real-media {
   animation: storySlideIn 210ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   will-change: transform, opacity;
   pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .story-slide-prev .story-full-card {
@@ -3238,6 +3266,8 @@ video.post-media.real-media {
   animation: sheetUp 220ms ease-out both;
   pointer-events: auto;
   touch-action: auto;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .story-comment-box input {
@@ -3472,6 +3502,11 @@ video.post-media.real-media {
 .story-full-media {
   border-radius: inherit;
   opacity: 1;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .story-layer-stage {
@@ -3479,6 +3514,11 @@ video.post-media.real-media {
   inset: 0;
   z-index: 3;
   pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .story-layer-stage.editable-stage {
