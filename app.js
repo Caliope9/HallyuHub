@@ -3771,7 +3771,7 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-story-media]").forEach((input) => {
     input.addEventListener("change", () => {
       const file = input.files?.[0];
-      state.storyDraft.type = input.dataset.storyMedia;
+      state.storyDraft.type = file?.type?.startsWith("video") ? "video" : file ? "photo" : input.dataset.storyMedia;
       state.storyDraft.mediaName = file?.name || "";
       state.storyDraft.text = state.storyDraft.text || "";
       state.storyDraft.mediaType = file?.type?.startsWith("video") ? "video" : file ? "image" : "";
@@ -6313,14 +6313,14 @@ function startStoryMediaTouchTransform(event) {
   const end = (endEvent) => {
     endEvent?.preventDefault?.();
     endEvent?.stopPropagation?.();
-    target.removeEventListener("touchmove", move);
-    target.removeEventListener("touchend", end);
-    target.removeEventListener("touchcancel", end);
+    document.removeEventListener("touchmove", move);
+    document.removeEventListener("touchend", end);
+    document.removeEventListener("touchcancel", end);
     render();
   };
-  target.addEventListener("touchmove", move, { passive: false });
-  target.addEventListener("touchend", end, { passive: false });
-  target.addEventListener("touchcancel", end, { passive: false });
+  document.addEventListener("touchmove", move, { passive: false });
+  document.addEventListener("touchend", end, { passive: false });
+  document.addEventListener("touchcancel", end, { passive: false });
 }
 
 function playStoryMusicPreview(name) {
@@ -7068,6 +7068,15 @@ function renderStoryEditor() {
                   </div>`
                 : ""
             }
+            ${
+              !draft.mediaUrl
+                ? `<div class="story-camera-empty" data-protected-file="story-media-gallery" data-permission-source="gallery" role="button" tabindex="0">
+                    <span></span>
+                    <strong>Cámara lista</strong>
+                    <small>Tocá la galería para elegir foto o video</small>
+                  </div>`
+                : ""
+            }
             <div class="story-layer-stage editable-stage">${elements.map((element) => renderStoryLayer(element, true)).join("")}</div>
             ${draft.location ? `<small>${escapeHtml(draft.location)}</small>` : ""}
             <div class="story-music-pill story-music-edit"><span>♪</span>${escapeHtml(draft.music)}</div>
@@ -7079,12 +7088,21 @@ function renderStoryEditor() {
             <button type="button" data-story-tool="music" aria-label="Musica"><span>♪</span></button>
             <button type="button" data-story-tool="background" aria-label="Fondo"><span>◎</span></button>
             <button type="button" data-story-tool="mention" aria-label="Menciones y ubicacion"><span>@</span></button>
-            <button type="button" data-story-tool="gallery" aria-label="Foto o video"><span>▣</span></button>
           </div>
           ${state.storyToolPanel === "adjust" && selected ? renderStoryAdjustPanel(selected) : ""}
           ${state.storyToolPanel ? renderStoryToolPanel(draft, userLevel, visibleTracks) : ""}
         </div>
         <div class="story-create-bottom">
+          <input id="story-media-gallery" class="hidden-file-input" type="file" accept="image/*,video/*" data-story-media="gallery" />
+          <div class="story-gallery-strip" aria-label="Galería">
+            <button type="button" class="story-gallery-open" data-protected-file="story-media-gallery" data-permission-source="gallery">
+              <span>+</span>
+              <strong>Abrir galería</strong>
+            </button>
+            ${DEMO_STORY_IMAGES.slice(0, 5)
+              .map((image, index) => `<button type="button" class="story-gallery-thumb" data-protected-file="story-media-gallery" data-permission-source="gallery" style="--thumb:url('${image}')" aria-label="Elegir de galería ${index + 1}"></button>`)
+              .join("")}
+          </div>
           <button type="button" data-create-own-story="${escapeAttr(draft.background)}">Publicar</button>
         </div>
       </div>
@@ -7134,14 +7152,10 @@ function renderStoryToolPanel(draft, userLevel, visibleTracks) {
         <input data-story-draft="location" value="${escapeAttr(draft.location)}" placeholder="Ubicación opcional" />
       </div>
       <div class="story-chip-row color-row">${storyTextColors.map((color) => `<button class="${draft.textColor === color ? "active" : ""}" style="--swatch:${color}" data-story-text-color="${color}" aria-label="Color ${color}"></button>`).join("")}</div>`,
-    gallery: `<div class="story-upload-grid compact-upload">
-        <input id="story-media-foto" class="hidden-file-input" type="file" accept="image/*" data-story-media="foto" />
-        <input id="story-media-video" class="hidden-file-input" type="file" accept="video/*" data-story-media="video" />
-        <input id="story-media-camara" class="hidden-file-input" type="file" accept="image/*,video/*" capture="environment" data-story-media="camara" />
-        <button type="button" data-protected-file="story-media-foto" data-permission-source="gallery">Foto</button>
-        <button type="button" data-protected-file="story-media-video" data-permission-source="gallery">Video</button>
-        <button type="button" data-protected-file="story-media-camara" data-permission-source="camera" data-permission-camera="true" data-permission-mic="true">Cámara</button>
-      </div>`,
+    gallery: `<button type="button" class="story-gallery-open panel-gallery-open" data-protected-file="story-media-gallery" data-permission-source="gallery">
+        <span>+</span>
+        <strong>Abrir galería</strong>
+      </button>`,
   }[tool];
   return `
     <div class="story-floating-panel">
