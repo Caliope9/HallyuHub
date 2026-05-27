@@ -1,6 +1,26 @@
 const state = {
   view: "home",
   communityTab: "global",
+  chatTab: "communities",
+  activeCommunity: "",
+  rookieFilter: "principiantes",
+  selectedRookieQuestion: "",
+  rookieDraft: "",
+  rookieReplyDrafts: {},
+  rookieAnswerOverrides: {},
+  savedRookieQuestions: {},
+  sharedRookieQuestions: {},
+  rookieKeyword: "",
+  joinedCommunities: {},
+  communityMessages: {},
+  communityDrafts: {},
+  communityReplyTo: {},
+  communityReports: {},
+  communityUserReports: {},
+  hiddenCommunityMessages: {},
+  mutedCommunityUsers: {},
+  blockedCommunityUsers: {},
+  privateConversations: [],
   selectedAvatar: "berry",
   ambience: "hallyu",
   selectedGroup: "skz",
@@ -139,29 +159,7 @@ const state = {
   storyMusicInfoOpen: false,
   storyEditorOpen: false,
   storyToolPanel: null,
-  storyDraft: {
-    type: "text",
-    text: "",
-    sticker: "✨",
-    elements: [{ id: "sticker-1", type: "sticker", content: "✨", x: 72, y: 18, size: 38, rotation: 0 }],
-    selectedElementId: "sticker-1",
-    mention: "",
-    location: "",
-    music: "Basic beat · safe loop",
-    musicCategory: "Viral",
-    background: "Neon pastel",
-    mediaName: "",
-    mediaUrl: "",
-    mediaType: "",
-    mediaScale: 1,
-    mediaX: 0,
-    mediaY: 0,
-    mediaRotation: 0,
-    font: "Inter",
-    textColor: "#ffffff",
-    textStyle: "glow",
-    stickerCategory: "Cute",
-  },
+  storyDraft: createDefaultStoryDraft(),
   ownStoryStatsOpen: false,
   ownStory: null,
   ownStories: [],
@@ -187,8 +185,37 @@ const state = {
 };
 
 let storyAutoTimer = null;
+let storyCameraStream = null;
 let swipeStart = null;
 let swipeSuppressClickUntil = 0;
+
+function createDefaultStoryDraft() {
+  return {
+    type: "text",
+    text: "",
+    sticker: "✨",
+    elements: [],
+    selectedElementId: "",
+    mention: "",
+    location: "",
+    music: "",
+    musicCategory: "Viral",
+    background: "Neon pastel",
+    mediaName: "",
+    mediaUrl: "",
+    mediaType: "",
+    mediaScale: 1,
+    mediaX: 0,
+    mediaY: 0,
+    mediaRotation: 0,
+    font: "Inter",
+    textColor: "#ffffff",
+    textStyle: "glow",
+    stickerCategory: "Cute",
+    cameraActive: false,
+    cameraError: "",
+  };
+}
 
 const swipeNavigationViews = ["home", "search", "trends", "fancams", "profile"];
 
@@ -1764,6 +1791,10 @@ fancamVideos.forEach((fancam, index) => {
   fancam.coverUrl = mediaUrl;
   fancam.mediaUrl = mediaUrl;
   fancam.mediaType = "image";
+  fancam.sourceType = fancam.sourceType || "fan_upload";
+  fancam.status = fancam.status || "published";
+  fancam.reports = fancam.reports || [];
+  fancam.eventName = fancam.eventName || fancam.show || "Fan show";
 });
 
 const events = [
@@ -1905,6 +1936,139 @@ const mentors = [
     name: "Nico",
     role: "Organizador de eventos",
     help: "Ayuda a encontrar comunidades seguras en tu pais o ciudad.",
+  },
+];
+
+const rookieCategories = [
+  ["principiantes", "Principiantes"],
+  ["grupos", "Grupos"],
+  ["canciones", "Canciones"],
+  ["fandoms", "Fandoms"],
+  ["fancams", "Fancams"],
+  ["photocards", "Photocards"],
+  ["vocabulario", "Vocabulario K-pop"],
+  ["recomendaciones", "Recomendaciones"],
+];
+
+const rookieKeywordInfo = {
+  bias: "Tu integrante favorito o quien más te llama la atención dentro de un grupo.",
+  comeback: "Regreso musical de un artista con canción, álbum, concepto y promociones nuevas.",
+  lightstick: "Objeto luminoso oficial o inspirado en un fandom para conciertos y eventos.",
+  photocard: "Tarjeta coleccionable con foto de un artista; se intercambia y se guarda en carpetas.",
+  fandom: "Comunidad de fans de un grupo o artista.",
+  fancam: "Video centrado en un idol, performance o momento de escenario.",
+  idol: "Artista de K-pop entrenado para cantar, bailar, actuar y conectar con fans.",
+  "dance practice": "Video de práctica donde se ve claramente la coreografía del grupo.",
+  debut: "Primera presentación oficial de un artista o grupo.",
+  "comeback stage": "Presentación en vivo del nuevo comeback en programas o eventos.",
+};
+
+const rookieQuestions = [
+  {
+    id: "rookie-bts-start",
+    category: "principiantes",
+    user: "Nati Hallyu",
+    username: "nati.newfan",
+    avatarUrl: getDemoUserImage(3),
+    title: "¿Por dónde empiezo con BTS?",
+    question: "Me gustan canciones pop con mensaje y quiero entender eras, miembros y canciones importantes sin perderme.",
+    keywords: ["bias", "fandom", "debut"],
+    time: "hace 8 min",
+    recommendations: ["Escuchá Dynamite, Spring Day y Run BTS para ver tres lados distintos.", "Entrá a ARMY Chile o Hallyu LATAM para preguntas rápidas.", "Mirá una guía de integrantes y después elegí 5 stages favoritos."],
+    answers: [
+      { user: "Mika mentor", username: "mika.stay", avatarUrl: getDemoUserImage(1), time: "5 min", body: "Yo empezaría por una playlist corta: Dynamite, Spring Day, Black Swan, Run BTS y Mikrokosmos. Después mirá entrevistas por era." },
+      { user: "Vale Multi", username: "vale.multi", avatarUrl: getDemoUserImage(4), time: "3 min", body: "No te apures con todo el lore. Primero ubicá voces, rap line y dance line. El bias aparece solo." },
+    ],
+  },
+  {
+    id: "rookie-skz-like",
+    category: "grupos",
+    user: "Lola Moon",
+    username: "lola.moon",
+    avatarUrl: getDemoUserImage(5),
+    title: "¿Qué grupo me recomiendan si me gusta Stray Kids?",
+    question: "Me gusta la energía fuerte, rap, performance y canciones para entrenar. ¿Qué grupos puedo probar?",
+    keywords: ["idol", "dance practice", "fandom"],
+    time: "hace 21 min",
+    recommendations: ["ATEEZ por performance intensa.", "SEVENTEEN por coreografías y variedad.", "ENHYPEN si querés conceptos oscuros y elegantes."],
+    answers: [
+      { user: "Agus Han", username: "agus.han", avatarUrl: getDemoUserImage(2), time: "14 min", body: "Probá ATEEZ: Guerrilla, Bouncy y Wonderland. Si te gustan los stages potentes, te va a enganchar." },
+    ],
+  },
+  {
+    id: "rookie-bias",
+    category: "vocabulario",
+    user: "Cami Pop",
+    username: "cami.pop",
+    avatarUrl: getDemoUserImage(6),
+    title: "¿Qué significa bias?",
+    question: "Lo leo todo el tiempo y no entiendo si es favorito, crush o algo distinto.",
+    keywords: ["bias", "fandom", "idol"],
+    time: "hace 40 min",
+    recommendations: ["Bias = favorito principal.", "Bias wrecker = quien te hace dudar de tu favorito.", "No hace falta elegir uno si sos nueva."],
+    answers: [
+      { user: "Nico guía", username: "nico.guia", avatarUrl: getDemoUserImage(7), time: "25 min", body: "Bias es tu favorito dentro de un grupo. Puede cambiar, y eso está perfecto. Es una forma divertida de conectar con el grupo." },
+    ],
+  },
+  {
+    id: "rookie-comeback",
+    category: "fandoms",
+    user: "Sofi Seoul",
+    username: "sofi.seoul",
+    avatarUrl: getDemoUserImage(8),
+    title: "¿Cómo funcionan los comebacks?",
+    question: "Veo teasers, horarios, albums y stages. ¿Qué debería seguir primero?",
+    keywords: ["comeback", "comeback stage", "photocard"],
+    time: "hace 1 h",
+    recommendations: ["Seguí calendario de teasers.", "Guardá fecha de MV y stage.", "Si comprás álbum, revisá versiones e inclusiones."],
+    answers: [
+      { user: "Vale Multi", username: "vale.multi", avatarUrl: getDemoUserImage(4), time: "46 min", body: "Un comeback suele traer concepto, fotos, MV, álbum y presentaciones. Para empezar: teaser, MV y comeback stage." },
+    ],
+  },
+  {
+    id: "rookie-fancams",
+    category: "fancams",
+    user: "Renata Fan",
+    username: "renata.fan",
+    avatarUrl: getDemoUserImage(9),
+    title: "¿Dónde veo fancams?",
+    question: "Quiero ver videos centrados en integrantes, pero no sé cómo buscarlos ni qué mirar.",
+    keywords: ["fancam", "idol", "comeback stage"],
+    time: "hace 2 h",
+    recommendations: ["Buscá por nombre del idol + fancam.", "En HallyuHub entrá a Fancams y filtrá por artista.", "Mirar stages ayuda a descubrir performance y presencia."],
+    answers: [
+      { user: "Mika mentor", username: "mika.stay", avatarUrl: getDemoUserImage(1), time: "1 h", body: "En la app, Fancams te muestra videos subidos por fans. También podés buscar por grupo o artista." },
+    ],
+  },
+  {
+    id: "rookie-songs",
+    category: "canciones",
+    user: "Juli Min",
+    username: "juli.min",
+    avatarUrl: getDemoUserImage(10),
+    title: "¿Qué canciones recomiendan para empezar?",
+    question: "Me gustan canciones pegadizas, outfits bonitos y coreografías fáciles de recordar.",
+    keywords: ["dance practice", "debut", "comeback"],
+    time: "ayer",
+    recommendations: ["TWICE para pop brillante.", "NewJeans para mood fresco.", "IVE para elegancia pop."],
+    answers: [
+      { user: "Luna Rivas", username: "luna.rivas", avatarUrl: getDemoUserImage(0), time: "ayer", body: "Probá Hype Boy, I AM, Fancy y Feel Special. Son súper buenas para entrar sin saturarte." },
+    ],
+  },
+  {
+    id: "rookie-photocard",
+    category: "photocards",
+    user: "Dani Collector",
+    username: "dani.cards",
+    avatarUrl: getDemoUserImage(11),
+    title: "¿Cómo empiezo a coleccionar photocards?",
+    question: "Quiero comprar o intercambiar, pero me da miedo caer en estafas.",
+    keywords: ["photocard", "fandom", "lightstick"],
+    time: "ayer",
+    recommendations: ["Pedí referencias.", "Usá comunidades locales verificadas.", "No pagues sin pruebas claras del producto."],
+    answers: [
+      { user: "Nico guía", username: "nico.guia", avatarUrl: getDemoUserImage(7), time: "ayer", body: "Primero armá wishlist, comprá sleeves y verificá vendedores. En comunidades locales podés pedir referencias." },
+    ],
   },
 ];
 
@@ -2078,6 +2242,7 @@ const profileHighlights = ["Conciertos", "Fancams", "Bias", "Photocards", "Dance
 const profileTabs = [
   ["posts", "Publicaciones"],
   ["trends", "Drops"],
+  ["fancams", "Fancams"],
   ["outfits", "Outfit"],
   ["photocards", "Photocards"],
   ["saved", "Guardados"],
@@ -2161,6 +2326,7 @@ function setView(nextView) {
   if (nextView !== "home") {
     state.activeStory = null;
     state.storyComposerOpen = false;
+    if (state.storyEditorOpen) resetStoryDraft();
     state.storyEditorOpen = false;
     clearStoryAutoplay();
   }
@@ -2350,6 +2516,80 @@ function mountGlobalStoryEditor() {
   document.getElementById("global-story-editor")?.remove();
   if (!state.storyEditorOpen) return;
   document.body.insertAdjacentHTML("beforeend", `<div id="global-story-editor">${renderStoryEditor()}</div>`);
+}
+
+function stopStoryCamera() {
+  if (storyCameraStream) {
+    storyCameraStream.getTracks?.().forEach((track) => track.stop());
+  }
+  storyCameraStream = null;
+  if (state.storyDraft) state.storyDraft.cameraActive = false;
+}
+
+function resetStoryDraft() {
+  stopStoryCamera();
+  state.storyDraft = createDefaultStoryDraft();
+  state.storyToolPanel = null;
+}
+
+function openStoryEditorFresh() {
+  resetStoryDraft();
+  state.activeStory = null;
+  state.storyEditorOpen = true;
+  state.storyComposerOpen = false;
+  state.ownStoryStatsOpen = false;
+  state.storyMusicInfoOpen = false;
+  clearStoryAutoplay();
+}
+
+function attachStoryCameraPreview() {
+  const video = document.querySelector("[data-story-camera-preview]");
+  if (video && storyCameraStream && video.srcObject !== storyCameraStream) {
+    video.srcObject = storyCameraStream;
+    video.play?.().catch(() => {});
+  }
+}
+
+async function openStoryCamera() {
+  state.storyDraft.cameraError = "";
+  if (!navigator.mediaDevices?.getUserMedia) {
+    state.storyDraft.cameraError = "No pudimos abrir la cámara. Revisá permisos o usá galería.";
+    showToast(state.storyDraft.cameraError);
+    render();
+    return;
+  }
+  try {
+    stopStoryCamera();
+    storyCameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    state.storyDraft.cameraActive = true;
+    state.storyDraft.cameraError = "";
+    render();
+    setTimeout(attachStoryCameraPreview, 0);
+  } catch {
+    state.storyDraft.cameraActive = false;
+    state.storyDraft.cameraError = "No pudimos abrir la cámara. Revisá permisos o usá galería.";
+    showToast(state.storyDraft.cameraError);
+    render();
+  }
+}
+
+function captureStoryCameraPhoto() {
+  const video = document.querySelector("[data-story-camera-preview]");
+  if (!video || !storyCameraStream || !video.videoWidth) {
+    showToast("La cámara todavía no está lista");
+    return;
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
+  state.storyDraft.mediaUrl = canvas.toDataURL("image/jpeg", 0.9);
+  state.storyDraft.mediaType = "image";
+  state.storyDraft.mediaName = "foto-camara.jpg";
+  state.storyDraft.type = "photo";
+  resetStoryMediaTransform();
+  stopStoryCamera();
+  render();
 }
 
 function getStoryKey(index) {
@@ -2955,7 +3195,10 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-open-artist-video]").forEach((button) => {
     button.addEventListener("click", () => {
       const video = officialVideoEmbeds.find((item) => item.youtubeId === button.dataset.openArtistVideo);
-      if (!video) return;
+      if (!video) {
+        showToast("Video oficial disponible próximamente");
+        return;
+      }
       state.mediaEmbed = video;
       render();
     });
@@ -3143,7 +3386,7 @@ function bindDynamicActions() {
         state.storyDirection = 1;
         state.storyPaused = false;
       } else {
-        state.storyEditorOpen = true;
+        openStoryEditorFresh();
       }
       state.storyComposerOpen = false;
       state.ownStoryStatsOpen = false;
@@ -3163,21 +3406,15 @@ function bindDynamicActions() {
     button.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      state.activeStory = null;
-      state.storyEditorOpen = true;
-      state.storyToolPanel = null;
-      state.storyComposerOpen = false;
-      state.ownStoryStatsOpen = false;
-      state.storyMusicInfoOpen = false;
-      clearStoryAutoplay();
+      openStoryEditorFresh();
       render();
     });
   });
 
   document.querySelectorAll("[data-story-editor-close]").forEach((button) => {
     button.addEventListener("click", () => {
+      resetStoryDraft();
       state.storyEditorOpen = false;
-      state.storyToolPanel = null;
       render();
     });
   });
@@ -3235,6 +3472,14 @@ function bindDynamicActions() {
         mic: button.dataset.permissionMic === "true",
       });
     });
+  });
+
+  document.querySelectorAll("[data-story-camera-open]").forEach((button) => {
+    button.addEventListener("click", () => openStoryCamera());
+  });
+
+  document.querySelectorAll("[data-story-camera-capture]").forEach((button) => {
+    button.addEventListener("click", () => captureStoryCameraPhoto());
   });
 
   document.querySelectorAll("[data-story-custom-sticker]").forEach((input) => {
@@ -3318,8 +3563,34 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-story-music]").forEach((button) => {
     button.addEventListener("click", () => {
       state.storyDraft.music = button.dataset.storyMusic;
+      const track = storyMusicLibrary.find((item) => item.name === button.dataset.storyMusic);
+      const existing = getStoryDraftElements().find((element) => element.type === "music");
+      const musicElement = {
+        id: "music-layer",
+        type: "music",
+        content: button.dataset.storyMusic,
+        detail: track?.detail || "Audio demo",
+        x: existing?.x || 50,
+        y: existing?.y || 18,
+        size: existing?.size || 13,
+        rotation: existing?.rotation || 0,
+        color: "#ffffff",
+      };
+      state.storyDraft.elements = existing
+        ? getStoryDraftElements().map((element) => (element.id === "music-layer" ? musicElement : element))
+        : [...getStoryDraftElements(), musicElement];
+      state.storyDraft.selectedElementId = "music-layer";
       playStoryMusicPreview(button.dataset.storyMusic);
       state.storyToolPanel = null;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-music-clear]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.storyDraft.music = "";
+      state.storyDraft.elements = getStoryDraftElements().filter((element) => element.type !== "music");
+      if (state.storyDraft.selectedElementId === "music-layer") state.storyDraft.selectedElementId = "";
       render();
     });
   });
@@ -3338,6 +3609,17 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-story-control]").forEach((input) => {
     input.addEventListener("input", () => {
       updateSelectedStoryElement(input.dataset.storyControl, Number(input.value));
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-scale]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const selected = getSelectedStoryElement();
+      if (!selected) return;
+      const delta = Number(button.dataset.storyScale || 0);
+      const current = Number(selected.size || 28);
+      updateSelectedStoryElement("size", Math.max(10, Math.min(96, current + delta)));
       render();
     });
   });
@@ -3739,6 +4021,10 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-open-fancam-artist]").forEach((button) => {
     button.addEventListener("click", () => {
       const fancam = fancamVideos.find((item) => item.artistId === button.dataset.openFancamArtist);
+      if (!fancam) {
+        showToast("Fancams de este artista disponibles próximamente");
+        return;
+      }
       state.videoProfileOverlay = `fancam:${fancam?.id || button.dataset.openFancamArtist}`;
       render();
     });
@@ -3957,6 +4243,8 @@ function bindDynamicActions() {
     button.addEventListener("click", () => {
       const id = button.dataset.profileFollow;
       state.followedProfiles[id] = !state.followedProfiles[id];
+      storage.set("hallyuHubFollowedProfiles", state.followedProfiles);
+      showToast(state.followedProfiles[id] ? "Ahora seguís este perfil" : "Dejaste de seguir este perfil");
       render();
     });
   });
@@ -4015,7 +4303,10 @@ function bindDynamicActions() {
     button.addEventListener("click", () => {
       const profile = state.liveProfiles.find((item) => item.id === button.dataset.openProfile);
       const demoProfile = demoUsers.find((item) => item.id === button.dataset.openProfile);
-      if (!profile && !demoProfile) return;
+      if (!profile && !demoProfile) {
+        showToast("Perfil disponible próximamente");
+        return;
+      }
       state.profileEditorOpen = false;
       state.viewedProfile = demoProfile ? getDemoProfilePayload(demoProfile) : {
         id: profile.id,
@@ -4058,6 +4349,171 @@ function bindDynamicActions() {
       state.communityTab = button.dataset.communityTab;
       render();
     });
+  });
+
+  document.querySelectorAll("[data-chat-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.chatTab = button.dataset.chatTab;
+      renderAndScrollTop();
+    });
+  });
+
+  document.querySelectorAll("[data-open-community]").forEach((card) => {
+    card.addEventListener("click", () => openCommunityChat(card.dataset.openCommunity));
+  });
+
+  document.querySelectorAll("[data-join-community]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      joinCommunity(button.dataset.joinCommunity);
+    });
+  });
+
+  document.querySelectorAll("[data-open-community-view]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.activeCommunity = button.dataset.openCommunityView;
+      state.joinedCommunities[state.activeCommunity] = true;
+      persistCommunityState();
+      setView("community");
+    });
+  });
+
+  document.querySelectorAll("[data-community-draft]").forEach((input) => {
+    input.addEventListener("input", () => {
+      state.communityDrafts[input.dataset.communityDraft] = input.value;
+    });
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") sendCommunityMessage(input.dataset.communityDraft);
+    });
+  });
+
+  document.querySelectorAll("[data-community-send]").forEach((button) => {
+    button.addEventListener("click", () => sendCommunityMessage(button.dataset.communitySend));
+  });
+
+  document.querySelectorAll("[data-community-reply]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const [communityId, messageId] = button.dataset.communityReply.split(":");
+      setCommunityReply(communityId, messageId);
+    });
+  });
+
+  document.querySelectorAll("[data-community-reply-clear]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.communityReplyTo[button.dataset.communityReplyClear] = null;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-community-react]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const [communityId, messageId, reaction] = button.dataset.communityReact.split(":");
+      reactCommunityMessage(communityId, messageId, reaction || "⭐");
+    });
+  });
+
+  document.querySelectorAll("[data-community-report-message]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const [communityId, messageId] = button.dataset.communityReportMessage.split(":");
+      reportCommunityMessage(communityId, messageId);
+    });
+  });
+
+  document.querySelectorAll("[data-community-report-user]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const [communityId, userKey] = button.dataset.communityReportUser.split(":");
+      reportCommunityUser(communityId, userKey);
+    });
+  });
+
+  document.querySelectorAll("[data-community-mute]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const [communityId, userKey] = button.dataset.communityMute.split(":");
+      toggleCommunityMute(communityId, userKey);
+    });
+  });
+
+  document.querySelectorAll("[data-community-block]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const [communityId, userKey] = button.dataset.communityBlock.split(":");
+      toggleCommunityBlock(communityId, userKey);
+    });
+  });
+
+  document.querySelectorAll("[data-community-private]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      startCommunityPrivateChat(button.dataset.communityPrivate, button.dataset.communityPrivateAvatar || "");
+    });
+  });
+
+  document.querySelectorAll("[data-rookie-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.rookieFilter = button.dataset.rookieFilter;
+      state.selectedRookieQuestion = "";
+      renderAndScrollTop();
+    });
+  });
+
+  document.querySelectorAll("[data-rookie-draft]").forEach((input) => {
+    input.addEventListener("input", () => {
+      state.rookieDraft = input.value;
+    });
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") publishRookieQuestion();
+    });
+  });
+
+  document.querySelectorAll("[data-rookie-publish]").forEach((button) => {
+    button.addEventListener("click", publishRookieQuestion);
+  });
+
+  document.querySelectorAll("[data-open-rookie-question]").forEach((card) => {
+    card.addEventListener("click", () => openRookieQuestion(card.dataset.openRookieQuestion));
+  });
+
+  document.querySelectorAll("[data-rookie-back]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedRookieQuestion = "";
+      renderAndScrollTop();
+    });
+  });
+
+  document.querySelectorAll("[data-rookie-keyword]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      state.rookieKeyword = button.dataset.rookieKeyword;
+      state.selectedRookieQuestion = "";
+      renderAndScrollTop();
+    });
+  });
+
+  document.querySelectorAll("[data-rookie-keyword-clear]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.rookieKeyword = "";
+      renderAndScrollTop();
+    });
+  });
+
+  document.querySelectorAll("[data-rookie-save]").forEach((button) => {
+    button.addEventListener("click", () => toggleRookieSave(button.dataset.rookieSave));
+  });
+
+  document.querySelectorAll("[data-rookie-share]").forEach((button) => {
+    button.addEventListener("click", () => shareRookieQuestion(button.dataset.rookieShare));
+  });
+
+  document.querySelectorAll("[data-rookie-reply-draft]").forEach((input) => {
+    input.addEventListener("input", () => {
+      state.rookieReplyDrafts[input.dataset.rookieReplyDraft] = input.value;
+    });
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") answerRookieQuestion(input.dataset.rookieReplyDraft);
+    });
+  });
+
+  document.querySelectorAll("[data-rookie-answer]").forEach((button) => {
+    button.addEventListener("click", () => answerRookieQuestion(button.dataset.rookieAnswer));
   });
 
   document.querySelectorAll("[data-activity-tab]").forEach((button) => {
@@ -4193,6 +4649,7 @@ function bindDynamicActions() {
     button.addEventListener("click", () => setView(button.dataset.goView));
   });
 
+  attachStoryCameraPreview();
   bindFallbackButtonActions();
 }
 
@@ -4209,6 +4666,10 @@ function bindFallbackButtonActions() {
 
 function openArtistProfile(artistId) {
   const group = kpopGroups.find((item) => (item.artists || []).some((artist) => artist.id === artistId));
+  if (!group) {
+    showToast("Perfil de artista disponible próximamente");
+    return;
+  }
   if (group) state.selectedGroup = group.id;
   state.selectedArtist = artistId;
   renderAndScrollTop();
@@ -4348,7 +4809,19 @@ async function initApp() {
   state.likedPosts = storage.get("hallyuHubLikedPosts", {});
   state.savedPosts = storage.get("hallyuHubSavedPosts", {});
   state.sharedPosts = storage.get("hallyuHubSharedPosts", {});
+  state.followedProfiles = storage.get("hallyuHubFollowedProfiles", {});
   state.videoMuted = storage.get("hallyuHubVideoMuted", true);
+  state.joinedCommunities = storage.get("hallyuHubJoinedCommunities", {});
+  state.communityMessages = storage.get("hallyuHubCommunityMessages", {});
+  state.communityReports = storage.get("hallyuHubCommunityReports", {});
+  state.communityUserReports = storage.get("hallyuHubCommunityUserReports", {});
+  state.hiddenCommunityMessages = storage.get("hallyuHubHiddenCommunityMessages", {});
+  state.mutedCommunityUsers = storage.get("hallyuHubMutedCommunityUsers", {});
+  state.blockedCommunityUsers = storage.get("hallyuHubBlockedCommunityUsers", {});
+  state.privateConversations = storage.get("hallyuHubPrivateConversations", []);
+  state.rookieAnswerOverrides = storage.get("hallyuHubRookieAnswerOverrides", {});
+  state.savedRookieQuestions = storage.get("hallyuHubSavedRookieQuestions", {});
+  state.sharedRookieQuestions = storage.get("hallyuHubSharedRookieQuestions", {});
   state.isAuthenticated = Boolean(localSession);
   state.session = localSession ? { user: localSession.user, created_at: localSession.sessionCreatedAt } : null;
   state.selectedAvatar = state.user.avatar || "berry";
@@ -4957,7 +5430,11 @@ function publishVideoEditorContent() {
     return;
   }
   if (!draft.rightsConfirmed) {
-    showToast("Confirmá que este contenido fue creado por vos o tenés permiso");
+    showToast(draft.kind === "fancams" ? "Confirmá que este video fue grabado por vos o tenés permiso" : "Confirmá que este contenido fue creado por vos o tenés permiso");
+    return;
+  }
+  if (draft.kind === "fancams" && (!String(draft.group || "").trim() || !String(draft.artist || "").trim())) {
+    showToast("Para subir una Fancam elegí grupo y artista/idol relacionado");
     return;
   }
   if (isVideoEditorLong(draft.kind, draft)) {
@@ -5113,6 +5590,7 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
       comments: allowComments ? "0" : "Cerrados",
       rightsConfirmed: base.rightsConfirmed,
       moderationStatus: base.moderationStatus,
+      fanContentStatus: base.fanContentStatus,
       taggedGroup: base.taggedGroup,
       taggedArtist: base.taggedArtist,
       taggedShow: base.taggedShow,
@@ -5131,6 +5609,7 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
     return { id, type: category, label: "Drop", mediaUrl, mediaType, filter };
   }
   if (category === "fancams") {
+    const eventName = optionalFields.taggedShow || "Fan show";
     const fancam = {
       id,
       userId,
@@ -5139,14 +5618,18 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
       artistId: linkedArtist?.id || normalizeProfileKey(optionalFields.taggedArtist || optionalFields.taggedPeople || `local-artist-${Date.now()}`),
       artist: linkedArtist?.name || optionalFields.taggedArtist || optionalFields.taggedPeople.replace("@", "") || state.user.name,
       group: linkedGroup?.name || optionalFields.taggedGroup || state.user.favoriteGroup || "HallyuHub",
+      eventName,
       user: state.user.name,
       username,
       avatarUrl: state.user.avatarUrl || getDemoUserImage(0),
       era: "Demo upload",
-      show: optionalFields.taggedPlace || "Fan focus",
-      date: "Ahora",
+      show: eventName,
+      date: optionalFields.eventDate || "Ahora",
       views: "0",
       likes: "0",
+      reports: [],
+      status: rightsConfirmed ? "published" : "pending",
+      sourceType: "fan_upload",
       sort: "recent",
       description: caption || "Fancam nueva creada en modo demo.",
       imageUrl: mediaUrl,
@@ -5161,6 +5644,7 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
       comments: allowComments ? "0" : "Cerrados",
       rightsConfirmed: base.rightsConfirmed,
       moderationStatus: base.moderationStatus,
+      fanContentStatus: base.fanContentStatus,
       taggedGroup: base.taggedGroup,
       taggedArtist: base.taggedArtist,
       taggedShow: base.taggedShow,
@@ -5172,7 +5656,7 @@ function createLocalPublishedContent({ category, caption, hashtags, optionalFiel
       trimDuration: base.trimDuration,
     };
     fancamVideos.unshift(fancam);
-    userPosts.unshift({ ...base, type: "popular" });
+    userPosts.unshift({ ...base, type: "fancam", category: "fancams", group: "Fancam", sourceType: "fan_upload" });
     sortPostsByRecentInPlace(userPosts);
     storage.set("hallyuHubUserPosts", userPosts.filter((post) => String(post.id || "").startsWith("local-")));
     storage.set("hallyuHubUserFancams", fancamVideos.filter((item) => String(item.id || "").startsWith("local-fancams")));
@@ -5569,6 +6053,7 @@ function unfollowFeedUser(userName) {
   state.followedProfiles[key] = false;
   state.openPostMenu = null;
   storage.set("hallyuHubMutedUsers", state.mutedUsers);
+  storage.set("hallyuHubFollowedProfiles", state.followedProfiles);
   showToast(`Dejaste de seguir a ${userName}`);
   render();
 }
@@ -5579,6 +6064,7 @@ function followFeedUser(userName) {
   state.followedProfiles[key] = true;
   state.openPostMenu = null;
   storage.set("hallyuHubMutedUsers", state.mutedUsers);
+  storage.set("hallyuHubFollowedProfiles", state.followedProfiles);
   showToast(`Ahora seguís a ${userName}`);
   render();
 }
@@ -5865,7 +6351,14 @@ function openFeedProfile(name) {
 }
 
 async function followUser(userId) {
-  if (state.backendMode !== "supabase" || !state.session?.user) return;
+  if (state.backendMode !== "supabase" || !state.session?.user) {
+    const key = normalizeProfileKey(userId);
+    state.followedProfiles[key] = !state.followedProfiles[key];
+    storage.set("hallyuHubFollowedProfiles", state.followedProfiles);
+    showToast(state.followedProfiles[key] ? "Usuario seguido" : "Dejaste de seguir usuario");
+    render();
+    return;
+  }
   await state.supabase.from("follows").upsert({ follower_id: state.session.user.id, following_id: userId });
 }
 
@@ -5875,7 +6368,29 @@ async function sendPrivateMessage(threadId, body) {
 }
 
 async function startPrivateMessage(recipientId, body) {
-  if (state.backendMode !== "supabase" || !state.session?.user || !recipientId) return;
+  if (!recipientId) return;
+  if (state.backendMode !== "supabase" || !state.session?.user) {
+    const profile = getDemoUser(recipientId);
+    const id = normalizeProfileKey(recipientId);
+    if (!state.privateConversations.some((chat) => chat.id === id)) {
+      state.privateConversations = [
+        {
+          id,
+          name: profile?.name || recipientId,
+          avatarUrl: profile?.avatarUrl || getDemoUserImage(1),
+          last: body || "Solicitud de mensaje creada en modo demo.",
+          time: "Ahora",
+          status: "Solicitud",
+        },
+        ...state.privateConversations,
+      ];
+    }
+    state.chatTab = "private";
+    persistCommunityState();
+    showToast("Solicitud de mensaje creada");
+    setView("messages");
+    return;
+  }
   const { data, error } = await state.supabase
     .from("private_threads")
     .insert({ created_by: state.session.user.id, recipient_id: recipientId, accepted: false })
@@ -6109,10 +6624,7 @@ function renderAuth() {
 }
 
 function getStoryDraftElements() {
-  if (!Array.isArray(state.storyDraft.elements) || !state.storyDraft.elements.length) {
-    state.storyDraft.elements = [{ id: "sticker-1", type: "sticker", content: state.storyDraft.sticker || "✨", x: 72, y: 18, size: 38, rotation: 0 }];
-    state.storyDraft.selectedElementId = state.storyDraft.elements[0].id;
-  }
+  if (!Array.isArray(state.storyDraft.elements)) state.storyDraft.elements = [];
   return state.storyDraft.elements;
 }
 
@@ -6164,11 +6676,12 @@ function syncStoryDraftElement(field, value) {
 }
 
 function getSelectedStoryElement() {
-  return getStoryDraftElements().find((element) => element.id === state.storyDraft.selectedElementId) || getStoryDraftElements()[0];
+  return getStoryDraftElements().find((element) => element.id === state.storyDraft.selectedElementId) || null;
 }
 
 function updateSelectedStoryElement(key, value) {
   const selectedId = state.storyDraft.selectedElementId;
+  if (!selectedId) return;
   state.storyDraft.elements = getStoryDraftElements().map((element) =>
     element.id === selectedId ? { ...element, [key]: value } : element,
   );
@@ -6206,7 +6719,7 @@ function startStoryElementDrag(event, elementId) {
 
 function getStoryMediaTransform(source = state.storyDraft) {
   return {
-    scale: Math.max(0.55, Math.min(3, Number(source?.mediaScale || 1))),
+    scale: Math.max(0.5, Math.min(4, Number(source?.mediaScale || 1))),
     x: Math.max(-120, Math.min(120, Number(source?.mediaX || 0))),
     y: Math.max(-120, Math.min(120, Number(source?.mediaY || 0))),
     rotation: Math.max(-35, Math.min(35, Number(source?.mediaRotation || 0))),
@@ -6259,7 +6772,7 @@ function startStoryMediaTransform(event) {
       const distance = pointerDistance();
       const baseDistance = initial.distance || distance || 1;
       if (!initial.distance) initial.distance = distance;
-      state.storyDraft.mediaScale = Math.max(0.55, Math.min(3, Math.round(initial.scale * (distance / baseDistance) * 100) / 100));
+      state.storyDraft.mediaScale = Math.max(0.5, Math.min(4, Math.round(initial.scale * (distance / baseDistance) * 100) / 100));
     } else {
       const current = pointers.get(moveEvent.pointerId);
       state.storyDraft.mediaX = Math.max(-120, Math.min(120, Math.round(initial.x + current.x - initial.pointerX)));
@@ -6303,7 +6816,7 @@ function startStoryMediaTouchTransform(event) {
     const touches = [...moveEvent.touches].map((touch) => ({ x: touch.clientX, y: touch.clientY }));
     if (touches.length > 1 && initialDistance) {
       const distance = Math.hypot(touches[0].x - touches[1].x, touches[0].y - touches[1].y);
-      state.storyDraft.mediaScale = Math.max(0.55, Math.min(3, Math.round(initial.scale * (distance / initialDistance) * 100) / 100));
+      state.storyDraft.mediaScale = Math.max(0.5, Math.min(4, Math.round(initial.scale * (distance / initialDistance) * 100) / 100));
     } else if (touches.length === 1 && startTouches[0]) {
       state.storyDraft.mediaX = Math.max(-120, Math.min(120, Math.round(initial.x + touches[0].x - startTouches[0].x)));
       state.storyDraft.mediaY = Math.max(-120, Math.min(120, Math.round(initial.y + touches[0].y - startTouches[0].y)));
@@ -6410,6 +6923,7 @@ function createOwnStory(style = "Neon pastel") {
 
 function publishStoryFromEditor(style = state.storyDraft?.background || "Neon pastel") {
   createOwnStory(style);
+  resetStoryDraft();
   showToast("Historia publicada");
   playAppSound("publish");
   render();
@@ -6712,9 +7226,11 @@ function renderStoryLayers(elements) {
 function renderStoryLayer(element, editable = false) {
   const Tag = editable ? "button" : "span";
   const data = editable ? `type="button" data-story-layer="${element.id}"` : "";
-  const typeClass = element.type === "text" ? `text-layer ${element.textStyle || "glow"}` : element.type === "custom-sticker" ? "custom-sticker-layer" : "";
+  const typeClass = element.type === "text" ? `text-layer ${element.textStyle || "glow"}` : element.type === "custom-sticker" ? "custom-sticker-layer" : element.type === "music" ? "music-layer" : "";
   const animated = element.animated || ["🪩", "✨", "💫", "🔥", "⭐", "💜"].includes(element.content) ? "animated-sticker" : "";
-  const content = element.imageUrl
+  const content = element.type === "music"
+    ? `<span>♪ ${escapeHtml(element.content)}</span><small>${escapeHtml(element.detail || "Audio demo")}</small>`
+    : element.imageUrl
     ? `<img src="${escapeAttr(element.imageUrl)}" alt="${escapeAttr(element.content)}" />`
     : escapeHtml(element.content);
   return `<${Tag} class="story-layer ${typeClass} ${animated} ${editable && state.storyDraft.selectedElementId === element.id ? "selected" : ""}" ${data} style="left:${element.x}%; top:${element.y}%; font-size:${element.size}px; color:${element.color || "#fff"}; font-family:${escapeAttr(element.font || "Inter")}, system-ui, sans-serif; transform:translate(-50%, -50%) rotate(${element.rotation || 0}deg);">${content}</${Tag}>`;
@@ -7058,6 +7574,14 @@ function renderStoryEditor() {
         <div class="story-create-body">
           <div class="story-editor-preview story-create-canvas" style="--art:${getStoryBackground(draft.background)}">
             ${
+              !draft.mediaUrl && draft.cameraActive
+                ? `<div class="story-camera-live">
+                    <video data-story-camera-preview autoplay muted playsinline></video>
+                    <button type="button" data-story-camera-capture>Capturar</button>
+                  </div>`
+                : ""
+            }
+            ${
               draft.mediaUrl
                 ? `<div class="story-editor-media-frame" data-story-media-transform style="${getStoryMediaStyle(draft)}">
                     ${
@@ -7069,17 +7593,18 @@ function renderStoryEditor() {
                 : ""
             }
             ${
-              !draft.mediaUrl
+              !draft.mediaUrl && !draft.cameraActive
                 ? `<div class="story-camera-empty" data-protected-file="story-media-gallery" data-permission-source="gallery" role="button" tabindex="0">
                     <span></span>
                     <strong>Cámara lista</strong>
-                    <small>Tocá la galería para elegir foto o video</small>
+                    <small>Usá cámara o elegí foto/video desde galería</small>
                   </div>`
                 : ""
             }
+            ${draft.cameraError ? `<div class="story-camera-error">${escapeHtml(draft.cameraError)}</div>` : ""}
             <div class="story-layer-stage editable-stage">${elements.map((element) => renderStoryLayer(element, true)).join("")}</div>
             ${draft.location ? `<small>${escapeHtml(draft.location)}</small>` : ""}
-            <div class="story-music-pill story-music-edit"><span>♪</span>${escapeHtml(draft.music)}</div>
+            ${draft.music ? `<div class="story-music-pill story-music-edit"><span>♪</span>${escapeHtml(draft.music)} · Audio demo <button type="button" data-story-music-clear aria-label="Quitar música">×</button></div>` : ""}
             ${draft.mediaName ? `<em>${escapeHtml(draft.mediaName)}</em>` : ""}
           </div>
           <div class="story-tool-rail" aria-label="Herramientas de historia">
@@ -7095,6 +7620,10 @@ function renderStoryEditor() {
         <div class="story-create-bottom">
           <input id="story-media-gallery" class="hidden-file-input" type="file" accept="image/*,video/*" data-story-media="gallery" />
           <div class="story-gallery-strip" aria-label="Galería">
+            <button type="button" class="story-camera-open" data-story-camera-open>
+              <span></span>
+              <strong>Abrir cámara</strong>
+            </button>
             <button type="button" class="story-gallery-open" data-protected-file="story-media-gallery" data-permission-source="gallery">
               <span>+</span>
               <strong>Abrir galería</strong>
@@ -7168,7 +7697,11 @@ function renderStoryToolPanel(draft, userLevel, visibleTracks) {
 function renderStoryAdjustPanel(selected) {
   return `
     <div class="story-layer-controls floating-adjust">
-      <div><strong>Sticker</strong><span>${selected.content}</span></div>
+      <div><strong>${selected.type === "text" ? "Texto" : selected.type === "music" ? "Música" : "Sticker"}</strong><span>${selected.type === "music" ? "♪" : selected.content}</span></div>
+      <div class="story-scale-buttons">
+        <button type="button" data-story-scale="-4" aria-label="Achicar">−</button>
+        <button type="button" data-story-scale="4" aria-label="Agrandar">+</button>
+      </div>
       <label>Tamaño <input type="range" min="20" max="86" value="${selected.size || 34}" data-story-control="size" /></label>
       <label>Rotar <input type="range" min="-35" max="35" value="${selected.rotation || 0}" data-story-control="rotation" /></label>
       <button type="button" data-story-delete-element>Eliminar</button>
@@ -7866,6 +8399,10 @@ function renderVideoUploadEditor(kind) {
   const longVideo = isVideoEditorLong(kind, draft);
   const activeFilter = publishFilters.find(([id]) => id === draft.filter) || publishFilters[0];
   const filterClass = `filter-${draft.filter || "original"}`;
+  const artistDatalist = kpopGroups
+    .flatMap((group) => (group.artists || []).map((artist) => `<option value="${escapeAttr(artist.name)}">${escapeHtml(group.name)}</option>`))
+    .join("");
+  const groupDatalist = kpopGroups.map((group) => `<option value="${escapeAttr(group.name)}">${escapeHtml(group.fandom)}</option>`).join("");
   return `
     <section class="video-editor-overlay" aria-label="${escapeAttr(title)}">
       <div class="video-editor-shell">
@@ -7916,18 +8453,20 @@ function renderVideoUploadEditor(kind) {
               <label>Hashtags<input data-video-editor-field="hashtags" value="${escapeAttr(draft.hashtags)}" placeholder="#HallyuHub #KpopLatam" /></label>
               <label>Música/audio<input data-video-editor-field="music" value="${escapeAttr(draft.music)}" placeholder="Elegí o escribí audio seguro" /></label>
               <div class="video-editor-grid-fields">
-                <label>Grupo<input data-video-editor-field="group" value="${escapeAttr(draft.group)}" placeholder="BTS, ENHYPEN..." /></label>
-                <label>Artista<input data-video-editor-field="artist" value="${escapeAttr(draft.artist)}" placeholder="Jung Kook, Jungwon..." /></label>
-                <label>Show/evento<input data-video-editor-field="show" value="${escapeAttr(draft.show)}" placeholder="Music show, concierto..." /></label>
+                <label>Grupo${isFancam ? " *" : ""}<input list="fancam-group-options" data-video-editor-field="group" value="${escapeAttr(draft.group)}" placeholder="BTS, ENHYPEN..." /></label>
+                <label>Artista/idol${isFancam ? " *" : ""}<input list="fancam-artist-options" data-video-editor-field="artist" value="${escapeAttr(draft.artist)}" placeholder="Jung Kook, Jungwon..." /></label>
+                <label>Show/evento<input data-video-editor-field="show" value="${escapeAttr(draft.show)}" placeholder="Concierto, show, presentación..." /></label>
                 <label>Ciudad<input data-video-editor-field="city" value="${escapeAttr(draft.city)}" placeholder="Buenos Aires, Santiago..." /></label>
                 <label>Fecha<input data-video-editor-field="eventDate" value="${escapeAttr(draft.eventDate)}" placeholder="2026-05-21" /></label>
                 <label>Ubicación opcional<input data-video-editor-field="location" value="${escapeAttr(draft.location)}" placeholder="Estadio, teatro, fan meeting..." /></label>
               </div>
+              <datalist id="fancam-group-options">${groupDatalist}</datalist>
+              <datalist id="fancam-artist-options">${artistDatalist}</datalist>
               <label>Texto sobre video<input data-video-editor-field="overlayText" value="${escapeAttr(draft.overlayText)}" placeholder="Texto corto opcional" /></label>
               <div class="video-editor-toggle-row">
                 <label><input type="checkbox" data-video-editor-field="allowComments" ${draft.allowComments ? "checked" : ""} /> Permitir comentarios</label>
                 <label><input type="checkbox" data-video-editor-field="vertical" ${draft.vertical ? "checked" : ""} /> Ajustar 9:16</label>
-                <label><input type="checkbox" data-video-editor-field="rightsConfirmed" ${draft.rightsConfirmed ? "checked" : ""} /> Confirmo que este contenido fue grabado o creado por mí, o que tengo permiso para subirlo.</label>
+                <label><input type="checkbox" data-video-editor-field="rightsConfirmed" ${draft.rightsConfirmed ? "checked" : ""} /> ${isFancam ? "Confirmo que este video fue grabado por mí o que tengo permiso para subirlo." : "Confirmo que este contenido fue grabado o creado por mí, o que tengo permiso para subirlo."}</label>
               </div>
             </div>
 
@@ -8174,13 +8713,15 @@ function renderFancamCard(fancam, index = 0, options = {}) {
       </div>
       <div class="fancam-shade"></div>
       <div class="fancam-info">
+        <span class="fan-upload-pill">Subido por fan</span>
         <button class="fancam-artist-link" data-open-video-profile="fancam:${fancam.id}">
           ${renderAvatarElement("mini fancam-avatar", "berry", artistAvatar)}
           <div>
             <strong>${escapeHtml(fancam.artist)}</strong>
-            <small>${escapeHtml(fancam.group)} · ${escapeHtml(fancam.show)}</small>
+            <small>${escapeHtml(fancam.group)} · ${escapeHtml(fancam.eventName || fancam.show)}</small>
           </div>
         </button>
+        <small class="fancam-uploader-line">por ${escapeHtml(fancam.user || "Fan")} ${fancam.city ? `· ${escapeHtml(fancam.city)}` : ""} ${fancam.date ? `· ${escapeHtml(fancam.date)}` : ""}</small>
         <p class="fancam-description ${expanded ? "expanded" : ""}">${escapeHtml(fancam.description)}</p>
         ${longDescription ? `<button class="drop-more-link fancam-more-link" data-toggle-fancam-text="${fancam.id}">${expanded ? "Ver menos" : "Ver más"}</button>` : ""}
       </div>
@@ -9013,7 +9554,7 @@ function renderArtistMediaHub(artist, group) {
         </div>
       </div>
       <div class="artist-media-section">
-        <div class="artist-media-title"><strong>Fancams</strong><small>Contenido de usuarios moderable</small></div>
+        <div class="artist-media-title"><strong>Fancams de fans</strong><small>Videos subidos por usuarios, no oficiales</small></div>
         ${
           artistFancams.length
             ? `<div class="artist-fancam-row">${artistFancams.map((fancam, index) => renderArtistFancamTile(fancam, index)).join("")}</div>`
@@ -9044,8 +9585,8 @@ function renderArtistFanContent(artist, group) {
 function renderGroupFanContent(group) {
   const content = getFanContentForEntity({ group, scope: "group" });
   return renderFanContentSection({
-    title: "Fans en shows",
-    subtitle: `${group.name} · experiencias, fotos y fancams`,
+    title: "Fancams del fandom",
+    subtitle: `${group.name} · fans en shows, fotos y experiencias`,
     empty: `Todavía no hay experiencias fan etiquetadas para ${group.name}.`,
     content,
   });
@@ -9136,10 +9677,11 @@ function getFanContentForEntity({ artist, group, scope }) {
     thumbnail: fancam.thumbnail || fancam.coverUrl || fancam.imageUrl || fancam.mediaUrl || getDemoDropMedia(index),
     likes: fancam.likes || "0",
     comments: fancam.comments || "0",
-    status: fancam.fanContentStatus || fancam.moderationStatus || "publicado",
+    status: fancam.fanContentStatus || fancam.moderationStatus || fancam.status || "published",
+    sourceType: fancam.sourceType || "fan_upload",
     taggedGroup: fancam.taggedGroup || fancam.group || "",
     taggedArtist: fancam.taggedArtist || fancam.artist || "",
-    taggedShow: fancam.taggedShow || fancam.show || "",
+    taggedShow: fancam.taggedShow || fancam.eventName || fancam.show || "",
     city: fancam.city || fancam.location || "",
     eventDate: fancam.eventDate || fancam.date || "",
     hashtags: fancam.hashtags || [],
@@ -9202,7 +9744,7 @@ function renderFanFancamTile(item) {
       <img src="${escapeAttr(previewUrl)}" alt="${escapeAttr(item.title)}" loading="lazy" />
       <div>
         <strong>${escapeHtml(item.title)}</strong>
-        <small>${escapeHtml(item.taggedShow || item.city || "Fan upload")} · ${escapeHtml(item.status)}</small>
+        <small>Subido por fan · ${escapeHtml(item.taggedShow || item.city || "Fan upload")} · ${escapeHtml(item.status)}</small>
       </div>
       <div class="fan-safety-actions compact">
         <button data-report-content="${item.type}:${item.id}">Reportar</button>
@@ -9363,6 +9905,283 @@ function renderArtistFancamTile(fancam, index = 0) {
   `;
 }
 
+function getCommunityId(community) {
+  return normalizeProfileKey(community?.name || "community");
+}
+
+function getAllCommunities() {
+  return Object.values(communities).flat();
+}
+
+function findCommunityById(communityId) {
+  return getAllCommunities().find((community) => getCommunityId(community) === communityId) || communities.global[0];
+}
+
+function getCommunitySeedMessages(communityId) {
+  const community = findCommunityById(communityId);
+  const seedUsers = [getDemoUser(1), getDemoUser(4), getDemoUser(7)];
+  return [
+    {
+      id: `${communityId}-demo-1`,
+      userId: seedUsers[0].id,
+      user: seedUsers[0].name,
+      username: seedUsers[0].username,
+      avatarUrl: seedUsers[0].avatarUrl,
+      body: `Bienvenidos a ${community.name}. Dejen sus dudas, eventos y trades seguros acá.`,
+      time: "09:42",
+      status: "enviado",
+      reactions: { "⭐": 4, "💜": 2 },
+      replies: [],
+      reports: 0,
+    },
+    {
+      id: `${communityId}-demo-2`,
+      userId: seedUsers[1].id,
+      user: seedUsers[1].name,
+      username: seedUsers[1].username,
+      avatarUrl: seedUsers[1].avatarUrl,
+      body: "¿Alguien va al random dance del sábado? Podemos armar grupito para llegar juntos.",
+      time: "10:15",
+      status: "enviado",
+      reactions: { "🫰": 3 },
+      replies: [],
+      reports: 0,
+    },
+    {
+      id: `${communityId}-demo-3`,
+      userId: state.user?.id || "current-user",
+      user: state.user?.name || "Tú",
+      username: state.user?.username || "hallyufan",
+      avatarUrl: state.user?.avatarUrl || getDemoUserImage(0),
+      body: "Me sumo. También puedo compartir una guía de tiendas confiables.",
+      time: "ahora",
+      status: "enviado",
+      reactions: {},
+      replies: [],
+      reports: 0,
+    },
+  ];
+}
+
+function getCommunityMessages(communityId) {
+  if (!state.communityMessages[communityId]) {
+    state.communityMessages[communityId] = getCommunitySeedMessages(communityId);
+  }
+  const hidden = state.hiddenCommunityMessages[communityId] || {};
+  return state.communityMessages[communityId].filter((message) => !hidden[message.id]);
+}
+
+function persistCommunityState() {
+  storage.set("hallyuHubJoinedCommunities", state.joinedCommunities);
+  storage.set("hallyuHubCommunityMessages", state.communityMessages);
+  storage.set("hallyuHubCommunityReports", state.communityReports);
+  storage.set("hallyuHubCommunityUserReports", state.communityUserReports);
+  storage.set("hallyuHubHiddenCommunityMessages", state.hiddenCommunityMessages);
+  storage.set("hallyuHubMutedCommunityUsers", state.mutedCommunityUsers);
+  storage.set("hallyuHubBlockedCommunityUsers", state.blockedCommunityUsers);
+  storage.set("hallyuHubPrivateConversations", state.privateConversations);
+}
+
+function joinCommunity(communityId) {
+  const community = findCommunityById(communityId);
+  const id = getCommunityId(community);
+  state.joinedCommunities[id] = true;
+  state.activeCommunity = id;
+  persistCommunityState();
+  showToast(`Te uniste a ${community.name}`);
+  renderAndScrollTop();
+}
+
+function openCommunityChat(communityId) {
+  const community = findCommunityById(communityId);
+  const id = getCommunityId(community);
+  state.joinedCommunities[id] = true;
+  state.activeCommunity = id;
+  persistCommunityState();
+  renderAndScrollTop();
+}
+
+function sendCommunityMessage(communityId) {
+  const body = (state.communityDrafts[communityId] || "").trim();
+  if (!body) return;
+  const replyTo = state.communityReplyTo[communityId] || null;
+  const message = {
+    id: `community-${Date.now()}`,
+    userId: state.user?.id || "current-user",
+    user: state.user?.name || "Tú",
+    username: state.user?.username || "hallyufan",
+    avatarUrl: state.user?.avatarUrl || getDemoUserImage(0),
+    body,
+    time: "ahora",
+    status: "enviado",
+    replyTo,
+    reactions: {},
+    replies: [],
+    reports: 0,
+  };
+  state.communityMessages[communityId] = [...getCommunityMessages(communityId), message];
+  state.communityDrafts[communityId] = "";
+  state.communityReplyTo[communityId] = null;
+  persistCommunityState();
+  playAppSound("message");
+  render();
+}
+
+function reactCommunityMessage(communityId, messageId, reaction = "⭐") {
+  state.communityMessages[communityId] = getCommunityMessages(communityId).map((message) =>
+    message.id === messageId
+      ? { ...message, reactions: { ...(message.reactions || {}), [reaction]: Number(message.reactions?.[reaction] || 0) + 1 } }
+      : message,
+  );
+  persistCommunityState();
+  playAppSound("like");
+  render();
+}
+
+function reportCommunityMessage(communityId, messageId) {
+  const key = `${communityId}:${messageId}`;
+  const nextCount = Number(state.communityReports[key] || 0) + 1;
+  state.communityReports[key] = nextCount;
+  if (nextCount >= 5) {
+    state.hiddenCommunityMessages[communityId] = {
+      ...(state.hiddenCommunityMessages[communityId] || {}),
+      [messageId]: true,
+    };
+    showToast("Mensaje ocultado por reportes de la comunidad");
+  } else {
+    showToast(`Reporte enviado (${nextCount}/5)`);
+  }
+  persistCommunityState();
+  render();
+}
+
+function reportCommunityUser(communityId, userKey) {
+  const key = `${communityId}:${normalizeProfileKey(userKey)}`;
+  const nextCount = Number(state.communityUserReports[key] || 0) + 1;
+  state.communityUserReports[key] = nextCount;
+  if (nextCount >= 10) {
+    state.blockedCommunityUsers[key] = Date.now() + 24 * 60 * 60 * 1000;
+    showToast("Usuario bloqueado 24h en esta comunidad");
+  } else {
+    showToast(`Usuario reportado (${nextCount}/10)`);
+  }
+  persistCommunityState();
+  render();
+}
+
+function toggleCommunityMute(communityId, userKey) {
+  const key = `${communityId}:${normalizeProfileKey(userKey)}`;
+  state.mutedCommunityUsers[key] = !state.mutedCommunityUsers[key];
+  persistCommunityState();
+  showToast(state.mutedCommunityUsers[key] ? "Usuario silenciado en esta comunidad" : "Usuario reactivado");
+  render();
+}
+
+function toggleCommunityBlock(communityId, userKey) {
+  const key = `${communityId}:${normalizeProfileKey(userKey)}`;
+  if (state.blockedCommunityUsers[key]) {
+    delete state.blockedCommunityUsers[key];
+    showToast("Usuario desbloqueado en esta comunidad");
+  } else {
+    state.blockedCommunityUsers[key] = Date.now() + 24 * 60 * 60 * 1000;
+    showToast("Usuario bloqueado 24h en esta comunidad");
+  }
+  persistCommunityState();
+  render();
+}
+
+function startCommunityPrivateChat(userName, avatarUrl = "") {
+  const id = normalizeProfileKey(userName);
+  if (!id) return;
+  const existing = state.privateConversations.find((chat) => chat.id === id);
+  if (!existing) {
+    state.privateConversations = [
+      {
+        id,
+        name: userName,
+        avatarUrl,
+        last: "Chat privado creado desde comunidad.",
+        time: "Ahora",
+        status: "Privado",
+      },
+      ...state.privateConversations,
+    ];
+  }
+  state.chatTab = "private";
+  persistCommunityState();
+  showToast(`Chat privado con ${userName} creado`);
+  setView("messages");
+}
+
+function setCommunityReply(communityId, messageId) {
+  const message = getCommunityMessages(communityId).find((item) => item.id === messageId);
+  state.communityReplyTo[communityId] = message ? { id: message.id, user: message.user, body: message.body } : null;
+  render();
+}
+
+function renderCommunityChat(community) {
+  const communityId = getCommunityId(community);
+  const messages = getCommunityMessages(communityId);
+  const reply = state.communityReplyTo[communityId];
+  return `
+    <section class="community-chat-panel">
+      <div class="community-chat-header">
+        <div class="community-avatar small" style="--art:${art[getStableAssetIndex(communityId, art.length)]}"></div>
+        <div>
+          <strong>${escapeHtml(community.name)}</strong>
+          <small>${escapeHtml(community.members)} · ${escapeHtml(community.activity)}</small>
+        </div>
+        <span class="tag">Chat activo</span>
+      </div>
+      <div class="community-chat-thread">
+        ${messages.map((message) => renderCommunityMessage(message, communityId)).join("")}
+      </div>
+      <div class="community-chat-tools">
+        <button type="button" data-demo-action="Selector de emojis abierto">😊</button>
+        <button type="button" data-demo-action="Selector de foto/video listo">＋ media</button>
+        <button type="button" data-demo-action="Stickers HallyuHub listos">Sticker</button>
+      </div>
+      ${reply ? `<div class="community-reply-pill">Respondiendo a @${escapeHtml(reply.user)} <button type="button" data-community-reply-clear="${communityId}">×</button></div>` : ""}
+      <div class="community-chat-input">
+        ${renderAvatarElement("mini", state.user?.avatar || "berry", state.user?.avatarUrl)}
+        <input type="text" value="${escapeAttr(state.communityDrafts[communityId] || "")}" placeholder="Escribí en ${escapeAttr(community.name)}..." data-community-draft="${communityId}" />
+        <button type="button" data-community-send="${communityId}">Enviar</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderCommunityMessage(message, communityId) {
+  const own = normalizeProfileKey(message.userId) === normalizeProfileKey(state.user?.id) || normalizeProfileKey(message.username) === normalizeProfileKey(state.user?.username);
+  const reactions = Object.entries(message.reactions || {}).filter(([, count]) => Number(count) > 0);
+  const muted = state.mutedCommunityUsers[`${communityId}:${normalizeProfileKey(message.username || message.user)}`];
+  const blocked = state.blockedCommunityUsers[`${communityId}:${normalizeProfileKey(message.username || message.user)}`];
+  return `
+    <article class="community-message ${own ? "own" : "other"}">
+      ${!own ? `<button class="community-avatar-button" type="button" data-community-private="${escapeAttr(message.user)}" data-community-private-avatar="${escapeAttr(message.avatarUrl || "")}">${renderAvatarElement("mini", "berry", message.avatarUrl)}</button>` : ""}
+      <div class="community-message-body">
+        <div class="community-message-bubble">
+          ${message.replyTo ? `<div class="community-quoted">↪ ${escapeHtml(message.replyTo.user)}: ${escapeHtml(message.replyTo.body).slice(0, 70)}</div>` : ""}
+          <div class="community-message-head"><strong>${own ? "Tú" : escapeHtml(message.user)}</strong><span>${escapeHtml(message.time || "ahora")}</span></div>
+          <p>${muted ? "Mensaje silenciado" : escapeHtml(message.body)}</p>
+          ${own ? `<small class="sent-state">${escapeHtml(message.status || "enviado")}</small>` : ""}
+        </div>
+        ${reactions.length ? `<div class="community-reactions">${reactions.map(([emoji, count]) => `<span>${escapeHtml(emoji)} ${count}</span>`).join("")}</div>` : ""}
+        <div class="community-message-actions">
+          <button type="button" data-community-reply="${communityId}:${escapeAttr(message.id)}">Responder</button>
+          <button type="button" data-community-react="${communityId}:${escapeAttr(message.id)}:⭐">⭐</button>
+          <button type="button" data-community-react="${communityId}:${escapeAttr(message.id)}:💜">💜</button>
+          ${!own ? `<button type="button" data-community-private="${escapeAttr(message.user)}" data-community-private-avatar="${escapeAttr(message.avatarUrl || "")}">Enviar mensaje</button>` : ""}
+          <button type="button" data-community-report-message="${communityId}:${escapeAttr(message.id)}">Reportar mensaje</button>
+          ${!own ? `<button type="button" data-community-report-user="${communityId}:${escapeAttr(message.username || message.user)}">Reportar usuario</button>
+          <button type="button" data-community-mute="${communityId}:${escapeAttr(message.username || message.user)}">${muted ? "Activar" : "Silenciar"}</button>
+          <button type="button" data-community-block="${communityId}:${escapeAttr(message.username || message.user)}">${blocked ? "Desbloquear" : "Bloquear"}</button>` : ""}
+        </div>
+      </div>
+    </article>
+  `;
+}
+
 function renderCommunity() {
   const tabs = [
     ["global", "Global"],
@@ -9371,6 +10190,7 @@ function renderCommunity() {
     ["groups", "Por grupo"],
   ];
   const list = communities[state.communityTab];
+  const activeCommunity = state.activeCommunity ? findCommunityById(state.activeCommunity) : null;
   return `
     <div class="tabs">
       ${tabs
@@ -9383,104 +10203,122 @@ function renderCommunity() {
     <div class="community-list">
       ${list
         .map(
-          (community, index) => `
-          <article class="community-card">
+          (community, index) => {
+            const communityId = getCommunityId(community);
+            const joined = Boolean(state.joinedCommunities[communityId]);
+            return `
+          <article class="community-card ${state.activeCommunity === communityId ? "active" : ""}" data-open-community="${communityId}">
             <div class="community-top">
               <div class="community-title">
                 <div class="community-avatar" style="--art:${art[index]}"></div>
                 <div>
-                  <h3>${community.name}</h3>
-                  <div class="meta-row"><span>${community.members}</span><span>${community.activity}</span></div>
+                  <h3>${escapeHtml(community.name)}</h3>
+                  <div class="meta-row"><span>${escapeHtml(community.members)}</span><span>${escapeHtml(community.activity)}</span></div>
                 </div>
               </div>
-              <span class="tag">Unirme</span>
+              <button type="button" class="community-join-chip" data-join-community="${communityId}">${joined ? "Entrar" : "Unirse"}</button>
             </div>
-            <p class="muted">${community.detail}</p>
-            <div class="community-actions">
-              <button class="ghost-button" data-go-view="messages">Ver chat</button>
-              <button class="ghost-button" data-go-view="events">Eventos</button>
-              <button class="ghost-button" data-demo-action="Moderadores visibles en modo demo">Moderadores</button>
-            </div>
-          </article>`,
+            <p class="muted">${escapeHtml(community.detail)}</p>
+          </article>`;
+          },
         )
         .join("")}
     </div>
-    <section class="chat-panel">
-      <div class="section-heading"><h2>Chats de mi comunidad</h2><span>Seguro</span></div>
-      <div class="chat-list">
-        ${chatChannels
-          .map(
-            (channel, index) => `
-            <article class="chat-card">
-              <div class="chat-sigil" style="--art:${art[index + 1]}"></div>
-              <div>
-                <div class="chat-card-head">
-                  <h3>${channel.name}</h3>
-                  <span class="tag">${channel.status}</span>
-                </div>
-                <p class="muted">${channel.detail}</p>
-                <div class="chat-bubble">${channel.last}</div>
-              </div>
-            </article>`,
-          )
-          .join("")}
-      </div>
-    </section>
+    ${
+      activeCommunity
+        ? renderCommunityChat(activeCommunity)
+        : `<section class="community-empty-chat"><strong>Elegí una comunidad</strong><span>Tocá “Unirse” o cualquier card para abrir el chat principal.</span></section>`
+    }
     <button class="primary-button" data-demo-action="Solicitud enviada para crear grupo local">Solicitar grupo de mi ciudad</button>
   `;
 }
 
 function renderMessages() {
   const storyChats = (state.storyInbox || []).map((item) => ({
+    id: normalizeProfileKey(item.to),
     name: item.to,
     last: `${item.from || state.user?.name || "Tú"}: ${item.message}`,
     time: item.time || "Ahora",
     status: item.status || "Historia",
     avatarUrl: getDemoUser(item.to).avatarUrl,
   }));
-  const allConversations = [...storyChats, ...conversations];
+  const allConversations = [...state.privateConversations, ...storyChats, ...conversations.map((chat) => ({ ...chat, id: normalizeProfileKey(chat.name) }))];
+  const joined = getAllCommunities().filter((community) => state.joinedCommunities[getCommunityId(community)]);
+  const communityPreview = joined.length ? joined : getAllCommunities().slice(0, 5);
   return `
-    <article class="hero-card">
-      <div class="pill">DM privado</div>
-      <h2>Mensajes con permiso</h2>
-      <p>Como en Instagram: si no aceptas la solicitud, la persona no puede escribirte directo.</p>
-    </article>
-    <div class="section-heading"><h2>Solicitudes</h2><span>2 pendientes</span></div>
-    <div class="request-list">
-      ${privateRequests
-        .map(
-          (request, index) => `
-          <article class="request-card">
-            ${renderAvatarElement("mini", "berry", request.avatarUrl)}
-            <div>
-              <h3>${request.name}</h3>
-              <p class="muted">${request.note}</p>
-              <span class="tag">${request.shared}</span>
-            </div>
-            <div class="request-actions">
-              <button class="ghost-button" data-demo-action="Solicitud rechazada">Rechazar</button>
-              <button class="ghost-button accept" data-demo-action="Solicitud aceptada">Aceptar</button>
-            </div>
-          </article>`,
-        )
-        .join("")}
+    <div class="chat-tabs">
+      <button type="button" class="${state.chatTab === "communities" ? "active" : ""}" data-chat-tab="communities">Comunidades</button>
+      <button type="button" class="${state.chatTab === "private" ? "active" : ""}" data-chat-tab="private">Privados</button>
     </div>
-    <div class="section-heading"><h2>Chats</h2><span>Aceptados</span></div>
-    <div class="chat-list">
-      ${allConversations
-        .map(
-          (chat, index) => `
-          <article class="dm-card">
-            ${renderAvatarElement("mini", "berry", chat.avatarUrl)}
-            <div>
-              <div class="chat-card-head"><h3>${chat.name}</h3><span>${chat.time}</span></div>
-              <p class="muted">${chat.last}</p>
-              <span class="tag">${chat.status}</span>
-            </div>
-          </article>`,
-        )
-        .join("")}
-    </div>
+    ${
+      state.chatTab === "communities"
+        ? `
+          <article class="hero-card compact-chat-hero">
+            <div class="pill">Comunidades</div>
+            <h2>Chats por fandom, ciudad y grupo</h2>
+            <p>Tocá una comunidad para entrar directo al chat principal.</p>
+          </article>
+          <div class="chat-list">
+            ${communityPreview
+              .map((community, index) => {
+                const communityId = getCommunityId(community);
+                return `
+                <button type="button" class="chat-card community-chat-link" data-open-community-view="${communityId}">
+                  <div class="chat-sigil" style="--art:${art[index + 1]}"></div>
+                  <div>
+                    <div class="chat-card-head"><h3>${escapeHtml(community.name)}</h3><span>${state.joinedCommunities[communityId] ? "Unida" : "Abierta"}</span></div>
+                    <p class="muted">${escapeHtml(community.detail)}</p>
+                    <div class="chat-bubble">Chat principal · ${escapeHtml(community.activity)}</div>
+                  </div>
+                </button>`;
+              })
+              .join("")}
+          </div>
+        `
+        : `
+          <article class="hero-card compact-chat-hero">
+            <div class="pill">DM privado</div>
+            <h2>Mensajes con permiso</h2>
+            <p>Los chats privados quedan separados de las comunidades.</p>
+          </article>
+          <div class="section-heading"><h2>Solicitudes</h2><span>${privateRequests.length} pendientes</span></div>
+          <div class="request-list">
+            ${privateRequests
+              .map(
+                (request) => `
+                <article class="request-card">
+                  ${renderAvatarElement("mini", "berry", request.avatarUrl)}
+                  <div>
+                    <h3>${escapeHtml(request.name)}</h3>
+                    <p class="muted">${escapeHtml(request.note)}</p>
+                    <span class="tag">${escapeHtml(request.shared)}</span>
+                  </div>
+                  <div class="request-actions">
+                    <button class="ghost-button" data-demo-action="Solicitud rechazada">Rechazar</button>
+                    <button class="ghost-button accept" data-demo-action="Solicitud aceptada">Aceptar</button>
+                  </div>
+                </article>`,
+              )
+              .join("")}
+          </div>
+          <div class="section-heading"><h2>Chats privados</h2><span>${allConversations.length}</span></div>
+          <div class="chat-list">
+            ${allConversations
+              .map(
+                (chat) => `
+                <article class="dm-card">
+                  ${renderAvatarElement("mini", "berry", chat.avatarUrl)}
+                  <div>
+                    <div class="chat-card-head"><h3>${escapeHtml(chat.name)}</h3><span>${escapeHtml(chat.time)}</span></div>
+                    <p class="muted">${escapeHtml(chat.last)}</p>
+                    <span class="tag">${escapeHtml(chat.status)}</span>
+                  </div>
+                </article>`,
+              )
+              .join("")}
+          </div>
+        `
+    }
   `;
 }
 
@@ -9792,46 +10630,234 @@ function renderOnboarding() {
   `;
 }
 
+function getRookieQuestions() {
+  const stored = storage.get("hallyuHubRookieQuestions", []);
+  const local = Array.isArray(stored) ? stored : [];
+  const mergedLocal = local.map((question) => ({
+    ...question,
+    answers: state.rookieAnswerOverrides[question.id] || question.answers || [],
+  }));
+  const mergedDemo = rookieQuestions.map((question) => ({
+    ...question,
+    answers: state.rookieAnswerOverrides[question.id] || question.answers || [],
+  }));
+  return [...mergedLocal, ...mergedDemo];
+}
+
+function persistRookieQuestions(questions) {
+  storage.set("hallyuHubRookieQuestions", questions.filter((question) => String(question.id || "").startsWith("local-rookie-")));
+}
+
+function getFilteredRookieQuestions() {
+  const keyword = normalizeProfileKey(state.rookieKeyword);
+  return getRookieQuestions().filter((question) => {
+    const matchesCategory = !state.rookieFilter || question.category === state.rookieFilter || state.rookieFilter === "all";
+    const matchesKeyword = !keyword || (question.keywords || []).some((item) => normalizeProfileKey(item).includes(keyword));
+    return matchesCategory && matchesKeyword;
+  });
+}
+
+function getRookieQuestion(questionId) {
+  return getRookieQuestions().find((question) => question.id === questionId) || getFilteredRookieQuestions()[0] || rookieQuestions[0];
+}
+
+function saveRookieQuestionsState() {
+  storage.set("hallyuHubSavedRookieQuestions", state.savedRookieQuestions);
+  storage.set("hallyuHubSharedRookieQuestions", state.sharedRookieQuestions);
+  storage.set("hallyuHubRookieAnswerOverrides", state.rookieAnswerOverrides);
+}
+
+function openRookieQuestion(questionId) {
+  state.selectedRookieQuestion = questionId;
+  renderAndScrollTop();
+}
+
+function publishRookieQuestion() {
+  const body = (state.rookieDraft || "").trim();
+  if (!body) {
+    showToast("Escribí tu pregunta para publicarla");
+    return;
+  }
+  const firstKeyword = Object.keys(rookieKeywordInfo).find((keyword) => normalizeProfileKey(body).includes(normalizeProfileKey(keyword)));
+  const newQuestion = {
+    id: `local-rookie-${Date.now()}`,
+    category: state.rookieFilter || "principiantes",
+    user: state.user?.name || "Hallyu fan",
+    username: state.user?.username || "hallyufan",
+    avatarUrl: state.user?.avatarUrl || getDemoUserImage(0),
+    title: body.length > 58 ? `${body.slice(0, 58)}...` : body,
+    question: body,
+    keywords: firstKeyword ? [firstKeyword] : ["recomendaciones", "fandom"],
+    time: "ahora",
+    recommendations: ["La comunidad ya puede recomendarte grupos, canciones, videos y comunidades."],
+    answers: [],
+  };
+  const stored = storage.get("hallyuHubRookieQuestions", []);
+  const next = [newQuestion, ...(Array.isArray(stored) ? stored : [])];
+  persistRookieQuestions(next);
+  state.rookieDraft = "";
+  state.selectedRookieQuestion = newQuestion.id;
+  playAppSound("comment");
+  showToast("Consulta publicada");
+  renderAndScrollTop();
+}
+
+function answerRookieQuestion(questionId) {
+  const body = (state.rookieReplyDrafts[questionId] || "").trim();
+  if (!body) return;
+  const allQuestions = getRookieQuestions();
+  const current = allQuestions.find((question) => question.id === questionId);
+  const nextAnswers = [
+    ...(current?.answers || []),
+    {
+      user: state.user?.name || "Hallyu fan",
+      username: state.user?.username || "hallyufan",
+      avatarUrl: state.user?.avatarUrl || getDemoUserImage(0),
+      time: "ahora",
+      body,
+    },
+  ];
+  const nextQuestions = allQuestions.map((question) =>
+    question.id === questionId
+      ? {
+          ...question,
+          answers: nextAnswers,
+        }
+      : question,
+  );
+  state.rookieAnswerOverrides[questionId] = nextAnswers;
+  persistRookieQuestions(nextQuestions);
+  saveRookieQuestionsState();
+  state.rookieReplyDrafts[questionId] = "";
+  playAppSound("comment");
+  showToast("Respuesta enviada");
+  render();
+}
+
+function toggleRookieSave(questionId) {
+  state.savedRookieQuestions[questionId] = !state.savedRookieQuestions[questionId];
+  saveRookieQuestionsState();
+  playAppSound("save");
+  showToast(state.savedRookieQuestions[questionId] ? "Consulta guardada" : "Consulta quitada de guardados");
+  render();
+}
+
+function shareRookieQuestion(questionId) {
+  state.sharedRookieQuestions[questionId] = Number(state.sharedRookieQuestions[questionId] || 0) + 1;
+  saveRookieQuestionsState();
+  showToast("Opciones para compartir consulta abiertas");
+  render();
+}
+
+function renderRookieKeywordPanel() {
+  if (!state.rookieKeyword) return "";
+  const label = state.rookieKeyword;
+  const info = rookieKeywordInfo[label] || "Concepto K-pop explicado por la comunidad.";
+  const related = getRookieQuestions().filter((question) => (question.keywords || []).some((keyword) => normalizeProfileKey(keyword) === normalizeProfileKey(label)));
+  return `
+    <section class="rookie-keyword-panel">
+      <div>
+        <strong>#${escapeHtml(label)}</strong>
+        <p>${escapeHtml(info)}</p>
+      </div>
+      <span>${related.length} consultas relacionadas</span>
+      <button type="button" data-rookie-keyword-clear>Limpiar</button>
+    </section>
+  `;
+}
+
+function renderRookieQuestionCard(question) {
+  return `
+    <article class="rookie-question-card" data-open-rookie-question="${escapeAttr(question.id)}">
+      ${renderAvatarElement("mini", "berry", question.avatarUrl)}
+      <div>
+        <div class="rookie-question-head">
+          <strong>${escapeHtml(question.user)}</strong>
+          <span>${escapeHtml(question.time)}</span>
+        </div>
+        <h3>${escapeHtml(question.title)}</h3>
+        <p>${escapeHtml(question.question)}</p>
+        <div class="rookie-keywords">
+          ${(question.keywords || []).map((keyword) => `<button type="button" data-rookie-keyword="${escapeAttr(keyword)}">#${escapeHtml(keyword)}</button>`).join("")}
+        </div>
+        <div class="rookie-question-meta">
+          <span>${(question.answers || []).length} respuestas</span>
+          <span>${(question.recommendations || []).length} recomendaciones</span>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function renderRookieQuestionDetail(question) {
+  const saved = Boolean(state.savedRookieQuestions[question.id]);
+  return `
+    <section class="rookie-detail-panel">
+      <button class="ghost-button back-button" type="button" data-rookie-back>Volver a consultas</button>
+      <article class="rookie-detail-question">
+        <div class="rookie-detail-user">
+          ${renderAvatarElement("mini", "berry", question.avatarUrl)}
+          <div><strong>${escapeHtml(question.user)}</strong><span>@${escapeHtml(question.username)} · ${escapeHtml(question.time)}</span></div>
+        </div>
+        <h2>${escapeHtml(question.title)}</h2>
+        <p>${escapeHtml(question.question)}</p>
+        <div class="rookie-keywords">
+          ${(question.keywords || []).map((keyword) => `<button type="button" data-rookie-keyword="${escapeAttr(keyword)}">#${escapeHtml(keyword)}</button>`).join("")}
+        </div>
+        <div class="rookie-detail-actions">
+          <button type="button" data-rookie-save="${escapeAttr(question.id)}">${saved ? "Guardado" : "Guardar"}</button>
+          <button type="button" data-rookie-share="${escapeAttr(question.id)}">Compartir</button>
+        </div>
+      </article>
+      <div class="section-heading small"><h2>Recomendaciones</h2><span>${(question.recommendations || []).length}</span></div>
+      <div class="rookie-recommendations">
+        ${(question.recommendations || []).map((item) => `<article>${escapeHtml(item)}</article>`).join("")}
+      </div>
+      <div class="section-heading small"><h2>Respuestas</h2><span>${(question.answers || []).length}</span></div>
+      <div class="rookie-answer-list">
+        ${(question.answers || []).map((answer) => `
+          <article class="rookie-answer">
+            ${renderAvatarElement("mini", "berry", answer.avatarUrl)}
+            <div><strong>${escapeHtml(answer.user)}</strong><span>${escapeHtml(answer.time)}</span><p>${escapeHtml(answer.body)}</p></div>
+          </article>
+        `).join("")}
+      </div>
+      <div class="rookie-answer-input">
+        ${renderAvatarElement("mini", state.user?.avatar || "berry", state.user?.avatarUrl)}
+        <input type="text" value="${escapeAttr(state.rookieReplyDrafts[question.id] || "")}" placeholder="Responder con una recomendación..." data-rookie-reply-draft="${escapeAttr(question.id)}" />
+        <button type="button" data-rookie-answer="${escapeAttr(question.id)}">Responder</button>
+      </div>
+    </section>
+  `;
+}
+
 function renderRookie() {
+  const selected = state.selectedRookieQuestion ? getRookieQuestion(state.selectedRookieQuestion) : null;
+  const questions = getFilteredRookieQuestions();
   return `
     <article class="rookie-hero">
       <div class="pill">K-pop 101</div>
       <h2>Quiero entrar al mundo del K-pop</h2>
-      <p>Fans con experiencia te acompanan, recomiendan musica y explican la cultura fandom.</p>
+      <p>Preguntá, respondé y recibí recomendaciones de fans con experiencia.</p>
     </article>
-    <div class="section-heading"><h2>Ruta para empezar</h2><span>Principiante</span></div>
-    <div class="guide-list">
-      ${[
-        ["01", "Elige tu vibra", "Dinos si te gusta pop brillante, rap fuerte, baladas o performance."],
-        ["02", "Recibe 5 canciones", "Una mentora te arma una mini playlist para escuchar sin saturarte."],
-        ["03", "Aprende palabras clave", "Bias, comeback, era, photocard, fancam y mas sin sentirse perdido."],
-      ]
-        .map(
-          ([number, title, detail]) => `
-          <article class="glass-card guide-card">
-            <div class="guide-number">${number}</div>
-            <div><h3 class="card-title">${title}</h3><p class="muted">${detail}</p></div>
-          </article>`,
-        )
-        .join("")}
+    <div class="rookie-compose">
+      <input type="text" value="${escapeAttr(state.rookieDraft)}" placeholder="Hacé una pregunta: ¿Qué significa bias?" data-rookie-draft />
+      <button type="button" data-rookie-publish>Publicar</button>
     </div>
-    <div class="section-heading"><h2>Mentores disponibles</h2><span>Hablar ahora</span></div>
-    <div class="mentor-list">
-      ${mentors
-        .map(
-          (mentor, index) => `
-          <article class="mentor-card">
-            <div class="mentor-avatar" style="--art:${art[index + 2]}"></div>
-            <div>
-              <h3>${mentor.name}</h3>
-              <p class="muted">${mentor.role}</p>
-              <p>${mentor.help}</p>
-              <button class="ghost-button" data-demo-action="Solicitud enviada al mentor">Pedir consejo</button>
-            </div>
-          </article>`,
-        )
-        .join("")}
+    <div class="rookie-category-row">
+      ${rookieCategories.map(([key, label]) => `<button type="button" class="${state.rookieFilter === key ? "active" : ""}" data-rookie-filter="${key}">${label}</button>`).join("")}
     </div>
+    ${renderRookieKeywordPanel()}
+    ${
+      selected
+        ? renderRookieQuestionDetail(selected)
+        : `
+          <div class="section-heading"><h2>Consultas de nuevos fans</h2><span>${questions.length}</span></div>
+          <div class="rookie-question-list">
+            ${questions.map(renderRookieQuestionCard).join("") || `<article class="settings-demo-box">No hay consultas con ese filtro todavía.</article>`}
+          </div>
+        `
+    }
   `;
 }
 
@@ -9976,6 +11002,42 @@ function renderProfileEditor() {
 function renderProfileFeed(tab, profileUser) {
   const ownUser = !state.viewedProfile || profileUser.username === state.user.username;
   if (tab === "archive") return renderStoryArchive(profileUser, ownUser);
+  if (tab === "fancams") {
+    const fancamFeed = ownUser
+      ? fancamVideos.filter((fancam) => fancam.userId === (state.user?.id || "") || fancam.username === state.user?.username)
+      : fancamVideos.filter((fancam) => fancam.username === profileUser.username);
+    if (fancamFeed.length) {
+      return fancamFeed
+        .map((fancam, index) =>
+          renderSocialPost(
+            {
+              id: `profile-${fancam.id}`,
+              user: fancam.user,
+              username: fancam.username,
+              avatarUrl: fancam.avatarUrl,
+              category: "fancams",
+              group: "Fancam",
+              time: fancam.date || formatRelativeTime(fancam.createdAt),
+              createdAt: fancam.createdAt,
+              caption: `${fancam.description} · ${fancam.group} / ${fancam.artist}`,
+              hashtags: fancam.hashtags || ["#Fancam"],
+              likes: fancam.likes || "0",
+              comments: fancam.comments || "0",
+              mediaUrl: fancam.mediaUrl,
+              mediaType: fancam.mediaType || "video",
+              taggedGroup: fancam.group,
+              taggedArtist: fancam.artist,
+              taggedShow: fancam.eventName || fancam.show,
+              city: fancam.city,
+              sourceType: "fan_upload",
+            },
+            index,
+            { compact: true },
+          ),
+        )
+        .join("");
+    }
+  }
   if (tab === "saved") {
     const savedFeed = userPosts.filter((post) => state.savedPosts[post.id] || state.savedPosts[getBasePostId(post.id)]);
     if (savedFeed.length) return savedFeed.map((post, index) => renderSocialPost(post, index, { compact: true })).join("");
