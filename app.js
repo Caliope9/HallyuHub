@@ -2232,6 +2232,47 @@ function renderAndScrollTop() {
   scrollToTop();
 }
 
+function isEditableField(element) {
+  return Boolean(element?.matches?.("input, textarea, select"));
+}
+
+function lockViewportScale() {
+  const content = "width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover";
+  let viewport = document.querySelector('meta[name="viewport"]');
+  if (!viewport) {
+    viewport = document.createElement("meta");
+    viewport.name = "viewport";
+    document.head.appendChild(viewport);
+  }
+  viewport.setAttribute("content", content);
+}
+
+function resetMobileInputZoom() {
+  setTimeout(() => {
+    window.scrollTo(0, window.scrollY);
+    if (document.body) document.body.style.zoom = "1";
+    applyScrollTop("auto");
+  }, 100);
+}
+
+function setupMobileInputZoomGuard() {
+  lockViewportScale();
+  if (document.body?.dataset.inputZoomGuard === "true") return;
+  document.body.dataset.inputZoomGuard = "true";
+  document.addEventListener("focusin", (event) => {
+    if (isEditableField(event.target)) document.body.classList.add("typing-field-active");
+  });
+  document.addEventListener("focusout", () => {
+    if (isEditableField(document.activeElement)) return;
+    document.body.classList.remove("typing-field-active");
+    resetMobileInputZoom();
+  });
+  window.visualViewport?.addEventListener("resize", () => {
+    if (document.body.classList.contains("typing-field-active") || isEditableField(document.activeElement)) return;
+    setTimeout(() => applyScrollTop("auto"), 80);
+  });
+}
+
 function render() {
   const view = document.getElementById("view");
   const appScreen = document.querySelector(".app-screen");
@@ -9462,7 +9503,7 @@ function renderProfileEditor() {
   const activeAvatar = avatars.find((avatar) => avatar.id === (state.selectedAvatar || state.user.avatar)) || avatars[0];
   const progress = getFanProgress();
   return `
-    <section class="profile-editor-card">
+    <section class="profile-editor-card edit-profile">
       <button class="ghost-button back-button" data-profile-edit-close>Volver al perfil</button>
       <div class="profile-edit-cover" style="--profile-bg:${getProfileBackground(state.selectedProfileBg || state.user.profileBg).art}">
         ${renderAvatarElement(`profile-avatar premium-avatar edit-avatar ${getRarityClass(activeAvatar)}`, state.selectedAvatar || state.user.avatar, state.profileAvatarPreviewUrl || state.user.avatarUrl)}
@@ -9574,4 +9615,5 @@ document.querySelectorAll("[data-go-view]").forEach((button) => {
 });
 
 setupSwipeNavigation();
+setupMobileInputZoomGuard();
 initApp();

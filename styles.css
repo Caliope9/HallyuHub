@@ -10311,3 +10311,73 @@ button.story-layer:active {
   align-items: start;
   line-height: 1.35;
 }
+
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select) {
+  font-size: 16px !important;
+}
+
+:where(input, textarea, select) {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+input,
+textarea,
+select {
+  font-size: 16px !important;
+}
+
+.phone-shell,
+.app-screen,
+.view,
+.main-content,
+.screen-container {
+  max-width: 100vw;
+  zoom: 1;
+}
+
+.edit-profile {
+  width: 100%;
+  max-width: 100%;
+  transform: none !important;
+  zoom: 1 !important;
+  perspective: none !important;
+  animation: none !important;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+.edit-profile,
+.edit-profile * {
+  transform: none !important;
+  zoom: 1 !important;
+  perspective: none !important;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.edit-profile input,
+.edit-profile textarea,
+.edit-profile select,
+.edit-profile button {
+  font-size: 16px !important;
+  line-height: 1.4;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+.edit-profile input,
+.edit-profile textarea,
+.edit-profile select {
+  max-width: 100%;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
