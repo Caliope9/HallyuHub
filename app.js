@@ -2298,6 +2298,7 @@ function render() {
   if (!state.isAuthenticated) {
     view.innerHTML = renderAuth();
     mountGlobalStoryViewer();
+    mountGlobalStoryEditor();
     bindDynamicActions();
     return;
   }
@@ -2306,6 +2307,7 @@ function render() {
     document.querySelector(".topbar").classList.add("hidden");
     view.innerHTML = renderOnboarding();
     mountGlobalStoryViewer();
+    mountGlobalStoryEditor();
     bindDynamicActions();
     return;
   }
@@ -2328,6 +2330,7 @@ function render() {
   };
   view.innerHTML = templates[state.view]() + renderPermissionPrompt() + (state.reportTarget ? renderReportSheet() : "") + renderMediaEmbedModal();
   mountGlobalStoryViewer();
+  mountGlobalStoryEditor();
   bindDynamicActions();
   scheduleStoryAutoplay();
 }
@@ -2340,6 +2343,12 @@ function mountGlobalStoryViewer() {
   document.getElementById("global-story-viewer")?.remove();
   if (state.activeStory === null) return;
   document.body.insertAdjacentHTML("beforeend", `<div id="global-story-viewer">${renderStoryViewer()}</div>`);
+}
+
+function mountGlobalStoryEditor() {
+  document.getElementById("global-story-editor")?.remove();
+  if (!state.storyEditorOpen) return;
+  document.body.insertAdjacentHTML("beforeend", `<div id="global-story-editor">${renderStoryEditor()}</div>`);
 }
 
 function getStoryKey(index) {
@@ -6546,7 +6555,6 @@ function renderHome() {
         <strong>Cargando más momentos fandom...</strong>
       </div>
     </div>
-    ${state.storyEditorOpen ? renderStoryEditor() : ""}
     ${state.toast ? `<div class="app-toast">${state.toast}</div>` : ""}
   `;
 }
@@ -7028,38 +7036,43 @@ function renderStoryEditor() {
   return `
     <section class="story-editor-overlay" aria-label="Crear historia">
       <div class="story-editor-card fullscreen-editor">
-        <div class="story-editor-topbar">
+        <div class="story-editor-topbar story-create-header">
           <button type="button" data-story-editor-close aria-label="Cerrar editor">X</button>
           <strong>Historia</strong>
+          <span></span>
+        </div>
+        <div class="story-create-body">
+          <div class="story-editor-preview story-create-canvas" style="--art:${getStoryBackground(draft.background)}">
+            ${
+              draft.mediaUrl
+                ? `<div class="story-editor-media-frame" data-story-media-transform style="${getStoryMediaStyle(draft)}">
+                    ${
+                      draft.mediaType === "video"
+                        ? `<video class="story-editor-media" src="${draft.mediaUrl}" autoplay muted loop playsinline preload="metadata"></video>`
+                        : `<img class="story-editor-media" src="${draft.mediaUrl}" alt="Vista previa de historia" draggable="false" />`
+                    }
+                  </div>`
+                : ""
+            }
+            <div class="story-layer-stage editable-stage">${elements.map((element) => renderStoryLayer(element, true)).join("")}</div>
+            ${draft.location ? `<small>${escapeHtml(draft.location)}</small>` : ""}
+            <div class="story-music-pill story-music-edit"><span>♪</span>${escapeHtml(draft.music)}</div>
+            ${draft.mediaName ? `<em>${escapeHtml(draft.mediaName)}</em>` : ""}
+          </div>
+          <div class="story-tool-rail" aria-label="Herramientas de historia">
+            <button type="button" data-story-tool="text" aria-label="Texto"><span>T</span></button>
+            <button type="button" data-story-tool="stickers" aria-label="Stickers"><span>✦</span></button>
+            <button type="button" data-story-tool="music" aria-label="Musica"><span>♪</span></button>
+            <button type="button" data-story-tool="background" aria-label="Fondo"><span>◎</span></button>
+            <button type="button" data-story-tool="mention" aria-label="Menciones y ubicacion"><span>@</span></button>
+            <button type="button" data-story-tool="gallery" aria-label="Foto o video"><span>▣</span></button>
+          </div>
+          ${state.storyToolPanel === "adjust" && selected ? renderStoryAdjustPanel(selected) : ""}
+          ${state.storyToolPanel ? renderStoryToolPanel(draft, userLevel, visibleTracks) : ""}
+        </div>
+        <div class="story-create-bottom">
           <button type="button" data-create-own-story="${escapeAttr(draft.background)}">Publicar</button>
         </div>
-        <div class="story-editor-preview" style="--art:${getStoryBackground(draft.background)}">
-          ${
-            draft.mediaUrl
-              ? `<div class="story-editor-media-frame" data-story-media-transform style="${getStoryMediaStyle(draft)}">
-                  ${
-                    draft.mediaType === "video"
-                      ? `<video class="story-editor-media" src="${draft.mediaUrl}" autoplay muted loop playsinline preload="metadata"></video>`
-                      : `<img class="story-editor-media" src="${draft.mediaUrl}" alt="Vista previa de historia" draggable="false" />`
-                  }
-                </div>`
-              : ""
-          }
-          <div class="story-layer-stage editable-stage">${elements.map((element) => renderStoryLayer(element, true)).join("")}</div>
-          ${draft.location ? `<small>${escapeHtml(draft.location)}</small>` : ""}
-          <div class="story-music-pill story-music-edit"><span>♪</span>${escapeHtml(draft.music)}</div>
-          ${draft.mediaName ? `<em>${escapeHtml(draft.mediaName)}</em>` : ""}
-        </div>
-        <div class="story-tool-rail" aria-label="Herramientas de historia">
-          <button type="button" data-story-tool="text" aria-label="Texto"><span>T</span></button>
-          <button type="button" data-story-tool="stickers" aria-label="Stickers"><span>✦</span></button>
-          <button type="button" data-story-tool="music" aria-label="Musica"><span>♪</span></button>
-          <button type="button" data-story-tool="background" aria-label="Fondo"><span>◎</span></button>
-          <button type="button" data-story-tool="mention" aria-label="Menciones y ubicacion"><span>@</span></button>
-          <button type="button" data-story-tool="gallery" aria-label="Foto o video"><span>▣</span></button>
-        </div>
-        ${state.storyToolPanel === "adjust" && selected ? renderStoryAdjustPanel(selected) : ""}
-        ${state.storyToolPanel ? renderStoryToolPanel(draft, userLevel, visibleTracks) : ""}
       </div>
     </section>
   `;

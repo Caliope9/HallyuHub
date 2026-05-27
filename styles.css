@@ -3502,20 +3502,22 @@ video.post-media.real-media {
 
 .story-editor-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   width: 100vw;
   height: 100dvh;
   min-height: 100dvh;
-  z-index: 120;
+  z-index: 99999;
   display: grid;
   place-items: stretch;
-  background:
-    radial-gradient(circle at 18% 0%, rgba(251, 188, 219, 0.09), transparent 32%),
-    radial-gradient(circle at 88% 18%, rgba(101, 228, 255, 0.07), transparent 28%),
-    rgba(1, 1, 6, 0.97);
+  background: #07030f;
   backdrop-filter: blur(18px);
   padding: 0;
   overflow: hidden;
+  border-radius: 0;
+  margin: 0;
 }
 
 .story-editor-card {
@@ -3540,6 +3542,43 @@ video.post-media.real-media {
   height: 100%;
   min-height: 100%;
   overflow: hidden;
+}
+
+.story-create-header {
+  flex-shrink: 0;
+}
+
+.story-create-body {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+}
+
+.story-create-canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.story-create-bottom {
+  flex: 0 0 auto;
+  padding: 9px 12px calc(env(safe-area-inset-bottom) + 10px);
+  background: rgba(7, 3, 15, 0.94);
+  box-sizing: border-box;
+}
+
+.story-create-bottom button {
+  width: 100%;
+  min-height: 42px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(251, 188, 219, 0.98), rgba(101, 228, 255, 0.88));
+  color: #16071d;
+  font-size: 13px;
+  font-weight: 1000;
+  box-shadow: 0 12px 30px rgba(251, 188, 219, 0.2), 0 0 22px rgba(101, 228, 255, 0.12);
 }
 
 .story-editor-topbar {
@@ -3573,15 +3612,6 @@ video.post-media.real-media {
   font-size: 12px;
   font-weight: 950;
   backdrop-filter: blur(18px);
-}
-
-.story-editor-topbar button:last-child {
-  min-height: 36px;
-  padding: 0 16px;
-  background: linear-gradient(135deg, rgba(251, 188, 219, 0.98), rgba(101, 228, 255, 0.88));
-  color: #16071d;
-  border-color: transparent;
-  box-shadow: 0 12px 30px rgba(251, 188, 219, 0.2), 0 0 22px rgba(101, 228, 255, 0.12);
 }
 
 .story-editor-preview {
@@ -3840,7 +3870,7 @@ button.story-layer:active {
 .story-tool-rail {
   position: absolute;
   right: 12px;
-  top: calc(env(safe-area-inset-top) + 54px);
+  top: 10px;
   z-index: 14;
   display: grid;
   gap: 6px;
@@ -3880,7 +3910,7 @@ button.story-layer:active {
   position: absolute;
   left: 18px;
   right: 18px;
-  bottom: calc(env(safe-area-inset-bottom) + 10px);
+  bottom: 10px;
   z-index: 20;
   border: 1px solid rgba(255, 255, 255, 0.13);
   border-radius: 22px;
@@ -4130,12 +4160,13 @@ button.story-layer:active {
 
 @media (min-width: 520px) {
   .story-editor-card {
-    padding: 14px;
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
   }
 
   .story-editor-preview {
-    width: min(420px, calc(100vw - 116px));
-    height: min(calc(100dvh - 78px), 760px);
+    width: 100%;
+    height: 100%;
+    max-height: none;
   }
 
   .story-tool-rail {
