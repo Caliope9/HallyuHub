@@ -134,7 +134,9 @@ const state = {
   viewedStories: {},
   storyPaused: false,
   storyDirection: 1,
+  activeOwnStoryIndex: 0,
   storyComposerOpen: false,
+  storyMusicInfoOpen: false,
   storyEditorOpen: false,
   storyToolPanel: null,
   storyDraft: {
@@ -151,6 +153,10 @@ const state = {
     mediaName: "",
     mediaUrl: "",
     mediaType: "",
+    mediaScale: 1,
+    mediaX: 0,
+    mediaY: 0,
+    mediaRotation: 0,
     font: "Inter",
     textColor: "#ffffff",
     textStyle: "glow",
@@ -159,6 +165,7 @@ const state = {
   ownStoryStatsOpen: false,
   ownStory: null,
   ownStories: [],
+  storyArchive: [],
   storyInbox: [],
   authMode: "start",
   isAuthenticated: false,
@@ -2074,6 +2081,7 @@ const profileTabs = [
   ["outfits", "Outfit"],
   ["photocards", "Photocards"],
   ["saved", "Guardados"],
+  ["archive", "Archivo"],
   ["favorites", "Favoritos"],
 ];
 
@@ -2336,7 +2344,8 @@ function mountGlobalStoryViewer() {
 
 function getStoryKey(index) {
   if (index === -1) {
-    const stamp = state.ownStory?.createdAt || state.ownStory?.mediaUrl || state.ownStory?.time || "own";
+    const ownStory = getActiveOwnStory();
+    const stamp = ownStory?.id || ownStory?.createdAt || ownStory?.mediaUrl || ownStory?.time || "own";
     return `own-story-${normalizeProfileKey(stamp)}`;
   }
   const story = followingStories[index];
@@ -2365,6 +2374,21 @@ function getFirstUnviewedStoryIndex(startIndex = 0) {
   return null;
 }
 
+function getFirstUnviewedOwnStoryIndex() {
+  const stories = getOwnStorySequence();
+  if (!stories.length) return 0;
+  const previousOwnIndex = state.activeOwnStoryIndex;
+  for (let index = 0; index < stories.length; index += 1) {
+    state.activeOwnStoryIndex = index;
+    if (!isStoryViewed(-1)) {
+      state.activeOwnStoryIndex = previousOwnIndex;
+      return index;
+    }
+  }
+  state.activeOwnStoryIndex = previousOwnIndex;
+  return Math.max(0, stories.length - 1);
+}
+
 function getStoryOpenIndex(requestedIndex = 0) {
   if (!isStoryViewed(requestedIndex)) return requestedIndex;
   const nextUnviewed = getFirstUnviewedStoryIndex(requestedIndex);
@@ -2379,11 +2403,37 @@ function getOrderedStoryIndexes() {
   ];
 }
 
+function areAllOwnStoriesViewed() {
+  const stories = getOwnStorySequence();
+  if (!stories.length) return false;
+  const previousOwnIndex = state.activeOwnStoryIndex;
+  const allViewed = stories.every((_, index) => {
+    state.activeOwnStoryIndex = index;
+    return isStoryViewed(-1);
+  });
+  state.activeOwnStoryIndex = previousOwnIndex;
+  return allViewed;
+}
+
 function advanceStory(direction = 1, options = {}) {
   if (state.activeStory === null) return;
   if (options.completed || direction > 0) markStoryViewed(state.activeStory);
   state.storyDirection = direction;
   state.storyPaused = false;
+  state.storyMusicInfoOpen = false;
+  if (state.activeStory === -1) {
+    const ownStories = getOwnStorySequence();
+    const nextOwnIndex = state.activeOwnStoryIndex + direction;
+    if (nextOwnIndex >= 0 && nextOwnIndex < ownStories.length) {
+      state.activeOwnStoryIndex = nextOwnIndex;
+      state.storyComposerOpen = false;
+      state.ownStoryStatsOpen = false;
+      render();
+      return;
+    }
+    closeStoryViewer();
+    return;
+  }
   let nextIndex = null;
   if (direction > 0) {
     const start = state.activeStory === -1 ? 0 : state.activeStory + 1;
@@ -2440,7 +2490,7 @@ function setStoryPaused(paused) {
 function isStoryInteractiveTarget(target) {
   return Boolean(
     target?.closest?.(
-      "[data-story-star], [data-own-story-stats], [data-story-message-open], [data-story-message-close], [data-story-send], [data-story-phrase], [data-story-message-input], .story-composer-sheet, .story-interactions, .story-close",
+      "[data-story-star], [data-own-story-stats], [data-story-music-info], [data-story-audio-action], [data-story-message-open], [data-story-message-close], [data-story-send], [data-story-phrase], [data-story-message-input], .story-audio-sheet, .story-composer-sheet, .story-interactions, .story-close",
     ),
   );
 }
@@ -2448,9 +2498,11 @@ function isStoryInteractiveTarget(target) {
 function bindStoryTapZone(element) {
   let holdStart = 0;
   let handledPointer = false;
+  let activePointerId = null;
   const pause = (event) => {
     if (isStoryInteractiveTarget(event.target)) return;
     event.preventDefault?.();
+    activePointerId = event.pointerId ?? "touch";
     holdStart = Date.now();
     handledPointer = true;
     setStoryPaused(true);
@@ -2458,6 +2510,7 @@ function bindStoryTapZone(element) {
   const resume = (event) => {
     if (!handledPointer || isStoryInteractiveTarget(event.target)) return;
     event.preventDefault?.();
+    if (activePointerId !== null && event.pointerId !== undefined && event.pointerId !== activePointerId) return;
     const heldLongEnough = Date.now() - holdStart > 250;
     const direction = Number(element.dataset.storyNav || 0);
     setStoryPaused(false);
@@ -2467,16 +2520,15 @@ function bindStoryTapZone(element) {
     element.dataset.suppressStoryNav = "true";
     setTimeout(() => delete element.dataset.suppressStoryNav, 120);
     handledPointer = false;
+    activePointerId = null;
   };
   const cancel = (event) => {
     if (!handledPointer) return;
     event.preventDefault?.();
     setStoryPaused(false);
     handledPointer = false;
+    activePointerId = null;
   };
-  element.addEventListener("touchstart", pause, { passive: false });
-  element.addEventListener("touchend", resume, { passive: false });
-  element.addEventListener("touchcancel", cancel, { passive: false });
   element.addEventListener("pointerdown", (event) => {
     pause(event);
   });
@@ -2608,6 +2660,7 @@ function closeStoryViewer() {
   state.activeStory = null;
   state.storyComposerOpen = false;
   state.ownStoryStatsOpen = false;
+  state.storyMusicInfoOpen = false;
   state.storyPaused = false;
   clearStoryAutoplay();
   render();
@@ -3031,7 +3084,7 @@ function bindDynamicActions() {
     button.addEventListener("click", () => {
       if (state.ownStory) {
         state.activeStory = -1;
-        markStoryViewed(-1);
+        state.activeOwnStoryIndex = getFirstUnviewedOwnStoryIndex();
         state.storyDirection = 1;
         state.storyPaused = false;
       } else {
@@ -3039,6 +3092,7 @@ function bindDynamicActions() {
       }
       state.storyComposerOpen = false;
       state.ownStoryStatsOpen = false;
+      state.storyMusicInfoOpen = false;
       state.storyPaused = false;
       render();
     });
@@ -3050,8 +3104,13 @@ function bindDynamicActions() {
 
   document.querySelectorAll("[data-story-editor-open]").forEach((button) => {
     button.addEventListener("click", () => {
+      state.activeStory = null;
       state.storyEditorOpen = true;
       state.storyToolPanel = null;
+      state.storyComposerOpen = false;
+      state.ownStoryStatsOpen = false;
+      state.storyMusicInfoOpen = false;
+      clearStoryAutoplay();
       render();
     });
   });
@@ -3657,6 +3716,7 @@ function bindDynamicActions() {
       state.storyDraft.mediaName = file?.name || "";
       state.storyDraft.text = state.storyDraft.text || "";
       state.storyDraft.mediaType = file?.type?.startsWith("video") ? "video" : file ? "image" : "";
+      resetStoryMediaTransform();
       if (!file) {
         render();
         return;
@@ -3670,12 +3730,18 @@ function bindDynamicActions() {
     });
   });
 
+  document.querySelectorAll("[data-story-media-transform]").forEach((element) => {
+    element.addEventListener("touchstart", startStoryMediaTouchTransform, { passive: false });
+    element.addEventListener("pointerdown", startStoryMediaTransform);
+  });
+
   document.querySelectorAll("[data-story-close]").forEach((button) => {
     button.addEventListener("click", () => {
       markStoryViewed(state.activeStory);
       state.activeStory = null;
       state.storyComposerOpen = false;
       state.ownStoryStatsOpen = false;
+      state.storyMusicInfoOpen = false;
       state.storyPaused = false;
       clearStoryAutoplay();
       render();
@@ -3699,6 +3765,40 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-own-story-stats]").forEach((button) => {
     button.addEventListener("click", () => {
       state.ownStoryStatsOpen = !state.ownStoryStatsOpen;
+      state.storyMusicInfoOpen = false;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-music-info]").forEach((button) => {
+    button.addEventListener("touchstart", (event) => event.stopPropagation(), { passive: true });
+    button.addEventListener("pointerdown", (event) => event.stopPropagation());
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      state.storyMusicInfoOpen = !state.storyMusicInfoOpen;
+      state.ownStoryStatsOpen = false;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-story-audio-action]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const action = button.dataset.storyAudioAction;
+      const story = getActiveStory();
+      if (action === "use") {
+        state.storyDraft.music = story?.music || state.storyDraft.music;
+        state.storyDraft.musicCategory = story?.musicCategory || state.storyDraft.musicCategory;
+        state.storyMusicInfoOpen = false;
+        showToast("Audio agregado a tu editor");
+      } else {
+        state.storyMusicInfoOpen = false;
+        state.view = "trends";
+        showToast("Mostrando contenido con este audio");
+        scrollToTop();
+      }
       render();
     });
   });
@@ -3912,6 +4012,12 @@ function bindDynamicActions() {
     button.addEventListener("click", () => {
       state.profileTab = button.dataset.profileTab;
       renderAndScrollTop();
+    });
+  });
+
+  document.querySelectorAll("[data-story-reshare]").forEach((button) => {
+    button.addEventListener("click", () => {
+      showToast("Recuerdos disponible próximamente");
     });
   });
 
@@ -4172,6 +4278,7 @@ async function initApp() {
   state.newsLastUpdated = savedNews?.updatedAt || null;
   state.ownStories = storage.get("hallyuHubOwnStories", []);
   state.ownStory = state.ownStories[0] || storage.get("hallyuHubOwnStory", null);
+  state.storyArchive = storage.get("hallyuHubStoryArchive", state.ownStories || []);
   state.storyInbox = storage.get("hallyuHubStoryInbox", []);
   state.viewedStories = storage.get("hallyuHubViewedStories", {});
   state.soundEnabled = storage.get("hallyuHubSoundEnabled", true);
@@ -6038,6 +6145,117 @@ function startStoryElementDrag(event, elementId) {
   document.addEventListener("pointerup", stopDrag);
 }
 
+function getStoryMediaTransform(source = state.storyDraft) {
+  return {
+    scale: Math.max(0.55, Math.min(3, Number(source?.mediaScale || 1))),
+    x: Math.max(-120, Math.min(120, Number(source?.mediaX || 0))),
+    y: Math.max(-120, Math.min(120, Number(source?.mediaY || 0))),
+    rotation: Math.max(-35, Math.min(35, Number(source?.mediaRotation || 0))),
+  };
+}
+
+function getStoryMediaStyle(source = state.storyDraft) {
+  const transform = getStoryMediaTransform(source);
+  return `--media-scale:${transform.scale};--media-x:${transform.x}px;--media-y:${transform.y}px;--media-rotation:${transform.rotation}deg;`;
+}
+
+function resetStoryMediaTransform() {
+  state.storyDraft.mediaScale = 1;
+  state.storyDraft.mediaX = 0;
+  state.storyDraft.mediaY = 0;
+  state.storyDraft.mediaRotation = 0;
+}
+
+function startStoryMediaTransform(event) {
+  if (!state.storyDraft.mediaUrl) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const target = event.currentTarget;
+  target.setPointerCapture?.(event.pointerId);
+  const pointers = new Map([[event.pointerId, { x: event.clientX, y: event.clientY }]]);
+  const initial = {
+    ...getStoryMediaTransform(),
+    pointerX: event.clientX,
+    pointerY: event.clientY,
+    distance: 0,
+  };
+  const updatePreview = () => {
+    target.style.setProperty("--media-scale", state.storyDraft.mediaScale);
+    target.style.setProperty("--media-x", `${state.storyDraft.mediaX}px`);
+    target.style.setProperty("--media-y", `${state.storyDraft.mediaY}px`);
+    target.style.setProperty("--media-rotation", `${state.storyDraft.mediaRotation || 0}deg`);
+  };
+  const pointerDistance = () => {
+    const values = [...pointers.values()];
+    if (values.length < 2) return 0;
+    return Math.hypot(values[0].x - values[1].x, values[0].y - values[1].y);
+  };
+  const moveMedia = (moveEvent) => {
+    if (!pointers.has(moveEvent.pointerId)) return;
+    pointers.set(moveEvent.pointerId, { x: moveEvent.clientX, y: moveEvent.clientY });
+    if (pointers.size > 1) {
+      const distance = pointerDistance();
+      const baseDistance = initial.distance || distance || 1;
+      if (!initial.distance) initial.distance = distance;
+      state.storyDraft.mediaScale = Math.max(0.55, Math.min(3, Math.round(initial.scale * (distance / baseDistance) * 100) / 100));
+    } else {
+      const current = pointers.get(moveEvent.pointerId);
+      state.storyDraft.mediaX = Math.max(-120, Math.min(120, Math.round(initial.x + current.x - initial.pointerX)));
+      state.storyDraft.mediaY = Math.max(-120, Math.min(120, Math.round(initial.y + current.y - initial.pointerY)));
+    }
+    updatePreview();
+  };
+  const stopMedia = (upEvent) => {
+    pointers.delete(upEvent.pointerId);
+    if (pointers.size === 0) {
+      document.removeEventListener("pointermove", moveMedia);
+      document.removeEventListener("pointerup", stopMedia);
+      document.removeEventListener("pointercancel", stopMedia);
+      render();
+    }
+  };
+  document.addEventListener("pointermove", moveMedia);
+  document.addEventListener("pointerup", stopMedia);
+  document.addEventListener("pointercancel", stopMedia);
+}
+
+function startStoryMediaTouchTransform(event) {
+  if (!state.storyDraft.mediaUrl || !event.touches?.length) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const target = event.currentTarget;
+  const startTouches = [...event.touches].map((touch) => ({ x: touch.clientX, y: touch.clientY }));
+  const initial = getStoryMediaTransform();
+  const initialDistance = startTouches.length > 1 ? Math.hypot(startTouches[0].x - startTouches[1].x, startTouches[0].y - startTouches[1].y) : 0;
+  const updatePreview = () => {
+    target.style.setProperty("--media-scale", state.storyDraft.mediaScale);
+    target.style.setProperty("--media-x", `${state.storyDraft.mediaX}px`);
+    target.style.setProperty("--media-y", `${state.storyDraft.mediaY}px`);
+    target.style.setProperty("--media-rotation", `${state.storyDraft.mediaRotation || 0}deg`);
+  };
+  const move = (moveEvent) => {
+    moveEvent.preventDefault();
+    const touches = [...moveEvent.touches].map((touch) => ({ x: touch.clientX, y: touch.clientY }));
+    if (touches.length > 1 && initialDistance) {
+      const distance = Math.hypot(touches[0].x - touches[1].x, touches[0].y - touches[1].y);
+      state.storyDraft.mediaScale = Math.max(0.55, Math.min(3, Math.round(initial.scale * (distance / initialDistance) * 100) / 100));
+    } else if (touches.length === 1 && startTouches[0]) {
+      state.storyDraft.mediaX = Math.max(-120, Math.min(120, Math.round(initial.x + touches[0].x - startTouches[0].x)));
+      state.storyDraft.mediaY = Math.max(-120, Math.min(120, Math.round(initial.y + touches[0].y - startTouches[0].y)));
+    }
+    updatePreview();
+  };
+  const end = () => {
+    target.removeEventListener("touchmove", move);
+    target.removeEventListener("touchend", end);
+    target.removeEventListener("touchcancel", end);
+    render();
+  };
+  target.addEventListener("touchmove", move, { passive: false });
+  target.addEventListener("touchend", end, { passive: false });
+  target.addEventListener("touchcancel", end, { passive: false });
+}
+
 function playStoryMusicPreview(name) {
   const track = storyMusicLibrary.find((item) => item.name === name);
   const AudioEngine = window.AudioContext || window.webkitAudioContext;
@@ -6077,14 +6295,41 @@ function createOwnStory(style = "Neon pastel") {
     mediaName: draft.mediaName || "",
     mediaUrl: draft.mediaUrl || "",
     mediaType: draft.mediaType || "",
+    thumbnail: draft.mediaUrl || "",
+    text: draft.text || "",
+    stickers: elements,
+    mediaScale: getStoryMediaTransform(draft).scale,
+    mediaX: getStoryMediaTransform(draft).x,
+    mediaY: getStoryMediaTransform(draft).y,
+    mediaRotation: getStoryMediaTransform(draft).rotation,
     type: draft.type || "text",
     musicCategory: draft.musicCategory || "Viral",
     elements,
   };
   state.ownStories = [story, ...(state.ownStories || [])].slice(0, 20);
   state.ownStory = story;
+  state.activeOwnStoryIndex = 0;
+  state.storyArchive = [
+    {
+      id: story.id,
+      userId: state.user?.id || "local-user",
+      mediaUrl: story.mediaUrl,
+      mediaType: story.mediaType || "text",
+      createdAt: story.createdAt,
+      thumbnail: story.thumbnail || story.mediaUrl || "",
+      text: story.text || "",
+      stickers: story.stickers || [],
+      music: story.music,
+      scale: story.mediaScale,
+      positionX: story.mediaX,
+      positionY: story.mediaY,
+      rotation: story.mediaRotation,
+    },
+    ...(state.storyArchive || []),
+  ].slice(0, 60);
   storage.set("hallyuHubOwnStories", state.ownStories);
   storage.set("hallyuHubOwnStory", state.ownStory);
+  storage.set("hallyuHubStoryArchive", state.storyArchive);
   const storyKey = getStoryKey(-1);
   if (storyKey) {
     state.viewedStories = { ...state.viewedStories };
@@ -6118,10 +6363,20 @@ function getStoryBackground(style) {
 function sendStoryMessage(message) {
   if (!message) return;
   const story = getActiveStory();
+  const ownerKey = normalizeProfileKey(story?.user || "historia");
+  const currentUser = state.user || defaultUser;
   const item = {
+    id: `story-msg-${Date.now()}`,
+    ownerId: ownerKey,
+    fromId: currentUser.id,
+    from: currentUser.name,
+    fromUsername: currentUser.username,
+    fromAvatarUrl: currentUser.avatarUrl,
     to: story?.user || "Historia",
+    storyId: story?.id || getStoryKey(state.activeStory),
     message,
     time: "Ahora",
+    status: "Enviado",
   };
   state.storyInbox = [item, ...state.storyInbox].slice(0, 12);
   storage.set("hallyuHubStoryInbox", state.storyInbox);
@@ -6133,8 +6388,35 @@ function sendStoryMessage(message) {
 }
 
 function getActiveStory() {
-  if (state.activeStory === -1) return state.ownStory;
+  if (state.activeStory === -1) return getActiveOwnStory();
   return followingStories[state.activeStory];
+}
+
+function getOwnStorySequence() {
+  return Array.isArray(state.ownStories) && state.ownStories.length
+    ? state.ownStories
+    : state.ownStory
+      ? [state.ownStory]
+      : [];
+}
+
+function getActiveOwnStory() {
+  const stories = getOwnStorySequence();
+  return stories[Math.max(0, Math.min(stories.length - 1, state.activeOwnStoryIndex || 0))] || state.ownStory;
+}
+
+function getStoryViewerSequence() {
+  if (state.activeStory === -1) {
+    return { stories: getOwnStorySequence(), index: Math.max(0, state.activeOwnStoryIndex || 0), isOwn: true };
+  }
+  const active = followingStories[state.activeStory];
+  if (!active) return { stories: [], index: 0, isOwn: false };
+  const userKey = normalizeProfileKey(active.user);
+  const group = followingStories
+    .map((story, index) => ({ ...story, sourceIndex: index }))
+    .filter((story) => normalizeProfileKey(story.user) === userKey);
+  const groupIndex = Math.max(0, group.findIndex((story) => story.sourceIndex === state.activeStory));
+  return { stories: group.length ? group : [active], index: groupIndex, isOwn: false };
 }
 
 function renderHome() {
@@ -6167,7 +6449,7 @@ function renderHome() {
     <div class="stories-row" aria-label="Historias de personas que sigo">
       <div class="story-item own-story-item">
         <button type="button" class="story-own-main" data-own-story aria-label="${state.ownStory ? "Ver mi historia" : "Crear historia"}">
-          <span class="story-ring own-ring ${state.ownStory ? "has-story" : "empty-story"} ${state.ownStory && isStoryViewed(-1) ? "viewed" : ""}">
+          <span class="story-ring own-ring ${state.ownStory ? "has-story" : "empty-story"} ${state.ownStory && areAllOwnStoriesViewed() ? "viewed" : ""}">
             ${state.ownStory ? renderAvatarElement("story-avatar", state.user?.avatar || "berry", state.user?.avatarUrl || getDemoUserImage(0)) : `<span class="story-plus">+</span>`}
           </span>
         </button>
@@ -6294,8 +6576,9 @@ function renderStoryViewer() {
   if (!story) return "";
   const isOwnStory = state.activeStory === -1;
   const liked = state.likedStories[state.activeStory];
-  const progressTotal = followingStories.length + (state.ownStory ? 1 : 0);
-  const progressIndex = state.ownStory ? state.activeStory + 1 : state.activeStory;
+  const sequence = getStoryViewerSequence();
+  const progressTotal = Math.max(1, sequence.stories.length);
+  const progressIndex = Math.max(0, Math.min(progressTotal - 1, sequence.index));
   return `
     <section class="story-viewer story-slide-${state.storyDirection > 0 ? "next" : "prev"} ${state.storyPaused ? "story-paused" : ""} ${isOwnStory ? "own-story-viewer" : ""}" style="--story-art:${story.colors}" aria-label="Historia abierta">
       <div class="story-progress">${Array.from({ length: progressTotal }, (_, index) => `<span class="${index < progressIndex ? "seen" : ""} ${index === progressIndex ? "active" : ""}"></span>`).join("")}</div>
@@ -6308,8 +6591,9 @@ function renderStoryViewer() {
           <span class="story-ring small-ring">${renderAvatarElement("story-avatar small", story.avatar, story.avatarUrl)}</span>
           <div><h3>${story.user}</h3><p>${story.label} · ${story.time}</p></div>
         </div>
-        <div class="story-music-pill"><span>♪</span>${story.music}</div>
+        <button type="button" class="story-music-pill" data-story-music-info aria-label="Ver audio de la historia"><span>♪</span>${story.music}</button>
         ${story.musicCategory ? `<div class="story-music-sticker">♪ ${story.musicCategory}</div>` : ""}
+        ${state.storyMusicInfoOpen ? renderStoryAudioSheet(story) : ""}
         <div class="live-fandom-pill"><span></span>Live fandom activo</div>
         ${renderStoryMedia(story)}
         ${renderStoryLayers(story.elements || [])}
@@ -6324,8 +6608,8 @@ function renderStoryViewer() {
         ${
           isOwnStory
             ? `<div class="story-interactions own-story-actions">
-                <button class="story-star own-info-star ${state.ownStoryStatsOpen ? "active" : ""}" data-own-story-stats aria-label="Ver actividad de mi historia">★</button>
-                <strong>${story.views || 0} vistas · tocar estrella para ver actividad</strong>
+                <button class="own-story-stats-trigger ${state.ownStoryStatsOpen ? "active" : ""}" data-own-story-stats aria-label="Ver vistas y reacciones">Vistas y reacciones</button>
+                <strong>${story.views || 0} vistas · ${story.stars || 0} estrellas</strong>
               </div>
               ${state.ownStoryStatsOpen ? renderOwnStoryStats(story) : ""}`
             : `<div class="story-interactions">
@@ -6345,9 +6629,13 @@ function renderStoryViewer() {
 function renderStoryMedia(story) {
   const mediaUrl = story.mediaUrl || story.imageUrl || getDemoStoryImage(getStableAssetIndex(story.user, DEMO_STORY_IMAGES.length));
   const fallbackUrl = getDemoStoryImage(getStableAssetIndex(`${story.user}-fallback`, DEMO_STORY_IMAGES.length));
-  return story.mediaType === "video"
+  const hasCustomTransform = story.mediaScale || story.mediaX || story.mediaY || story.mediaRotation;
+  const mediaMarkup = story.mediaType === "video"
     ? `<video class="story-full-media" src="${escapeAttr(mediaUrl)}" autoplay muted loop playsinline preload="metadata"></video>`
-    : `<img class="story-full-media" src="${escapeAttr(mediaUrl)}" alt="Historia subida por ${escapeAttr(story.user)}" loading="lazy" onerror="this.onerror=null;this.src='${escapeAttr(fallbackUrl)}';" />`;
+    : `<img class="story-full-media" src="${escapeAttr(mediaUrl)}" alt="Historia subida por ${escapeAttr(story.user)}" loading="lazy" draggable="false" onerror="this.onerror=null;this.src='${escapeAttr(fallbackUrl)}';" />`;
+  return hasCustomTransform
+    ? `<div class="story-full-media-frame" style="${getStoryMediaStyle(story)}">${mediaMarkup}</div>`
+    : mediaMarkup;
 }
 
 function renderStoryLayers(elements) {
@@ -6596,13 +6884,15 @@ function renderPostOptionalMeta(post) {
 }
 
 function renderOwnStoryStats(story) {
+  const starViewers = storyViewers.filter((viewer) => String(viewer.action || "").toLowerCase().includes("estrella"));
   return `
     <div class="own-story-stats">
       <div class="own-stat-grid">
         <div><strong>${story.views || 0}</strong><span>vistas</span></div>
-        <div><strong>${story.stars || 0}</strong><span>estrellas</span></div>
+        <div><strong>${story.stars || starViewers.length}</strong><span>estrellas</span></div>
         <div><strong>${storyViewers.length}</strong><span>fans</span></div>
       </div>
+      <div class="viewer-section-label">Vieron tu historia</div>
       <div class="viewer-list">
         ${storyViewers
           .map(
@@ -6615,7 +6905,42 @@ function renderOwnStoryStats(story) {
           )
           .join("")}
       </div>
+      <div class="viewer-section-label">Dieron estrella</div>
+      <div class="viewer-list compact-viewer-list">
+        ${starViewers
+          .map(
+            (viewer) => `
+            <div class="viewer-row">
+              <span class="viewer-avatar"></span>
+              <div><strong>${viewer.name}</strong><small>reaccionó con estrella</small></div>
+              <span class="fandom-badge">★</span>
+            </div>`,
+          )
+          .join("")}
+      </div>
       <button class="ghost-button compact-story-edit" type="button" data-story-editor-open>Crear nueva historia</button>
+    </div>
+  `;
+}
+
+function renderStoryAudioSheet(story) {
+  const track = storyMusicLibrary.find((item) => item.name === story.music);
+  const title = story.music || "Audio HallyuHub";
+  const category = story.musicCategory || track?.category || "Demo";
+  const artist = track?.detail || "Audio demo de HallyuHub";
+  return `
+    <div class="story-audio-sheet">
+      <div class="sheet-handle"></div>
+      <div>
+        <span class="tag">${escapeHtml(category)}</span>
+        <h3>${escapeHtml(title)}</h3>
+        <p>${escapeHtml(artist)}</p>
+        <small>Audio demo de HallyuHub</small>
+      </div>
+      <div class="story-audio-actions">
+        <button type="button" data-story-audio-action="use">Usar este audio</button>
+        <button type="button" data-story-audio-action="more">Ver más con este audio</button>
+      </div>
     </div>
   `;
 }
@@ -6668,9 +6993,13 @@ function renderStoryEditor() {
         <div class="story-editor-preview" style="--art:${getStoryBackground(draft.background)}">
           ${
             draft.mediaUrl
-              ? draft.mediaType === "video"
-                ? `<video class="story-editor-media" src="${draft.mediaUrl}" autoplay muted loop playsinline preload="metadata"></video>`
-                : `<img class="story-editor-media" src="${draft.mediaUrl}" alt="Vista previa de historia" />`
+              ? `<div class="story-editor-media-frame" data-story-media-transform style="${getStoryMediaStyle(draft)}">
+                  ${
+                    draft.mediaType === "video"
+                      ? `<video class="story-editor-media" src="${draft.mediaUrl}" autoplay muted loop playsinline preload="metadata"></video>`
+                      : `<img class="story-editor-media" src="${draft.mediaUrl}" alt="Vista previa de historia" draggable="false" />`
+                  }
+                </div>`
               : ""
           }
           <div class="story-layer-stage editable-stage">${elements.map((element) => renderStoryLayer(element, true)).join("")}</div>
@@ -9018,6 +9347,14 @@ function renderCommunity() {
 }
 
 function renderMessages() {
+  const storyChats = (state.storyInbox || []).map((item) => ({
+    name: item.to,
+    last: `${item.from || state.user?.name || "Tú"}: ${item.message}`,
+    time: item.time || "Ahora",
+    status: item.status || "Historia",
+    avatarUrl: getDemoUser(item.to).avatarUrl,
+  }));
+  const allConversations = [...storyChats, ...conversations];
   return `
     <article class="hero-card">
       <div class="pill">DM privado</div>
@@ -9046,7 +9383,7 @@ function renderMessages() {
     </div>
     <div class="section-heading"><h2>Chats</h2><span>Aceptados</span></div>
     <div class="chat-list">
-      ${conversations
+      ${allConversations
         .map(
           (chat, index) => `
           <article class="dm-card">
@@ -9554,6 +9891,7 @@ function renderProfileEditor() {
 
 function renderProfileFeed(tab, profileUser) {
   const ownUser = !state.viewedProfile || profileUser.username === state.user.username;
+  if (tab === "archive") return renderStoryArchive(profileUser, ownUser);
   if (tab === "saved") {
     const savedFeed = userPosts.filter((post) => state.savedPosts[post.id] || state.savedPosts[getBasePostId(post.id)]);
     if (savedFeed.length) return savedFeed.map((post, index) => renderSocialPost(post, index, { compact: true })).join("");
@@ -9561,6 +9899,51 @@ function renderProfileFeed(tab, profileUser) {
   const localPosts = ownUser ? userPosts.filter((post) => (post.category || "posts") === tab) : [];
   const posts = localPosts.length ? localPosts : getProfileDemoPosts(tab, profileUser);
   return posts.map((post, index) => renderSocialPost(post, index, { compact: true })).join("");
+}
+
+function renderStoryArchive(profileUser, ownUser) {
+  const items = ownUser ? state.storyArchive || [] : [];
+  if (!ownUser) return `<article class="settings-demo-box">El archivo de historias es privado.</article>`;
+  if (!items.length) {
+    return `<article class="settings-demo-box">Todavía no hay historias archivadas. Cuando subas una historia, aparecerá acá.</article>`;
+  }
+  return `
+    <section class="story-archive-panel">
+      <div class="section-heading small"><h2>Archivo</h2><span>${items.length} historias</span></div>
+      <div class="story-archive-grid">
+        ${items
+          .map((item) => {
+            const date = formatArchiveDate(item.createdAt);
+            const thumb = item.thumbnail || item.mediaUrl || getDemoStoryImage(getStableAssetIndex(item.id, DEMO_STORY_IMAGES.length));
+            return `
+              <article class="story-archive-card">
+                <div class="story-archive-thumb">
+                  ${
+                    item.mediaType === "video"
+                      ? `<video src="${escapeAttr(item.mediaUrl)}" muted playsinline preload="metadata"></video>`
+                      : `<img src="${escapeAttr(thumb)}" alt="Historia archivada" loading="lazy" />`
+                  }
+                  <span>${item.mediaType === "video" ? "Video" : "Foto"}</span>
+                </div>
+                <div>
+                  <strong>${date}</strong>
+                  <small>${escapeHtml(item.music || "HallyuHub story")}</small>
+                </div>
+                <button type="button" data-story-reshare="${escapeAttr(item.id)}">Compartir otra vez</button>
+              </article>`;
+          })
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
+function formatArchiveDate(date) {
+  try {
+    return new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(date));
+  } catch {
+    return "Fecha pendiente";
+  }
 }
 
 function getProfileDemoPosts(tab, profileUser) {
