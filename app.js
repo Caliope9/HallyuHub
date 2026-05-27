@@ -11,6 +11,8 @@ const state = {
   activityTab: "activity",
   profileTab: "posts",
   profileEditorOpen: false,
+  profileAvatarPreviewUrl: "",
+  settingsAvatarPreviewUrl: "",
   homeFilter: "all",
   selectedHashtag: null,
   hashtagSort: "recent",
@@ -305,6 +307,12 @@ const userService = {
     storageService.set("currentUser", current);
     storageService.set("hallyuHubUser", current);
     return current;
+  },
+  updateCurrentUserAvatar(avatarUrl) {
+    if (!avatarUrl) return this.getCurrentUser();
+    const current = this.getCurrentUser();
+    if (!current) return null;
+    return this.saveCurrentUser({ ...current, avatarUrl });
   },
   getCurrentUser() {
     const current = storageService.get("currentUser", null) || storageService.get("hallyuHubUser", null);
@@ -2459,6 +2467,70 @@ function readImageFileAsDataUrl(file) {
   });
 }
 
+function isCurrentUserReference(item, user = state.user) {
+  if (!item || !user) return false;
+  const keys = [item.userId, item.username, item.user, item.name].filter(Boolean).map(normalizeProfileKey);
+  const userKeys = [user.id, user.username, user.name].filter(Boolean).map(normalizeProfileKey);
+  return keys.some((key) => userKeys.includes(key));
+}
+
+function syncCommentAvatarReferences(comments = [], user = state.user) {
+  comments.forEach((comment) => {
+    if (isCurrentUserReference(comment, user)) {
+      comment.user = user.name;
+      comment.username = user.username;
+      comment.avatarUrl = user.avatarUrl;
+      comment.avatar = user.avatar;
+    }
+    syncCommentAvatarReferences(comment.replies || [], user);
+  });
+}
+
+function syncCurrentUserVisualReferences(user = state.user) {
+  if (!user?.avatarUrl) return;
+  state.session = state.session ? { ...state.session, user } : state.session;
+  if (state.viewedProfile && isCurrentUserReference(state.viewedProfile, user)) {
+    state.viewedProfile = { ...state.viewedProfile, ...user, avatarUrl: user.avatarUrl };
+  }
+  userPosts.forEach((post) => {
+    if (isCurrentUserReference(post, user)) {
+      post.user = user.name;
+      post.username = user.username;
+      post.userId = user.id;
+      post.avatarUrl = user.avatarUrl;
+      post.avatar = user.avatar;
+    }
+    syncCommentAvatarReferences(post.commentList || [], user);
+  });
+  trendVideos.forEach((drop) => {
+    if (isCurrentUserReference(drop, user)) {
+      drop.user = user.name;
+      drop.username = user.username;
+      drop.userId = user.id;
+      drop.avatarUrl = user.avatarUrl;
+    }
+  });
+  fancamVideos.forEach((fancam) => {
+    if (isCurrentUserReference(fancam, user)) {
+      fancam.user = user.name;
+      fancam.username = user.username;
+      fancam.userId = user.id;
+      fancam.avatarUrl = user.avatarUrl;
+    }
+  });
+  if (state.ownStory) {
+    state.ownStory = { ...state.ownStory, user: user.name, avatar: user.avatar, avatarUrl: user.avatarUrl };
+    storage.set("hallyuHubOwnStory", state.ownStory);
+  }
+  if (Array.isArray(state.ownStories) && state.ownStories.length) {
+    state.ownStories = state.ownStories.map((story) => ({ ...story, user: user.name, avatar: user.avatar, avatarUrl: user.avatarUrl }));
+    storage.set("hallyuHubOwnStories", state.ownStories);
+  }
+  storage.set("hallyuHubUserPosts", userPosts.filter((post) => String(post.id || "").startsWith("local-")));
+  storage.set("hallyuHubUserDrops", trendVideos.filter((dropItem) => String(dropItem.id || "").startsWith("local-trends")));
+  storage.set("hallyuHubUserFancams", fancamVideos.filter((item) => String(item.id || "").startsWith("local-fancams")));
+}
+
 function closeStoryViewer() {
   state.activeStory = null;
   state.storyComposerOpen = false;
@@ -3661,6 +3733,7 @@ function bindDynamicActions() {
     button.addEventListener("click", () => {
       state.selectedAvatar = state.user.avatar;
       state.selectedProfileBg = state.user.profileBg;
+      state.profileAvatarPreviewUrl = "";
       state.profileEditorOpen = true;
       render();
     });
@@ -3668,6 +3741,7 @@ function bindDynamicActions() {
 
   document.querySelectorAll("[data-profile-edit-close]").forEach((button) => {
     button.addEventListener("click", () => {
+      state.profileAvatarPreviewUrl = "";
       state.profileEditorOpen = false;
       render();
     });
@@ -3675,6 +3749,34 @@ function bindDynamicActions() {
 
   document.querySelectorAll("[data-save-profile-edit]").forEach((button) => {
     button.addEventListener("click", saveProfileEdit);
+  });
+
+  document.querySelectorAll("#profile-edit-avatar-file").forEach((input) => {
+    input.addEventListener("change", async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const previewUrl = await readImageFileAsDataUrl(file);
+      if (!previewUrl) {
+        showToast("No pudimos leer la foto de perfil");
+        return;
+      }
+      state.profileAvatarPreviewUrl = previewUrl;
+      render();
+    });
+  });
+
+  document.querySelectorAll("#settings-avatar-file").forEach((input) => {
+    input.addEventListener("change", async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const previewUrl = await readImageFileAsDataUrl(file);
+      if (!previewUrl) {
+        showToast("No pudimos leer la foto de perfil");
+        return;
+      }
+      state.settingsAvatarPreviewUrl = previewUrl;
+      render();
+    });
   });
 
   document.querySelectorAll("[data-open-profile]").forEach((button) => {
@@ -4013,6 +4115,7 @@ async function initApp() {
   state.selectedAvatar = state.user.avatar || "berry";
   state.selectedProfileBg = state.user.profileBg || "army";
   state.ambience = state.user.ambience || "hallyu";
+  syncCurrentUserVisualReferences(state.user);
   state.view = state.isAuthenticated ? "home" : "auth";
   render();
 }
@@ -4117,7 +4220,7 @@ async function saveSettings() {
     state.backendMode === "supabase" && avatarFile
       ? await uploadMedia(avatarFile, supabaseBuckets.avatars)
       : avatarFile
-      ? await readImageFileAsDataUrl(avatarFile)
+      ? state.settingsAvatarPreviewUrl || (await readImageFileAsDataUrl(avatarFile))
       : state.user.avatarUrl;
   state.user = {
     ...state.user,
@@ -4147,6 +4250,8 @@ async function saveSettings() {
     await upsertProfile(state.session.user, state.user);
   }
   state.user = userService.saveCurrentUser(state.user);
+  syncCurrentUserVisualReferences(state.user);
+  state.settingsAvatarPreviewUrl = "";
   render();
 }
 
@@ -4158,7 +4263,7 @@ async function saveProfileEdit() {
     state.backendMode === "supabase" && avatarFile
       ? await uploadMedia(avatarFile, supabaseBuckets.avatars)
       : avatarFile
-      ? await readImageFileAsDataUrl(avatarFile)
+      ? state.profileAvatarPreviewUrl || (await readImageFileAsDataUrl(avatarFile))
       : state.user.avatarUrl;
 
   state.user = {
@@ -4180,6 +4285,8 @@ async function saveProfileEdit() {
     await upsertProfile(state.session.user, state.user);
   }
   state.user = userService.saveCurrentUser(state.user);
+  syncCurrentUserVisualReferences(state.user);
+  state.profileAvatarPreviewUrl = "";
   render();
 }
 
@@ -4201,6 +4308,7 @@ function saveOnboarding() {
     onboarded: true,
   };
   state.user = userService.saveCurrentUser(state.user);
+  syncCurrentUserVisualReferences(state.user);
   setView("profile");
 }
 
@@ -8891,7 +8999,7 @@ function renderSettings() {
   return `
     <button class="ghost-button back-button" data-go-view="profile">Volver al perfil</button>
     <section class="settings-header">
-      ${renderAvatarElement("hero", activeAvatar.id, state.user.avatarUrl || getDemoUserImage(0))}
+      ${renderAvatarElement("hero", activeAvatar.id, state.settingsAvatarPreviewUrl || state.user.avatarUrl || getDemoUserImage(0))}
       <div>
         <p class="eyebrow">Configuración</p>
         <h2>Centro de cuenta</h2>
@@ -9325,7 +9433,7 @@ function renderProfileEditor() {
     <section class="profile-editor-card">
       <button class="ghost-button back-button" data-profile-edit-close>Volver al perfil</button>
       <div class="profile-edit-cover" style="--profile-bg:${getProfileBackground(state.selectedProfileBg || state.user.profileBg).art}">
-        ${renderAvatarElement(`profile-avatar premium-avatar edit-avatar ${getRarityClass(activeAvatar)}`, state.selectedAvatar || state.user.avatar, state.user.avatarUrl)}
+        ${renderAvatarElement(`profile-avatar premium-avatar edit-avatar ${getRarityClass(activeAvatar)}`, state.selectedAvatar || state.user.avatar, state.profileAvatarPreviewUrl || state.user.avatarUrl)}
         <div>
           <p class="eyebrow">Editar perfil</p>
           <h2>Tu identidad HallyuHub</h2>
