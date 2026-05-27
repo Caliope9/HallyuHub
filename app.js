@@ -226,7 +226,135 @@ const storage = {
   },
 };
 
+const storageService = {
+  get: (key, fallback) => storage.get(key, fallback),
+  set: (key, value) => storage.set(key, value),
+  remove: (key) => storage.remove(key),
+};
+
+function createLocalUserId(email = "", username = "") {
+  const seed = normalizeProfileKey(email || username || `fan-${Date.now()}`);
+  return `local-${seed || Date.now()}`;
+}
+
+function ensureUserShape(user = {}) {
+  const createdAt = user.createdAt || new Date().toISOString();
+  const email = user.email || defaultUser.email;
+  const username = user.username || defaultUser.username;
+  const favoriteGroup = user.favoriteGroup || defaultUser.favoriteGroup;
+  const fandom = user.fandom || defaultUser.fandom;
+  return {
+    ...defaultUser,
+    ...user,
+    id: user.id || createLocalUserId(email, username),
+    email,
+    username,
+    name: user.name || defaultUser.name,
+    avatarUrl: user.avatarUrl || defaultUser.avatarUrl || getDemoUserImage(0),
+    bio: user.bio || defaultUser.bio,
+    country: user.country || defaultUser.country,
+    fandom,
+    favoriteGroup,
+    favoriteFandoms: Array.isArray(user.favoriteFandoms) ? user.favoriteFandoms : [fandom].filter(Boolean),
+    favoriteGroups: Array.isArray(user.favoriteGroups) ? user.favoriteGroups : [favoriteGroup].filter(Boolean),
+    createdAt,
+  };
+}
+
+const userService = {
+  getUsers() {
+    const users = storageService.get("users", []);
+    if (Array.isArray(users) && users.length) return users.map(ensureUserShape);
+    const legacyUser = storageService.get("hallyuHubUser", null);
+    const seededUser = ensureUserShape(legacyUser || defaultUser);
+    this.saveUsers([seededUser]);
+    return [seededUser];
+  },
+  saveUsers(users) {
+    storageService.set("users", users.map(ensureUserShape));
+  },
+  findByLogin(login = "") {
+    const normalized = String(login).trim().toLowerCase();
+    return this.getUsers().find((user) => user.email.toLowerCase() === normalized || user.username.toLowerCase() === normalized);
+  },
+  createUser(payload) {
+    const users = this.getUsers();
+    const email = String(payload.email || "").trim().toLowerCase();
+    const username = String(payload.username || "").trim();
+    if (users.some((user) => user.email.toLowerCase() === email || user.username.toLowerCase() === username.toLowerCase())) {
+      throw new Error("Ya existe una cuenta con ese email o usuario.");
+    }
+    const user = ensureUserShape({
+      ...payload,
+      email,
+      username,
+      id: createLocalUserId(email, username),
+      createdAt: new Date().toISOString(),
+      onboarded: false,
+    });
+    this.saveUsers([user, ...users]);
+    return user;
+  },
+  saveCurrentUser(user) {
+    const current = ensureUserShape(user);
+    const users = this.getUsers();
+    const nextUsers = users.some((item) => item.id === current.id)
+      ? users.map((item) => (item.id === current.id ? current : item))
+      : [current, ...users];
+    this.saveUsers(nextUsers);
+    storageService.set("currentUser", current);
+    storageService.set("hallyuHubUser", current);
+    return current;
+  },
+  getCurrentUser() {
+    const current = storageService.get("currentUser", null) || storageService.get("hallyuHubUser", null);
+    return current ? ensureUserShape(current) : null;
+  },
+};
+
+const authService = {
+  getSession() {
+    const isLoggedIn = Boolean(storageService.get("isLoggedIn", false) || storageService.get("hallyuHubSession", false));
+    const currentUser = userService.getCurrentUser();
+    if (!isLoggedIn || !currentUser) return null;
+    const sessionCreatedAt = storageService.get("sessionCreatedAt", new Date().toISOString());
+    storageService.set("currentUser", currentUser);
+    storageService.set("isLoggedIn", true);
+    storageService.set("sessionCreatedAt", sessionCreatedAt);
+    return {
+      user: currentUser,
+      sessionCreatedAt,
+    };
+  },
+  createSession(user) {
+    const currentUser = userService.saveCurrentUser(user);
+    const sessionCreatedAt = new Date().toISOString();
+    storageService.set("currentUser", currentUser);
+    storageService.set("isLoggedIn", true);
+    storageService.set("sessionCreatedAt", sessionCreatedAt);
+    storageService.set("hallyuHubSession", true);
+    return { user: currentUser, sessionCreatedAt };
+  },
+  register(payload) {
+    const user = userService.createUser(payload);
+    return this.createSession(user);
+  },
+  login(login, password) {
+    const user = userService.findByLogin(login);
+    if (!user) throw new Error("No encontramos una cuenta con esos datos.");
+    if (user.password && password && user.password !== password) throw new Error("La contraseña no coincide.");
+    return this.createSession(user);
+  },
+  logout() {
+    storageService.remove("currentUser");
+    storageService.remove("isLoggedIn");
+    storageService.remove("sessionCreatedAt");
+    storageService.remove("hallyuHubSession");
+  },
+};
+
 const defaultUser = {
+  id: "local-lunahallyu",
   email: "luna@hallyuhub.app",
   password: "demo123",
   name: "Luna Hallyu",
@@ -258,12 +386,17 @@ const defaultUser = {
   themePremium: false,
   onboarded: true,
   profileBg: "army",
+  favoriteFandoms: ["ARMY 💜", "Stay ⭐"],
+  favoriteGroups: ["BTS", "Stray Kids"],
+  createdAt: "2026-05-15T00:00:00.000Z",
 };
 
 const futureBackend = {
   provider: "Supabase Auth + Postgres + Storage",
   next: "Firebase o Supabase",
-  collections: ["users", "posts", "groups", "followers", "messages", "notifications"],
+  collections: ["users", "sessions", "profiles", "posts", "groups", "followers", "messages", "notifications"],
+  services: ["authService", "userService", "storageService"],
+  mobileReady: ["PWA", "responsive", "permissions on demand", "Expo/React Native wrapper"],
 };
 
 const supabaseBuckets = {
@@ -2316,6 +2449,16 @@ function handleMediaUpload(file, type = "media") {
   };
 }
 
+function readImageFileAsDataUrl(file) {
+  if (!file || !file.type?.startsWith("image")) return Promise.resolve("");
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result || "");
+    reader.onerror = () => resolve("");
+    reader.readAsDataURL(file);
+  });
+}
+
 function closeStoryViewer() {
   state.activeStory = null;
   state.storyComposerOpen = false;
@@ -3604,7 +3747,7 @@ function bindDynamicActions() {
         premium: !state.user.premium,
         themePremium: !state.user.premium,
       };
-      storage.set("hallyuHubUser", state.user);
+      state.user = userService.saveCurrentUser(state.user);
       render();
     });
   });
@@ -3824,8 +3967,8 @@ async function initApp() {
       return;
     }
   }
-  const savedUser = storage.get("hallyuHubUser", null);
-  const savedSession = storage.get("hallyuHubSession", false);
+  const localSession = authService.getSession();
+  const savedUser = localSession?.user || userService.getCurrentUser() || defaultUser;
   state.user = {
     ...defaultUser,
     ...(savedUser || {}),
@@ -3865,7 +4008,8 @@ async function initApp() {
   state.savedPosts = storage.get("hallyuHubSavedPosts", {});
   state.sharedPosts = storage.get("hallyuHubSharedPosts", {});
   state.videoMuted = storage.get("hallyuHubVideoMuted", true);
-  state.isAuthenticated = Boolean(savedSession);
+  state.isAuthenticated = Boolean(localSession);
+  state.session = localSession ? { user: localSession.user, created_at: localSession.sessionCreatedAt } : null;
   state.selectedAvatar = state.user.avatar || "berry";
   state.selectedProfileBg = state.user.profileBg || "army";
   state.ambience = state.user.ambience || "hallyu";
@@ -3929,21 +4073,31 @@ async function submitAuth(mode) {
     return;
   }
 
-  state.user = {
-    ...defaultUser,
-    ...state.user,
-    email,
-    password,
-    name: mode === "register" ? name : state.user?.name || name,
-    username: mode === "register" ? username : state.user?.username || username,
-    avatar,
-    onboarded: mode === "register" ? false : state.user?.onboarded ?? true,
-  };
-  state.selectedAvatar = avatar;
-  state.ambience = state.user.ambience;
-  state.isAuthenticated = true;
-  storage.set("hallyuHubUser", state.user);
-  storage.set("hallyuHubSession", true);
+  try {
+    const localSession =
+      mode === "register"
+        ? authService.register({
+            email,
+            password,
+            name,
+            username,
+            avatar,
+            avatarUrl: state.user?.avatarUrl || defaultUser.avatarUrl || getDemoUserImage(0),
+            bio: state.user?.bio || defaultUser.bio,
+            country: state.user?.country || defaultUser.country,
+            fandom: state.user?.fandom || defaultUser.fandom,
+            favoriteGroup: state.user?.favoriteGroup || defaultUser.favoriteGroup,
+          })
+        : authService.login(email, password);
+    state.user = localSession.user;
+    state.session = { user: localSession.user, created_at: localSession.sessionCreatedAt };
+    state.selectedAvatar = state.user.avatar || avatar;
+    state.ambience = state.user.ambience;
+    state.isAuthenticated = true;
+  } catch (error) {
+    alert(error.message || "No pudimos iniciar sesión.");
+    return;
+  }
   setView("home");
 }
 
@@ -3960,7 +4114,11 @@ async function saveSettings() {
   const selectedProfileBg = document.querySelector("[data-profile-bg].active")?.dataset.profileBg || state.selectedProfileBg || state.user.profileBg;
   const avatarFile = document.getElementById("settings-avatar-file")?.files?.[0];
   const uploadedAvatarUrl =
-    state.backendMode === "supabase" && avatarFile ? await uploadMedia(avatarFile, supabaseBuckets.avatars) : state.user.avatarUrl;
+    state.backendMode === "supabase" && avatarFile
+      ? await uploadMedia(avatarFile, supabaseBuckets.avatars)
+      : avatarFile
+      ? await readImageFileAsDataUrl(avatarFile)
+      : state.user.avatarUrl;
   state.user = {
     ...state.user,
     name: document.getElementById("settings-name")?.value.trim() || state.user.name,
@@ -3988,7 +4146,7 @@ async function saveSettings() {
   if (state.backendMode === "supabase" && state.session?.user) {
     await upsertProfile(state.session.user, state.user);
   }
-  storage.set("hallyuHubUser", state.user);
+  state.user = userService.saveCurrentUser(state.user);
   render();
 }
 
@@ -3997,7 +4155,11 @@ async function saveProfileEdit() {
   const selectedProfileBg = document.querySelector("[data-profile-bg].active")?.dataset.profileBg || state.selectedProfileBg || state.user.profileBg;
   const avatarFile = document.getElementById("profile-edit-avatar-file")?.files?.[0];
   const uploadedAvatarUrl =
-    state.backendMode === "supabase" && avatarFile ? await uploadMedia(avatarFile, supabaseBuckets.avatars) : state.user.avatarUrl;
+    state.backendMode === "supabase" && avatarFile
+      ? await uploadMedia(avatarFile, supabaseBuckets.avatars)
+      : avatarFile
+      ? await readImageFileAsDataUrl(avatarFile)
+      : state.user.avatarUrl;
 
   state.user = {
     ...state.user,
@@ -4017,7 +4179,7 @@ async function saveProfileEdit() {
   if (state.backendMode === "supabase" && state.session?.user) {
     await upsertProfile(state.session.user, state.user);
   }
-  storage.set("hallyuHubUser", state.user);
+  state.user = userService.saveCurrentUser(state.user);
   render();
 }
 
@@ -4038,7 +4200,7 @@ function saveOnboarding() {
     bio: document.getElementById("onboarding-bio")?.value.trim() || state.user.bio,
     onboarded: true,
   };
-  storage.set("hallyuHubUser", state.user);
+  state.user = userService.saveCurrentUser(state.user);
   setView("profile");
 }
 
@@ -4046,9 +4208,13 @@ async function logout() {
   if (state.backendMode === "supabase") {
     await state.supabase.auth.signOut();
   }
-  storage.remove("hallyuHubSession");
+  authService.logout();
   state.isAuthenticated = false;
+  state.session = null;
+  state.viewedProfile = null;
+  state.profileEditorOpen = false;
   state.view = "auth";
+  state.authMode = "start";
   render();
 }
 
