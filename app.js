@@ -2415,6 +2415,58 @@ function areAllOwnStoriesViewed() {
   return allViewed;
 }
 
+function getStoryGroupInfo(index = state.activeStory) {
+  const active = followingStories[index];
+  if (!active) return { group: [], groupIndex: -1, userKey: "" };
+  const userKey = normalizeProfileKey(active.user);
+  const group = followingStories
+    .map((story, sourceIndex) => ({ story, sourceIndex }))
+    .filter((item) => normalizeProfileKey(item.story.user) === userKey);
+  return {
+    group,
+    groupIndex: group.findIndex((item) => item.sourceIndex === index),
+    userKey,
+  };
+}
+
+function getStoryProfileOrder() {
+  const seen = new Set();
+  return followingStories.reduce((profiles, story, sourceIndex) => {
+    const userKey = normalizeProfileKey(story.user);
+    if (seen.has(userKey)) return profiles;
+    seen.add(userKey);
+    profiles.push({ userKey, firstIndex: sourceIndex });
+    return profiles;
+  }, []);
+}
+
+function getAdjacentStoryProfileIndex(direction = 1) {
+  const active = followingStories[state.activeStory];
+  if (!active) return null;
+  const order = getStoryProfileOrder();
+  const userKey = normalizeProfileKey(active.user);
+  const profileIndex = order.findIndex((profile) => profile.userKey === userKey);
+  const nextProfile = order[profileIndex + direction];
+  return nextProfile ? nextProfile.firstIndex : null;
+}
+
+function jumpStoryProfile(direction = 1) {
+  if (state.activeStory === null || state.activeStory === -1) return;
+  if (direction > 0) markStoryViewed(state.activeStory);
+  const nextIndex = getAdjacentStoryProfileIndex(direction);
+  state.storyDirection = direction;
+  state.storyPaused = false;
+  state.storyComposerOpen = false;
+  state.ownStoryStatsOpen = false;
+  state.storyMusicInfoOpen = false;
+  if (nextIndex === null) {
+    closeStoryViewer();
+    return;
+  }
+  state.activeStory = nextIndex;
+  render();
+}
+
 function advanceStory(direction = 1, options = {}) {
   if (state.activeStory === null) return;
   if (options.completed || direction > 0) markStoryViewed(state.activeStory);
@@ -2434,34 +2486,14 @@ function advanceStory(direction = 1, options = {}) {
     closeStoryViewer();
     return;
   }
-  let nextIndex = null;
-  if (direction > 0) {
-    const start = state.activeStory === -1 ? 0 : state.activeStory + 1;
-    for (let index = start; index < followingStories.length; index += 1) {
-      if (!isStoryViewed(index)) {
-        nextIndex = index;
-        break;
-      }
-    }
-    if (nextIndex === null) {
-      if (options.closeAtEnd === false) {
-        state.storyPaused = false;
-        scheduleStoryAutoplay();
-      } else {
-        closeStoryViewer();
-      }
-      return;
-    }
-  } else {
-    const previous = state.activeStory === -1 ? null : state.activeStory - 1;
-    if (previous !== null && previous >= 0) nextIndex = previous;
-    else if (state.ownStory) nextIndex = -1;
-    else {
-      closeStoryViewer();
-      return;
-    }
+  const { group, groupIndex } = getStoryGroupInfo(state.activeStory);
+  const sameProfileItem = group[groupIndex + direction];
+  if (!sameProfileItem) {
+    if (direction > 0) jumpStoryProfile(1);
+    else scheduleStoryAutoplay();
+    return;
   }
-  state.activeStory = nextIndex;
+  state.activeStory = sameProfileItem.sourceIndex;
   state.storyComposerOpen = false;
   state.ownStoryStatsOpen = false;
   render();
@@ -2499,10 +2531,14 @@ function bindStoryTapZone(element) {
   let holdStart = 0;
   let handledPointer = false;
   let activePointerId = null;
+  let startX = 0;
+  let startY = 0;
   const pause = (event) => {
     if (isStoryInteractiveTarget(event.target)) return;
     event.preventDefault?.();
     activePointerId = event.pointerId ?? "touch";
+    startX = event.clientX || 0;
+    startY = event.clientY || 0;
     holdStart = Date.now();
     handledPointer = true;
     setStoryPaused(true);
@@ -2512,10 +2548,17 @@ function bindStoryTapZone(element) {
     event.preventDefault?.();
     if (activePointerId !== null && event.pointerId !== undefined && event.pointerId !== activePointerId) return;
     const heldLongEnough = Date.now() - holdStart > 250;
+    const deltaX = (event.clientX || startX) - startX;
+    const deltaY = (event.clientY || startY) - startY;
+    const isHorizontalSwipe = Math.abs(deltaX) > 48 && Math.abs(deltaX) > Math.abs(deltaY) * 1.25;
     const direction = Number(element.dataset.storyNav || 0);
     setStoryPaused(false);
-    if (!heldLongEnough && direction) {
-      advanceStory(direction, { completed: direction > 0, closeAtEnd: false });
+    if (!heldLongEnough) {
+      if (isHorizontalSwipe && state.activeStory !== -1) {
+        jumpStoryProfile(deltaX < 0 ? 1 : -1);
+      } else if (direction) {
+        advanceStory(direction, { completed: direction > 0, closeAtEnd: false });
+      }
     }
     element.dataset.suppressStoryNav = "true";
     setTimeout(() => delete element.dataset.suppressStoryNav, 120);
