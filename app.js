@@ -6252,6 +6252,8 @@ function startStoryMediaTransform(event) {
   };
   const moveMedia = (moveEvent) => {
     if (!pointers.has(moveEvent.pointerId)) return;
+    moveEvent.preventDefault();
+    moveEvent.stopPropagation();
     pointers.set(moveEvent.pointerId, { x: moveEvent.clientX, y: moveEvent.clientY });
     if (pointers.size > 1) {
       const distance = pointerDistance();
@@ -6266,6 +6268,8 @@ function startStoryMediaTransform(event) {
     updatePreview();
   };
   const stopMedia = (upEvent) => {
+    upEvent.preventDefault?.();
+    upEvent.stopPropagation?.();
     pointers.delete(upEvent.pointerId);
     if (pointers.size === 0) {
       document.removeEventListener("pointermove", moveMedia);
@@ -6980,7 +6984,6 @@ function renderOwnStoryStats(story) {
           )
           .join("")}
       </div>
-      <button class="ghost-button compact-story-edit" type="button" data-story-editor-open>Crear nueva historia</button>
     </div>
   `;
 }
