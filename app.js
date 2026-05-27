@@ -2166,7 +2166,7 @@ function setView(nextView) {
   if (nextView !== "search") state.selectedHashtag = null;
   if (!state.isAuthenticated && nextView !== "auth") {
     state.view = "auth";
-    render();
+    renderAndScrollTop();
     return;
   }
   state.view = nextView;
@@ -2185,19 +2185,51 @@ function setView(nextView) {
   appScreen.style.setProperty("--user-accent", state.user?.accent || "#fbbcdb");
   appScreen.dataset.ambience = state.ambience;
   document.getElementById("screen-title").textContent = titleByView[nextView];
-  render();
-  scrollActiveViewToTop();
+  renderAndScrollTop();
   if (nextView === "news") loadKpopNews(false);
 }
 
-function scrollActiveViewToTop() {
-  const view = document.getElementById("view");
-  const screen = document.querySelector(".app-screen");
-  if (view) view.scrollTop = 0;
-  if (screen) screen.scrollTop = 0;
-  requestAnimationFrame(() => {
-    if (view) view.scrollTop = 0;
+function getScrollTargets() {
+  return [
+    window,
+    document.documentElement,
+    document.body,
+    document.getElementById("view"),
+    ...document.querySelectorAll(".view"),
+    document.querySelector(".app-screen"),
+    document.querySelector(".main-content"),
+    document.querySelector(".screen-container"),
+    document.querySelector(".mobile-shell"),
+    document.querySelector(".phone-shell"),
+    document.querySelector(".phone-frame"),
+  ].filter(Boolean);
+}
+
+function applyScrollTop(behavior = "smooth") {
+  getScrollTargets().forEach((target) => {
+    if (target === window) {
+      target.scrollTo({ top: 0, left: 0, behavior });
+    } else if (typeof target.scrollTo === "function") {
+      target.scrollTo({ top: 0, left: 0, behavior });
+    } else {
+      target.scrollTop = 0;
+      target.scrollLeft = 0;
+    }
   });
+}
+
+function scrollToTop() {
+  applyScrollTop("smooth");
+  requestAnimationFrame(() => applyScrollTop("auto"));
+  requestAnimationFrame(() => requestAnimationFrame(() => applyScrollTop("auto")));
+  setTimeout(() => applyScrollTop("auto"), 80);
+}
+
+const scrollActiveViewToTop = scrollToTop;
+
+function renderAndScrollTop() {
+  render();
+  scrollToTop();
 }
 
 function render() {
@@ -2722,7 +2754,7 @@ function bindDynamicActions() {
         openHashtagExplore(filter);
       } else {
         state.homeFilter = filter;
-        render();
+        renderAndScrollTop();
       }
     });
   });
@@ -3838,7 +3870,7 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-profile-tab]").forEach((button) => {
     button.addEventListener("click", () => {
       state.profileTab = button.dataset.profileTab;
-      render();
+      renderAndScrollTop();
     });
   });
 
@@ -3882,7 +3914,7 @@ function bindDynamicActions() {
     button.addEventListener("click", () => {
       state.selectedGroup = button.dataset.group;
       state.selectedArtist = null;
-      render();
+      renderAndScrollTop();
     });
   });
 
@@ -3908,7 +3940,7 @@ function bindDynamicActions() {
       const firstMatch = getFilteredGroups()[0];
       if (firstMatch) state.selectedGroup = firstMatch.id;
       state.selectedArtist = null;
-      render();
+      renderAndScrollTop();
     });
   });
 
@@ -3947,7 +3979,7 @@ function bindDynamicActions() {
   document.querySelectorAll("[data-close-artist]").forEach((button) => {
     button.addEventListener("click", () => {
       state.selectedArtist = null;
-      render();
+      renderAndScrollTop();
     });
   });
 
@@ -3973,7 +4005,7 @@ function openArtistProfile(artistId) {
   const group = kpopGroups.find((item) => (item.artists || []).some((artist) => artist.id === artistId));
   if (group) state.selectedGroup = group.id;
   state.selectedArtist = artistId;
-  render();
+  renderAndScrollTop();
 }
 
 function setupSwipeNavigation() {
@@ -4252,7 +4284,7 @@ async function saveSettings() {
   state.user = userService.saveCurrentUser(state.user);
   syncCurrentUserVisualReferences(state.user);
   state.settingsAvatarPreviewUrl = "";
-  render();
+  renderAndScrollTop();
 }
 
 async function saveProfileEdit() {
@@ -4287,7 +4319,7 @@ async function saveProfileEdit() {
   state.user = userService.saveCurrentUser(state.user);
   syncCurrentUserVisualReferences(state.user);
   state.profileAvatarPreviewUrl = "";
-  render();
+  renderAndScrollTop();
 }
 
 function saveOnboarding() {
@@ -4310,6 +4342,7 @@ function saveOnboarding() {
   state.user = userService.saveCurrentUser(state.user);
   syncCurrentUserVisualReferences(state.user);
   setView("profile");
+  scrollToTop();
 }
 
 async function logout() {
@@ -4465,7 +4498,7 @@ async function createPost() {
     state.publishDraft.result = created;
     showToast("Publicado correctamente");
     playAppSound("publish");
-    render();
+    renderAndScrollTop();
     return;
   }
   const uploadedMediaUrl = file ? await uploadMedia(file, supabaseBuckets.posts) : mediaUrl;
@@ -4490,7 +4523,7 @@ async function createPost() {
     mediaType: uploadedMediaType,
     filter: draft.filter,
   };
-  render();
+  renderAndScrollTop();
 }
 
 function syncPublishDraftFromDom() {
@@ -4756,8 +4789,7 @@ function publishVideoEditorContent() {
   state.fancamCreatorOpen = false;
   showToast("Publicado correctamente");
   playAppSound("publish");
-  scrollActiveViewToTop();
-  render();
+  renderAndScrollTop();
 }
 
 function createLocalPublishedContent({ category, caption, hashtags, optionalFields, mediaUrl, mediaType, filter, audio, privacy, allowComments, rightsConfirmed }) {
@@ -5074,7 +5106,7 @@ function openPublishedContent(type) {
     resetPublishDraft();
     setView("home");
     state.activeStory = -1;
-    render();
+    renderAndScrollTop();
     return;
   }
   if (["outfits", "photocards", "favorites", "posts"].includes(type)) {
