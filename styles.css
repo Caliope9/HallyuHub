@@ -3518,6 +3518,17 @@ video.post-media.real-media {
   overflow: hidden;
   border-radius: 0;
   margin: 0;
+  overscroll-behavior: contain;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+body.story-create-open {
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
 }
 
 .story-editor-card {
@@ -3554,6 +3565,11 @@ video.post-media.real-media {
   min-height: 0;
   overflow: hidden;
   display: flex;
+  overscroll-behavior: contain;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .story-create-canvas {
@@ -3632,6 +3648,11 @@ video.post-media.real-media {
   position: relative;
   overflow: hidden;
   margin: 0;
+  overscroll-behavior: contain;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.08),
     0 0 40px rgba(251, 188, 219, 0.13);

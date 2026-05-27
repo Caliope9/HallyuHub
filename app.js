@@ -2337,6 +2337,7 @@ function render() {
 
 function syncStoryFullscreenState() {
   document.body?.classList.toggle("story-open", state.activeStory !== null);
+  document.body?.classList.toggle("story-create-open", state.storyEditorOpen);
 }
 
 function mountGlobalStoryViewer() {
@@ -2563,7 +2564,9 @@ function bindStoryTapZone(element) {
     const direction = Number(element.dataset.storyNav || 0);
     setStoryPaused(false);
     if (!heldLongEnough) {
-      if (isHorizontalSwipe && state.activeStory !== -1) {
+      if (isHorizontalSwipe && state.activeStory === -1) {
+        closeStoryViewer();
+      } else if (isHorizontalSwipe && state.activeStory !== -1) {
         jumpStoryProfile(deltaX < 0 ? 1 : -1);
       } else if (direction) {
         advanceStory(direction, { completed: direction > 0, closeAtEnd: false });
@@ -3155,7 +3158,11 @@ function bindDynamicActions() {
   });
 
   document.querySelectorAll("[data-story-editor-open]").forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("touchstart", (event) => event.stopPropagation(), { passive: true });
+    button.addEventListener("pointerdown", (event) => event.stopPropagation());
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       state.activeStory = null;
       state.storyEditorOpen = true;
       state.storyToolPanel = null;
@@ -6220,6 +6227,7 @@ function resetStoryMediaTransform() {
 
 function startStoryMediaTransform(event) {
   if (!state.storyDraft.mediaUrl) return;
+  if (event.pointerType === "touch") return;
   event.preventDefault();
   event.stopPropagation();
   const target = event.currentTarget;
@@ -6287,6 +6295,7 @@ function startStoryMediaTouchTransform(event) {
   };
   const move = (moveEvent) => {
     moveEvent.preventDefault();
+    moveEvent.stopPropagation();
     const touches = [...moveEvent.touches].map((touch) => ({ x: touch.clientX, y: touch.clientY }));
     if (touches.length > 1 && initialDistance) {
       const distance = Math.hypot(touches[0].x - touches[1].x, touches[0].y - touches[1].y);
@@ -6297,7 +6306,9 @@ function startStoryMediaTouchTransform(event) {
     }
     updatePreview();
   };
-  const end = () => {
+  const end = (endEvent) => {
+    endEvent?.preventDefault?.();
+    endEvent?.stopPropagation?.();
     target.removeEventListener("touchmove", move);
     target.removeEventListener("touchend", end);
     target.removeEventListener("touchcancel", end);
@@ -6643,7 +6654,7 @@ function renderStoryViewer() {
           <div><h3>${story.user}</h3><p>${story.label} · ${story.time}</p></div>
         </div>
         <button type="button" class="story-music-pill" data-story-music-info aria-label="Ver audio de la historia"><span>♪</span>${story.music}</button>
-        ${story.musicCategory ? `<div class="story-music-sticker">♪ ${story.musicCategory}</div>` : ""}
+        ${!isOwnStory && story.musicCategory ? `<div class="story-music-sticker">♪ ${story.musicCategory}</div>` : ""}
         ${state.storyMusicInfoOpen ? renderStoryAudioSheet(story) : ""}
         <div class="live-fandom-pill"><span></span>Live fandom activo</div>
         ${renderStoryMedia(story)}
