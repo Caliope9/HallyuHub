@@ -3552,6 +3552,7 @@ function bindDynamicActions() {
   });
 
   document.querySelectorAll("[data-story-layer]").forEach((button) => {
+    button.addEventListener("touchstart", (event) => startStoryElementTouchTransform(event, button.dataset.storyLayer), { passive: false });
     button.addEventListener("pointerdown", (event) => startStoryElementDrag(event, button.dataset.storyLayer));
     button.addEventListener("click", () => {
       state.storyDraft.selectedElementId = button.dataset.storyLayer;
@@ -6695,6 +6696,7 @@ function updateSelectedTextElement(key, value) {
 }
 
 function startStoryElementDrag(event, elementId) {
+  if (event.pointerType === "touch") return;
   event.preventDefault();
   state.storyDraft.selectedElementId = elementId;
   const preview = event.currentTarget.closest(".story-editor-preview");
@@ -6715,6 +6717,95 @@ function startStoryElementDrag(event, elementId) {
   };
   document.addEventListener("pointermove", moveLayer);
   document.addEventListener("pointerup", stopDrag);
+}
+
+function startStoryElementTouchTransform(event, elementId) {
+  if (!event.touches?.length) return;
+  event.preventDefault();
+  event.stopPropagation();
+
+  state.storyDraft.selectedElementId = elementId;
+
+  const preview = event.currentTarget.closest(".story-editor-preview");
+  const target = event.currentTarget;
+  const element = getStoryDraftElements().find((item) => item.id === elementId);
+
+  if (!preview || !element) return;
+
+  const startTouches = [...event.touches].map((touch) => ({
+    x: touch.clientX,
+    y: touch.clientY,
+  }));
+
+  const initial = {
+    x: Number(element.x || 50),
+    y: Number(element.y || 50),
+    size: Number(element.size || 28),
+    distance:
+      startTouches.length > 1
+        ? Math.hypot(
+            startTouches[0].x - startTouches[1].x,
+            startTouches[0].y - startTouches[1].y,
+          )
+        : 0,
+  };
+
+  const updateLayer = (next) => {
+    state.storyDraft.elements = getStoryDraftElements().map((item) =>
+      item.id === elementId ? { ...item, ...next } : item,
+    );
+
+    if (next.x !== undefined) target.style.left = `${next.x}%`;
+    if (next.y !== undefined) target.style.top = `${next.y}%`;
+    if (next.size !== undefined) target.style.fontSize = `${next.size}px`;
+  };
+
+  const move = (moveEvent) => {
+    moveEvent.preventDefault();
+    moveEvent.stopPropagation();
+
+    const touches = [...moveEvent.touches].map((touch) => ({
+      x: touch.clientX,
+      y: touch.clientY,
+    }));
+
+    if (touches.length > 1 && initial.distance) {
+      const distance = Math.hypot(
+        touches[0].x - touches[1].x,
+        touches[0].y - touches[1].y,
+      );
+
+      updateLayer({
+        size: Math.max(12, Math.min(96, Math.round(initial.size * (distance / initial.distance)))),
+      });
+
+      return;
+    }
+
+    if (touches.length === 1 && startTouches[0]) {
+      const rect = preview.getBoundingClientRect();
+
+      updateLayer({
+        x: Math.max(4, Math.min(96, initial.x + ((touches[0].x - startTouches[0].x) / rect.width) * 100)),
+        y: Math.max(4, Math.min(92, initial.y + ((touches[0].y - startTouches[0].y) / rect.height) * 100)),
+      });
+    }
+  };
+
+  const end = (endEvent) => {
+    endEvent?.preventDefault?.();
+    endEvent?.stopPropagation?.();
+
+    document.removeEventListener("touchmove", move);
+    document.removeEventListener("touchend", end);
+    document.removeEventListener("touchcancel", end);
+
+    render();
+  };
+
+  document.addEventListener("touchmove", move, { passive: false });
+  document.addEventListener("touchend", end, { passive: false });
+  document.addEventListener("touchcancel", end, { passive: false });
 }
 
 function getStoryMediaTransform(source = state.storyDraft) {
