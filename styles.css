@@ -4010,6 +4010,11 @@ body.story-create-open {
   height: 1.8em;
   object-fit: contain;
   display: block;
+  pointer-events: none;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .story-layer.text-layer {
