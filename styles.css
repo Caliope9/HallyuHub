@@ -4059,11 +4059,12 @@ body.story-create-open {
 }
 
 button.story-layer.selected {
-  outline: 1px solid rgba(101, 228, 255, 0.68);
-  outline-offset: 6px;
-  border-radius: 999px;
-  filter: drop-shadow(0 0 16px rgba(101, 228, 255, 0.46)) drop-shadow(0 0 24px rgba(251, 188, 219, 0.28));
-  animation: selectedStickerPulse 1.8s ease-in-out infinite;
+  outline: 1px solid rgba(255, 255, 255, 0.34);
+  outline-offset: 3px;
+  border-radius: 14px;
+  filter: drop-shadow(0 0 8px rgba(101, 228, 255, 0.22));
+  animation: none;
+  z-index: 14;
 }
 
 button.story-layer:active {
