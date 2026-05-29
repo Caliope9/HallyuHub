@@ -3382,7 +3382,7 @@ function bindDynamicActions() {
     button.addEventListener("click", () => {
       if (state.ownStory) {
         state.activeStory = -1;
-        state.activeOwnStoryIndex = getFirstUnviewedOwnStoryIndex();
+        state.activeOwnStoryIndex = 0;
         state.storyDirection = 1;
         state.storyPaused = false;
       } else {
