@@ -83,9 +83,9 @@ class _SearchScreenState extends State<SearchScreen> {
   final _createdCommunities = <DiscoverCommunity>[];
   final _kpopEntities = <KpopEntity>[];
   final _entitySuggestions = <KpopEntity>[];
-  bool _kpopCatalogLive = false;
   int? _kpopGroupCount;
   int? _kpopArtistIdolCount;
+  int? _kpopTotalCount;
   bool _entitySuggestionsLoading = false;
   bool _entitySuggestionsNoMatch = false;
   final _followedEntityIds = <String>{};
@@ -260,8 +260,20 @@ class _SearchScreenState extends State<SearchScreen> {
       _entityFollowerCountsLoading = true;
       _kpopGroupCount = entityCounts?.groups;
       _kpopArtistIdolCount = entityCounts?.artistsAndIdols;
+      _kpopTotalCount = entityCounts?.total;
     });
+    assert(_kpopCountsAreConsistent);
     await _restoreKpopEntityFollowerCounts(entities);
+  }
+
+  bool get _kpopCountsAreConsistent {
+    final groups = _kpopGroupCount;
+    final artistsAndIdols = _kpopArtistIdolCount;
+    final total = _kpopTotalCount;
+    return groups == null ||
+        artistsAndIdols == null ||
+        total == null ||
+        groups + artistsAndIdols == total;
   }
 
   Future<_KpopEntityCounts?> _restoreKpopEntityCounts(
@@ -295,11 +307,9 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<List<KpopEntity>> _restoreKpopEntities() async {
-    _kpopCatalogLive = false;
     try {
       final entities = await widget.artistTagService.searchEntities(limit: 80);
       if (entities.isNotEmpty && widget.artistTagService.usesRealArtistTags) {
-        _kpopCatalogLive = true;
         return entities;
       }
       if (entities.isNotEmpty && !_isBetaReal) return entities;
@@ -1803,16 +1813,6 @@ class _SearchScreenState extends State<SearchScreen> {
       .where((entity) => entity.type != KpopEntityType.group)
       .toList(growable: false);
 
-  String _catalogCountLabel(int filtered, int total) {
-    final source = _kpopCatalogLive
-        ? 'en Supabase'
-        : _isBetaReal
-        ? 'sin datos live'
-        : 'fallback local';
-    if (_query.trim().isEmpty) return '$total $source';
-    return '$filtered resultados · $total $source';
-  }
-
   String _editorialSearchText(KpopEntity entity) {
     final group = _discoverGroupForKpopEntity(entity);
     if (group != null) {
@@ -2109,7 +2109,7 @@ class _SearchScreenState extends State<SearchScreen> {
             key: const ValueKey('discover-open-groups'),
             icon: Icons.groups_2_outlined,
             title: 'Grupos e idols',
-            subtitle: _isBetaReal ? 'Sugerencias revisadas' : '23 fichas',
+            subtitle: 'Explorá grupos y artistas',
             color: AppTheme.cyan,
             backgroundAsset: 'assets/brand/hally_discover_groups_stage_v2.jpg',
             mascotAsset: 'assets/brand/hally_mascot_groups_lightstick.png',
@@ -2305,15 +2305,6 @@ class _SearchScreenState extends State<SearchScreen> {
     ),
     _SectionTitle(
       title: 'Grupos y artistas',
-      trailing: _isBetaReal
-          ? _catalogCountLabel(
-              _filteredKpopGroups.length,
-              _kpopGroupCount ??
-                  _kpopEntities
-                      .where((e) => e.type == KpopEntityType.group)
-                      .length,
-            )
-          : '23 fichas',
     ),
     const SizedBox(height: 10),
     if (_isBetaReal) ...[
@@ -2406,15 +2397,6 @@ class _SearchScreenState extends State<SearchScreen> {
     ),
     _SectionTitle(
       title: 'Artistas y solistas',
-      trailing: _isBetaReal
-          ? _catalogCountLabel(
-              _filteredKpopIdols.length,
-              _kpopArtistIdolCount ??
-                  _kpopEntities
-                      .where((e) => e.type != KpopEntityType.group)
-                      .length,
-            )
-          : 'Perfiles',
     ),
     const SizedBox(height: 10),
     if (_isBetaReal)
