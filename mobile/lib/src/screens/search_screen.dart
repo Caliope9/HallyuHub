@@ -2305,6 +2305,7 @@ class _SearchScreenState extends State<SearchScreen> {
     ),
     _SectionTitle(
       title: 'Grupos y artistas',
+      trailing: null,
     ),
     const SizedBox(height: 10),
     if (_isBetaReal) ...[
@@ -2397,6 +2398,7 @@ class _SearchScreenState extends State<SearchScreen> {
     ),
     _SectionTitle(
       title: 'Artistas y solistas',
+      trailing: null,
     ),
     const SizedBox(height: 10),
     if (_isBetaReal)
