@@ -86,7 +86,6 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _kpopCatalogLive = false;
   int? _kpopGroupCount;
   int? _kpopArtistIdolCount;
-  int? _kpopTotalCount;
   bool _entitySuggestionsLoading = false;
   bool _entitySuggestionsNoMatch = false;
   final _followedEntityIds = <String>{};
@@ -222,7 +221,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Future<void> _restoreRealDiscoverData() async {
     final client = supabase.Supabase.instance.client;
-    final results = await Future.wait<Object>([
+    final results = await Future.wait<Object?>([
       _restoreKpopEntities(),
       _restoreKpopEntityCounts(client),
       _restoreFollowedEntityIds(client),
@@ -261,7 +260,6 @@ class _SearchScreenState extends State<SearchScreen> {
       _entityFollowerCountsLoading = true;
       _kpopGroupCount = entityCounts?.groups;
       _kpopArtistIdolCount = entityCounts?.artistsAndIdols;
-      _kpopTotalCount = entityCounts?.total;
     });
     await _restoreKpopEntityFollowerCounts(entities);
   }
