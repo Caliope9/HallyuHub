@@ -1,0 +1,57 @@
+name: Flutter Web
+
+on:
+  push:
+    branches:
+      - codex/flutter-migration
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: mobile
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.0
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Build web release
+        env:
+          HALLYUHUB_SUPABASE_URL: ${{ secrets.HALLYUHUB_SUPABASE_URL }}
+          HALLYUHUB_SUPABASE_ANON_KEY: ${{ secrets.HALLYUHUB_SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          : "${HALLYUHUB_SUPABASE_URL:?Missing HALLYUHUB_SUPABASE_URL GitHub Actions secret}"
+          : "${HALLYUHUB_SUPABASE_ANON_KEY:?Missing HALLYUHUB_SUPABASE_ANON_KEY GitHub Actions secret}"
+          flutter build web --release \
+            --dart-define="HALLYUHUB_SUPABASE_URL=${HALLYUHUB_SUPABASE_URL}" \
+            --dart-define="HALLYUHUB_SUPABASE_ANON_KEY=${HALLYUHUB_SUPABASE_ANON_KEY}"
+
+      - name: Upload web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hallyuhub-web-${{ github.sha }}
+          path: mobile/build/web
+          if-no-files-found: error

@@ -1,0 +1,4 @@
+project_id = "utohoznutswcofruuong"
+
+[functions.news-auto-import]
+verify_jwt = false

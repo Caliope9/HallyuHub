@@ -1,0 +1,10 @@
+.env*
+**/.env*
+.vercel/
+.dart_tool/
+.pub-cache/
+build/
+android/key.properties
+**/key.properties
+*.jks
+*.keystore
