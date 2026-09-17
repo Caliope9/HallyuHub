@@ -66,6 +66,21 @@ Future<void> _submitOpenReport(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+Future<void> _pumpUntilFound(
+  WidgetTester tester,
+  Finder finder, {
+  int attempts = 50,
+}) async {
+  for (
+    var attempt = 0;
+    attempt < attempts && finder.evaluate().isEmpty;
+    attempt++
+  ) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+  expect(finder, findsOneWidget);
+}
+
 void main() {
   testWidgets('comments and replies expose a report action that persists', (
     tester,
@@ -180,10 +195,12 @@ void main() {
         ),
       ),
     );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+    final reportButton = find.byKey(
+      const ValueKey('dm-report-$messageId'),
+    );
+    await _pumpUntilFound(tester, reportButton);
 
-    await tester.tap(find.byKey(const ValueKey('dm-report-$messageId')));
+    await tester.tap(reportButton);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Reportar mensaje'), findsOneWidget);
