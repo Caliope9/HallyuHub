@@ -2119,7 +2119,18 @@ class _SuggestedProfilesRail extends StatelessWidget {
           actionLabel: 'Ver todos',
           onAction: onViewAll,
         ),
-        const SizedBox(height: 7),
+        const SizedBox(height: 2),
+        Text(
+          'Conecta con más fans y descubre nuevas historias.',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.58),
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 8),
         if (visibleProfiles.isEmpty)
           const _EmptyInlinePanel(
             key: ValueKey('home-real-profiles-empty'),
@@ -2128,7 +2139,7 @@ class _SuggestedProfilesRail extends StatelessWidget {
           )
         else
           SizedBox(
-            height: 96,
+            height: 150,
             child: ListView.separated(
               key: const ValueKey('home-suggested-profiles'),
               scrollDirection: Axis.horizontal,
@@ -2207,27 +2218,35 @@ class _SuggestedProfileCard extends StatelessWidget {
         : const [AppTheme.rose, AppTheme.violet, AppTheme.cyan];
 
     return SizedBox(
-      width: 208,
+      width: 270,
+      height: 148,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           key: ValueKey('home-suggestion-open-${profile.id}'),
           onTap: onOpen,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(22),
           child: Ink(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppTheme.panelRaised.withValues(alpha: 0.76),
-              borderRadius: BorderRadius.circular(18),
+              color: AppTheme.panelRaised.withValues(alpha: 0.84),
+              borderRadius: BorderRadius.circular(22),
               border: Border.all(
-                color: avatarColors.first.withValues(alpha: 0.26),
+                color: AppTheme.violet.withValues(alpha: 0.34),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.violet.withValues(alpha: 0.08),
+                  blurRadius: 14,
+                  spreadRadius: 0,
+                ),
+              ],
             ),
             child: Row(
               children: [
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: 68,
+                  height: 68,
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
@@ -2241,7 +2260,7 @@ class _SuggestedProfileCard extends StatelessWidget {
                   ),
                   child: HubAvatar(
                     asset: profile.avatarAsset,
-                    size: 44,
+                    size: 64,
                     isLive: profile.online,
                     fallbackLabel: profile.name,
                     fallbackColors: [
@@ -2251,70 +2270,85 @@ class _SuggestedProfileCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
 
                 Expanded(
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        profile.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w900,
-                        ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            profile.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            visibleUsername,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.56),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          if (username.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              reason,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.42),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        visibleUsername,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.5),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
+                      SizedBox(
+                        height: 40,
+                        child: OutlinedButton(
+                          key: ValueKey('home-suggestion-follow-${profile.id}'),
+                          onPressed: onFollow,
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: following
+                                ? AppTheme.cyan.withValues(alpha: 0.16)
+                                : AppTheme.violet.withValues(alpha: 0.2),
+                            foregroundColor: Colors.white,
+                            side: BorderSide(
+                              color: following
+                                  ? AppTheme.cyan.withValues(alpha: 0.72)
+                                  : AppTheme.violet.withValues(alpha: 0.74),
+                            ),
+                            minimumSize: const Size(88, 40),
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: VisualDensity.compact,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                          ),
+                          child: Text(
+                            following ? 'Siguiendo' : 'Seguir',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
                         ),
                       ),
                     ],
-                  ),
-                ),
-
-                const SizedBox(width: 8),
-
-                SizedBox(
-                  height: 34,
-                  child: OutlinedButton(
-                    key: ValueKey('home-suggestion-follow-${profile.id}'),
-                    onPressed: onFollow,
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: following
-                          ? AppTheme.cyan.withValues(alpha: 0.12)
-                          : Colors.white.withValues(alpha: 0.04),
-                      foregroundColor: Colors.white,
-                      side: BorderSide(
-                        color: following
-                            ? AppTheme.cyan.withValues(alpha: 0.72)
-                            : avatarColors.first.withValues(alpha: 0.62),
-                      ),
-                      minimumSize: const Size(76, 34),
-                      padding: const EdgeInsets.symmetric(horizontal: 11),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      visualDensity: VisualDensity.compact,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    ),
-                    child: Text(
-                      following ? 'Siguiendo' : 'Seguir',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
                   ),
                 ),
               ],
