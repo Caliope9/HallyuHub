@@ -27,6 +27,18 @@ Configurar únicamente como secretos de Edge Functions:
 La función también requiere los secretos backend ya existentes:
 `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`.
 
+## Notificaciones nativas de Supabase Auth
+
+Supabase Auth ya contempla las notificaciones de seguridad
+`password_changed` y `email_changed`. HallyuHub no envía una segunda copia
+desde `account-email-events`: las plantillas nativas sugeridas están preparadas
+en `supabase/templates/password_changed_notification.html` y
+`supabase/templates/email_changed_notification.html`.
+
+Estas notificaciones se envían después de que Supabase Auth confirma el cambio.
+Si se activa un Send Email Hook global, debe manejar también esos tipos nativos
+y reemplazar el envío incorporado; no se deben activar ambos caminos a la vez.
+
 ## Activación pendiente en Supabase
 
 No se ejecutó ninguna configuración remota. Para automatizar los primeros tres

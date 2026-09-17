@@ -7,3 +7,13 @@ verify_jwt = false
 # Database Webhooks authenticate with the dedicated backend token checked by
 # the function, rather than a user JWT.
 verify_jwt = false
+
+[auth.email.notification.password_changed]
+enabled = true
+subject = "Tu contraseña de HallyuHub fue actualizada"
+content_path = "./templates/password_changed_notification.html"
+
+[auth.email.notification.email_changed]
+enabled = true
+subject = "El correo de tu cuenta HallyuHub fue actualizado"
+content_path = "./templates/email_changed_notification.html"

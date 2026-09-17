@@ -34,6 +34,8 @@ import '../services/media_permission_service.dart';
 import '../services/share_links.dart';
 import '../services/store_profile_service.dart';
 import '../services/account_deletion_service.dart';
+import '../services/beta_signup_service.dart';
+import '../services/content_moderation_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/comments_sheet.dart';
 import '../widgets/contextual_permission_sheet.dart';
@@ -136,6 +138,8 @@ class ProfileScreen extends StatefulWidget {
     this.feedbackReportService = const LocalFeedbackReportService(),
     this.storeProfileService = const LocalStoreProfileService(),
     this.accountDeletionService = const LocalAccountDeletionService(),
+    this.betaSignupService = const LocalBetaSignupService(),
+    this.contentModerationService = const UnavailableContentModerationService(),
     this.resetSignal = 0,
   });
 
@@ -156,6 +160,8 @@ class ProfileScreen extends StatefulWidget {
   final FeedbackReportService feedbackReportService;
   final StoreProfileService storeProfileService;
   final AccountDeletionService accountDeletionService;
+  final BetaSignupService betaSignupService;
+  final ContentModerationService contentModerationService;
   final int resetSignal;
 
   @override
@@ -606,6 +612,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           feedbackReportService: widget.feedbackReportService,
           storeProfileService: widget.storeProfileService,
           accountDeletionService: widget.accountDeletionService,
+          betaSignupService: widget.betaSignupService,
+          artistTagService: widget.artistTagService,
+          contentModerationService: widget.contentModerationService,
         ),
       ),
     );

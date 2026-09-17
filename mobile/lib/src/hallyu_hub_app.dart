@@ -660,6 +660,8 @@ class _HallyuHubShellState extends State<HallyuHubShell>
         resetSignal: _tabResetSignals[4],
         storeProfileService: widget.storeProfileService,
         accountDeletionService: widget.accountDeletionService,
+        betaSignupService: widget.betaSignupService,
+        contentModerationService: widget.contentModerationService,
       ),
     ];
 

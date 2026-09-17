@@ -8,9 +8,13 @@ import '../data/legal_documents.dart';
 import '../models.dart';
 import '../services/auth_service.dart';
 import '../services/account_deletion_service.dart';
+import '../services/beta_signup_service.dart';
+import '../services/content_moderation_service.dart';
 import '../services/feedback_report_service.dart';
 import '../services/hally_feature_tip_service.dart';
+import '../services/local_artist_tag_service.dart';
 import '../services/store_profile_service.dart';
+import 'admin_panel_screen.dart';
 import '../theme/app_theme.dart';
 import '../widgets/hub_avatar.dart';
 
@@ -40,6 +44,7 @@ enum _SettingsPanel {
   privacyPolicy,
   terms,
   communityRules,
+  adminPanel,
   betaNotice,
   legalContact,
   copyright,
@@ -60,6 +65,9 @@ class AccountSettingsScreen extends StatefulWidget {
     this.feedbackReportService = const LocalFeedbackReportService(),
     this.storeProfileService = const LocalStoreProfileService(),
     this.accountDeletionService = const LocalAccountDeletionService(),
+    this.betaSignupService = const LocalBetaSignupService(),
+    this.artistTagService = const LocalArtistTagService(),
+    this.contentModerationService = const UnavailableContentModerationService(),
   });
 
   final AuthUser user;
@@ -70,6 +78,9 @@ class AccountSettingsScreen extends StatefulWidget {
   final FeedbackReportService feedbackReportService;
   final StoreProfileService storeProfileService;
   final AccountDeletionService accountDeletionService;
+  final BetaSignupService betaSignupService;
+  final LocalArtistTagService artistTagService;
+  final ContentModerationService contentModerationService;
 
   @override
   State<AccountSettingsScreen> createState() => _AccountSettingsScreenState();
@@ -239,6 +250,22 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   }
 
   void _openPanel(_SettingsPanel panel) {
+    if (panel == _SettingsPanel.adminPanel) {
+      if (!widget.user.canAccessAdminPanel) return;
+      Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => AdminPanelScreen(
+            user: widget.user,
+            betaSignupService: widget.betaSignupService,
+            feedbackReportService: widget.feedbackReportService,
+            artistTagService: widget.artistTagService,
+            storeProfileService: widget.storeProfileService,
+            contentModerationService: widget.contentModerationService,
+          ),
+        ),
+      );
+      return;
+    }
     setState(() {
       _activePanel = panel;
       _savedMessage = null;
@@ -849,6 +876,24 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
           onTap: _confirmResetHallyTips,
         ),
         const SizedBox(height: 14),
+        if (widget.user.canAccessAdminPanel)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: _SettingsHomeSection(
+              title: 'Administración',
+              detail: 'Herramientas internas para cuentas autorizadas.',
+              items: const [
+                _SettingsItemData(
+                  panel: _SettingsPanel.adminPanel,
+                  title: 'Panel Admin',
+                  detail: 'Denuncias, feedback, sugerencias y operaciones internas.',
+                  icon: Icons.admin_panel_settings_outlined,
+                ),
+              ],
+              valueForPanel: _panelValue,
+              onOpen: _openPanel,
+            ),
+          ),
         for (final group in _settingsGroups)
           Padding(
             padding: const EdgeInsets.only(bottom: 14),
@@ -1403,6 +1448,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                 setState(() => _savedMessage = 'Método listo para conectar'),
           ),
         ];
+      case _SettingsPanel.adminPanel:
+        return const [];
       case _SettingsPanel.privacyPolicy:
       case _SettingsPanel.terms:
       case _SettingsPanel.communityRules:
@@ -1670,6 +1717,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
         return 'Plan gratuito';
       case _SettingsPanel.paymentMethods:
         return 'Sin método';
+      case _SettingsPanel.adminPanel:
+        return 'Acceso autorizado';
       case _SettingsPanel.privacyPolicy:
       case _SettingsPanel.terms:
       case _SettingsPanel.communityRules:
