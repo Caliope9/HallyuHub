@@ -59,7 +59,10 @@ CommunityProfile _profile() => const CommunityProfile(
 );
 
 Future<void> _submitOpenReport(WidgetTester tester) async {
-  await tester.tap(find.text('Enviar reporte'));
+  final submitButton = find.text('Enviar reporte');
+  await tester.ensureVisible(submitButton);
+  await tester.pump();
+  await tester.tap(submitButton);
   await tester.pumpAndSettle();
 }
 
@@ -97,7 +100,8 @@ void main() {
     await tester.pump();
 
     await tester.tap(find.byKey(const ValueKey('comment-report-$commentId')));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Reportar comentario'), findsOneWidget);
     await _submitOpenReport(tester);
 
@@ -176,10 +180,12 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     await tester.tap(find.byKey(const ValueKey('dm-report-$messageId')));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Reportar mensaje'), findsOneWidget);
     await _submitOpenReport(tester);
 
