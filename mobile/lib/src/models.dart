@@ -8,6 +8,26 @@ import 'data/legal_documents.dart';
 
 enum StoryContentType { image, text, video }
 
+enum StoryAudienceType {
+  publicAudience('Todos', 'public'),
+  followers('Seguidores', 'followers'),
+  closeFriends('Mejores amigos', 'close_friends'),
+  exclude('Todos excepto...', 'exclude'),
+  include('Solo compartir con...', 'include');
+
+  const StoryAudienceType(this.label, this.storageValue);
+
+  final String label;
+  final String storageValue;
+
+  static StoryAudienceType fromStorage(String? value) {
+    return values.firstWhere(
+      (audience) => audience.storageValue == value,
+      orElse: () => StoryAudienceType.followers,
+    );
+  }
+}
+
 enum StoryElementType { text, sticker, image }
 
 enum StoryVisualFilter {
@@ -147,6 +167,10 @@ class StoryDraft {
     this.taggedUserIds = const [],
     this.taggedUsers = const [],
     this.taggedEntities = const [],
+    this.audienceType = StoryAudienceType.followers,
+    this.audienceUserIds = const [],
+    this.sharedContentType = '',
+    this.sharedContentId = '',
   });
 
   final StoryContentType type;
@@ -171,6 +195,10 @@ class StoryDraft {
   final List<String> taggedUserIds;
   final List<CommunityProfile> taggedUsers;
   final List<KpopEntity> taggedEntities;
+  final StoryAudienceType audienceType;
+  final List<String> audienceUserIds;
+  final String sharedContentType;
+  final String sharedContentId;
 
   StoryDraft copyWith({
     StoryContentType? type,
@@ -197,6 +225,10 @@ class StoryDraft {
     List<String>? taggedUserIds,
     List<CommunityProfile>? taggedUsers,
     List<KpopEntity>? taggedEntities,
+    StoryAudienceType? audienceType,
+    List<String>? audienceUserIds,
+    String? sharedContentType,
+    String? sharedContentId,
   }) {
     return StoryDraft(
       type: type ?? this.type,
@@ -224,6 +256,10 @@ class StoryDraft {
       taggedUserIds: taggedUserIds ?? this.taggedUserIds,
       taggedUsers: taggedUsers ?? this.taggedUsers,
       taggedEntities: taggedEntities ?? this.taggedEntities,
+      audienceType: audienceType ?? this.audienceType,
+      audienceUserIds: audienceUserIds ?? this.audienceUserIds,
+      sharedContentType: sharedContentType ?? this.sharedContentType,
+      sharedContentId: sharedContentId ?? this.sharedContentId,
     );
   }
 }
@@ -282,6 +318,10 @@ class Story {
     this.taggedPeople = const [],
     this.taggedUserIds = const [],
     this.taggedEntities = const [],
+    this.audienceType = StoryAudienceType.followers,
+    this.audienceUserIds = const [],
+    this.sharedContentType = '',
+    this.sharedContentId = '',
     this.isLive = false,
     this.isOwn = false,
   });
@@ -320,6 +360,10 @@ class Story {
   final List<String> taggedPeople;
   final List<String> taggedUserIds;
   final List<KpopEntity> taggedEntities;
+  final StoryAudienceType audienceType;
+  final List<String> audienceUserIds;
+  final String sharedContentType;
+  final String sharedContentId;
   final bool isLive;
   final bool isOwn;
 
@@ -360,6 +404,10 @@ class Story {
     List<String>? taggedPeople,
     List<String>? taggedUserIds,
     List<KpopEntity>? taggedEntities,
+    StoryAudienceType? audienceType,
+    List<String>? audienceUserIds,
+    String? sharedContentType,
+    String? sharedContentId,
     bool? isLive,
     bool? isOwn,
   }) {
@@ -401,6 +449,10 @@ class Story {
       taggedPeople: taggedPeople ?? this.taggedPeople,
       taggedUserIds: taggedUserIds ?? this.taggedUserIds,
       taggedEntities: taggedEntities ?? this.taggedEntities,
+      audienceType: audienceType ?? this.audienceType,
+      audienceUserIds: audienceUserIds ?? this.audienceUserIds,
+      sharedContentType: sharedContentType ?? this.sharedContentType,
+      sharedContentId: sharedContentId ?? this.sharedContentId,
       isLive: isLive ?? this.isLive,
       isOwn: isOwn ?? this.isOwn,
     );

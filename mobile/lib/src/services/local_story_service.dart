@@ -151,6 +151,10 @@ class LocalStoryService {
       createdAt: DateTime.now(),
       taggedPeople: draft.taggedPeople,
       taggedUserIds: draft.taggedUserIds,
+      audienceType: draft.audienceType,
+      audienceUserIds: draft.audienceUserIds,
+      sharedContentType: draft.sharedContentType,
+      sharedContentId: draft.sharedContentId,
       isOwn: true,
     );
     activeStories.insert(0, story);
@@ -369,6 +373,14 @@ class LocalStoryService {
           ? null
           : DateTime.parse(json['originalCreatedAt'] as String),
       memoryLabel: json['memoryLabel'] as String? ?? '',
+      audienceType: StoryAudienceType.fromStorage(
+        json['audienceType'] as String?,
+      ),
+      audienceUserIds: (json['audienceUserIds'] as List<dynamic>? ?? const [])
+          .whereType<String>()
+          .toList(growable: false),
+      sharedContentType: json['sharedContentType'] as String? ?? '',
+      sharedContentId: json['sharedContentId'] as String? ?? '',
       isOwn: json['isOwn'] as bool? ?? true,
     );
   }
@@ -410,6 +422,10 @@ class LocalStoryService {
       if (story.originalCreatedAt != null)
         'originalCreatedAt': story.originalCreatedAt!.toIso8601String(),
       'memoryLabel': story.memoryLabel,
+      'audienceType': story.audienceType.storageValue,
+      'audienceUserIds': story.audienceUserIds,
+      'sharedContentType': story.sharedContentType,
+      'sharedContentId': story.sharedContentId,
       'isOwn': story.isOwn,
     };
   }

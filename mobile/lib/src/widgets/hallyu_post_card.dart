@@ -29,6 +29,8 @@ class HallyuPostCard extends StatelessWidget {
     this.onOpenTaggedPerson,
     this.onOpenTaggedEntity,
     this.onOpenNews,
+    this.onRepost,
+    this.reposted = false,
     this.onMore,
     this.videosMuted = true,
     this.onToggleVideoSound,
@@ -52,6 +54,8 @@ class HallyuPostCard extends StatelessWidget {
   final ValueChanged<String>? onOpenTaggedPerson;
   final ValueChanged<KpopEntity>? onOpenTaggedEntity;
   final ValueChanged<String>? onOpenNews;
+  final VoidCallback? onRepost;
+  final bool reposted;
   final VoidCallback? onMore;
   final bool videosMuted;
   final VoidCallback? onToggleVideoSound;
@@ -233,6 +237,20 @@ class HallyuPostCard extends StatelessWidget {
                   semanticLabel: 'Compartir post de ${post.author}',
                   onTap: onShare,
                 ),
+                if (onRepost != null)
+                  _HallyuPostAction(
+                    key: ValueKey('repost-${post.id}'),
+                    icon: reposted
+                        ? Icons.repeat_one_rounded
+                        : Icons.repeat_rounded,
+                    label: reposted ? 'Reposteado' : 'Repostear',
+                    color: AppTheme.cyan,
+                    active: reposted,
+                    semanticLabel: reposted
+                        ? 'Quitar repost de ${post.author}'
+                        : 'Repostear post de ${post.author}',
+                    onTap: onRepost!,
+                  ),
                 _HallyuPostAction(
                   key: ValueKey('save-${post.id}'),
                   icon: saved

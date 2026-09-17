@@ -7,6 +7,7 @@ import '../data/demo_data.dart';
 import '../models.dart';
 import '../screens/camera_capture_screen.dart';
 import '../services/local_artist_tag_service.dart';
+import '../services/age_policy.dart';
 import '../services/local_follow_service.dart';
 import '../services/media_permission_service.dart';
 import '../services/story_audio_controller.dart';
@@ -49,6 +50,8 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
   double? _videoDurationSeconds;
   late List<CommunityProfile> _selectedTaggedUsers;
   late List<KpopEntity> _selectedTaggedEntities;
+  late StoryAudienceType _audienceType;
+  late List<CommunityProfile> _selectedAudienceUsers;
 
   static const _textColors = [
     Colors.white,
@@ -64,6 +67,16 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
     _draft = widget.initialDraft;
     _selectedTaggedUsers = _draft.taggedUsers.toList(growable: true);
     _selectedTaggedEntities = _draft.taggedEntities.toList(growable: true);
+    final configuredPrivacy =
+        widget.currentUser?.storyPrivacy.trim().toLowerCase();
+    final configuredAudience = configuredPrivacy == 'todos'
+        ? StoryAudienceType.publicAudience
+        : StoryAudienceType.followers;
+    _audienceType = _draft.audienceType == StoryAudienceType.followers
+        ? configuredAudience
+        : _draft.audienceType;
+    _selectedAudienceUsers = const [];
+    _draft = _draft.copyWith(audienceType: _audienceType);
   }
 
   @override
@@ -608,6 +621,119 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
     await _openStoryTagsPanel();
   }
 
+  bool get _publicAudienceAllowed {
+    final user = widget.currentUser;
+    if (user == null) return true;
+    return !user.privateProfile && !AgePolicy.isTeen(user.birthDate);
+  }
+
+  String get _audienceSummary {
+    if (_audienceType == StoryAudienceType.exclude ||
+        _audienceType == StoryAudienceType.include ||
+        _audienceType == StoryAudienceType.closeFriends) {
+      return '${_audienceType.label.replaceAll('...', '')} '
+          '${_selectedAudienceUsers.length} persona(s)';
+    }
+    return _audienceType.label;
+  }
+
+  Future<void> _chooseAudience() async {
+    var pendingType = _audienceType;
+    var pendingUsers = _selectedAudienceUsers.toList(growable: true);
+    final applied = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) => DraggableScrollableSheet(
+          initialChildSize: .78,
+          minChildSize: .52,
+          maxChildSize: .94,
+          builder: (context, controller) => Container(
+            padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+            decoration: BoxDecoration(
+              color: AppTheme.night,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(28),
+              ),
+              border: Border(
+                top: BorderSide(color: AppTheme.violet.withValues(alpha: .5)),
+              ),
+            ),
+            child: ListView(
+              controller: controller,
+              children: [
+                const _StorySheetHandle(),
+                const SizedBox(height: 12),
+                const _StorySheetHeader(
+                  icon: Icons.visibility_outlined,
+                  title: 'Quién puede ver esta historia',
+                  subtitle: 'La privacidad del perfil y las reglas de edad siempre tienen prioridad.',
+                ),
+                const SizedBox(height: 8),
+                for (final audience in StoryAudienceType.values)
+                  RadioListTile<StoryAudienceType>(
+                    value: audience,
+                    groupValue: pendingType,
+                    onChanged: audience == StoryAudienceType.publicAudience &&
+                            !_publicAudienceAllowed
+                        ? null
+                        : (value) {
+                            if (value == null) return;
+                            setSheetState(() => pendingType = value);
+                          },
+                    title: Text(audience.label),
+                    subtitle: audience == StoryAudienceType.publicAudience &&
+                            !_publicAudienceAllowed
+                        ? const Text('No disponible para este perfil.')
+                        : null,
+                  ),
+                if (pendingType == StoryAudienceType.closeFriends ||
+                    pendingType == StoryAudienceType.exclude ||
+                    pendingType == StoryAudienceType.include) ...[
+                  const Divider(),
+                  UserTagSelector(
+                    followService: widget.followService,
+                    currentUser: widget.currentUser,
+                    selectedUsers: pendingUsers,
+                    onChanged: (users) =>
+                        setSheetState(() => pendingUsers = users),
+                    title: pendingType == StoryAudienceType.closeFriends
+                        ? 'Elegí tus mejores amigos'
+                        : pendingType == StoryAudienceType.exclude
+                        ? 'Personas excluidas'
+                        : 'Personas autorizadas',
+                    subtitle: 'Buscá por nombre o @usuario.',
+                    showEmptyOnlyAfterSearch: true,
+                  ),
+                ],
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  key: const ValueKey('story-audience-apply'),
+                  onPressed: () => Navigator.of(sheetContext).pop(true),
+                  icon: const Icon(Icons.check_rounded),
+                  label: const Text('Aplicar privacidad'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (applied != true || !mounted) return;
+    _selectedAudienceUsers = pendingUsers.take(100).toList(growable: false);
+    _audienceType = pendingType;
+    _updateDraft(
+      _draft.copyWith(
+        audienceType: _audienceType,
+        audienceUserIds: _selectedAudienceUsers
+            .map((user) => user.id)
+            .where((id) => id.isNotEmpty)
+            .toList(growable: false),
+      ),
+    );
+  }
+
   Future<void> _openStoryTagsPanel() async {
     var selectedUsers = _selectedTaggedUsers.toList(growable: true);
     var selectedEntities = _selectedTaggedEntities.toList(growable: true);
@@ -1035,6 +1161,18 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                   ],
                 ),
               ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
+              child: OutlinedButton.icon(
+                key: const ValueKey('story-editor-audience'),
+                onPressed: _chooseAudience,
+                icon: const Icon(Icons.lock_outline_rounded),
+                label: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Quién puede ver: $_audienceSummary'),
+                ),
+              ),
+            ),
             _EditorToolbar(
               hasSelection: _selectedElementId != null || _mediaSelected,
               hasMusic: _draft.musicAsset.isNotEmpty,

@@ -1166,6 +1166,19 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() => _sharedPosts.add(post.id));
           _showSnack(label);
         },
+        onShareToStory: () async {
+          Navigator.of(sheetContext).pop();
+          await _openStoryEditor(
+            StoryDraft(
+              type: StoryContentType.text,
+              title: 'Contenido compartido',
+              detail: post.caption,
+              text: 'Ver publicación de ${post.author}',
+              sharedContentType: 'post',
+              sharedContentId: post.id,
+            ),
+          );
+        },
       ),
     );
   }

@@ -28,6 +28,7 @@ class AppShareSheet extends StatefulWidget {
     required this.recipients,
     required this.onSelected,
     this.onSendToRecipient,
+    this.onShareToStory,
   });
 
   final String title;
@@ -36,6 +37,7 @@ class AppShareSheet extends StatefulWidget {
   final List<ShareRecipient> recipients;
   final ValueChanged<String> onSelected;
   final Future<String> Function(ShareRecipient recipient)? onSendToRecipient;
+  final Future<void> Function()? onShareToStory;
 
   @override
   State<AppShareSheet> createState() => _AppShareSheetState();
@@ -212,6 +214,17 @@ class _AppShareSheetState extends State<AppShareSheet> {
                   color: AppTheme.cyan,
                   onTap: _copyLink,
                 ),
+                if (widget.onShareToStory != null) ...[
+                  const SizedBox(width: 10),
+                  _ShareShortcut(
+                    icon: Icons.add_to_photos_outlined,
+                    label: 'En mi historia',
+                    color: AppTheme.violet,
+                    onTap: () async {
+                      await widget.onShareToStory!();
+                    },
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 18),

@@ -94,6 +94,11 @@ class SupabaseStoryService extends LocalStoryService {
               .toList(),
           'elements': draft.elements.map(_elementToJson).toList(),
           'media_transform': _transformFor(draft),
+          'audience_type': draft.audienceType.storageValue,
+          if (draft.sharedContentType.isNotEmpty)
+            'shared_content_type': draft.sharedContentType,
+          if (draft.sharedContentId.isNotEmpty)
+            'shared_content_id': draft.sharedContentId,
           'expires_at': DateTime.now()
               .toUtc()
               .add(_storyLifetime)
@@ -105,6 +110,7 @@ class SupabaseStoryService extends LocalStoryService {
     final storyId = insertedStory['id'] as String;
     _StoredStoryMedia? storedMedia;
     try {
+      await _storeAudience(authUser.id, storyId, draft);
       storedMedia = await _storeMedia(authUser.id, storyId, draft);
       if (storedMedia != null) {
         await _client.from('story_media').insert({
@@ -161,8 +167,59 @@ class SupabaseStoryService extends LocalStoryService {
       ),
       taggedPeople: draft.taggedPeople,
       taggedUserIds: draft.taggedUserIds,
+      audienceType: draft.audienceType,
+      audienceUserIds: draft.audienceUserIds,
+      sharedContentType: draft.sharedContentType,
+      sharedContentId: draft.sharedContentId,
       isOwn: true,
     );
+  }
+
+  Future<void> _storeAudience(
+    String ownerId,
+    String storyId,
+    StoryDraft draft,
+  ) async {
+    if (draft.audienceType == StoryAudienceType.include &&
+        draft.audienceUserIds.isEmpty) {
+      throw const StoryServiceException(
+        'Elegí al menos una persona para compartir esta historia.',
+      );
+    }
+    if (draft.audienceType == StoryAudienceType.closeFriends) {
+      if (draft.audienceUserIds.isEmpty) {
+        throw const StoryServiceException(
+          'Elegí al menos una persona para Mejores amigos.',
+        );
+      }
+      await _client.from('close_friends').upsert(
+        draft.audienceUserIds
+            .where((id) => id.isNotEmpty && id != ownerId)
+            .map(
+              (friendId) => {
+                'owner_id': ownerId,
+                'friend_id': friendId,
+              },
+            )
+            .toList(growable: false),
+        onConflict: 'owner_id,friend_id',
+      );
+      return;
+    }
+    if (draft.audienceType == StoryAudienceType.include ||
+        draft.audienceType == StoryAudienceType.exclude) {
+      await _client.from('story_audience_users').insert(
+        draft.audienceUserIds
+            .where((id) => id.isNotEmpty && id != ownerId)
+            .map(
+              (userId) => {
+                'story_id': storyId,
+                'user_id': userId,
+              },
+            )
+            .toList(growable: false),
+      );
+    }
   }
 
   @override
@@ -392,6 +449,11 @@ class SupabaseStoryService extends LocalStoryService {
       contentType: contentType,
       backgroundColors: _colorsFromRow(row['background_colors']),
       visualFilter: _visualFilter(row['visual_filter'] as String?),
+      audienceType: StoryAudienceType.fromStorage(
+        row['audience_type'] as String?,
+      ),
+      sharedContentType: row['shared_content_type'] as String? ?? '',
+      sharedContentId: row['shared_content_id'] as String? ?? '',
       viewers: viewers,
       views: views,
       stars: stars,
@@ -685,7 +747,8 @@ class SupabaseStoryService extends LocalStoryService {
   static const _storySelect =
       'id,author_id,title,detail,text,music,music_asset,content_type,'
       'duration_seconds,visual_filter,background_colors,elements,'
-      'media_transform,expires_at,created_at,'
+      'media_transform,audience_type,shared_content_type,shared_content_id,'
+      'expires_at,created_at,'
       'profiles:author_id(id,name,username,avatar_asset,avatar_url,fandom),'
       'story_media(id,media_type,storage_bucket,storage_path,public_url,sort_order,transform)';
 }
