@@ -84,7 +84,9 @@ security definer
 set search_path = pg_catalog, public
 as $$
   select case
-    when p_left is null or p_right is null or p_left = p_right then false
+    when auth.uid() is null
+      or p_left is null or p_right is null or p_left = p_right
+      or (p_left <> auth.uid() and p_right <> auth.uid()) then false
     else exists (
       select 1 from public.user_blocks
       where (blocker_id = p_left and blocked_id = p_right)
@@ -103,6 +105,7 @@ as $$
   select exists (
     select 1 from public.conversations c
     where c.id = p_conversation_id
+      and (c.created_by = auth.uid() or c.recipient_id = auth.uid())
       and public.hallyu_users_blocked_v1(c.created_by, c.recipient_id)
   );
 $$;
@@ -149,11 +152,11 @@ drop policy if exists "blocks restrict comments insert" on public.comments;
 create policy "blocks restrict comments insert" on public.comments as restrictive
 for insert to authenticated
 with check (
-  not public.hallyu_users_blocked_v1(
+  content_type in ('post', 'drop', 'fancam')
+  and not public.hallyu_users_blocked_v1(
     author_id,
-    public.hallyu_content_owner_v1('post', content_id)
+    public.hallyu_content_owner_v1(content_type, content_id)
   )
-  and content_type = 'post'
 );
 
 drop policy if exists "blocks restrict drop comments" on public.drop_comments;
@@ -463,7 +466,7 @@ $$;
 
 create table if not exists public.moderation_actions (
   id uuid primary key default gen_random_uuid(),
-  actor_id uuid not null references public.profiles(id) on delete restrict,
+  actor_id uuid references public.profiles(id) on delete set null,
   report_id uuid references public.content_reports(id) on delete set null,
   target_user_id uuid references public.profiles(id) on delete set null,
   content_type text not null default '',
@@ -478,8 +481,8 @@ revoke all on table public.moderation_actions from public, anon, authenticated;
 
 create table if not exists public.user_enforcement_events (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references public.profiles(id) on delete cascade,
-  actor_id uuid not null references public.profiles(id) on delete restrict,
+  user_id uuid references public.profiles(id) on delete set null,
+  actor_id uuid references public.profiles(id) on delete set null,
   status text not null check (status in ('active', 'restricted', 'suspended', 'banned')),
   reason text not null,
   enforcement_until timestamptz,
@@ -487,6 +490,76 @@ create table if not exists public.user_enforcement_events (
 );
 alter table public.user_enforcement_events enable row level security;
 revoke all on table public.user_enforcement_events from public, anon, authenticated;
+
+-- Los actores y el usuario sancionado se anonimizan al eliminar una cuenta;
+-- la auditoría queda retenida sin una FK RESTRICT ni PII obligatoria.
+alter table public.moderation_actions alter column actor_id drop not null;
+alter table public.user_enforcement_events alter column user_id drop not null;
+alter table public.user_enforcement_events alter column actor_id drop not null;
+
+do $$
+declare
+  target record;
+  fk_name text;
+  fk_count integer;
+begin
+  for target in
+    select * from (values
+      ('moderation_actions', 'actor_id', 'moderation_actions_actor_id_profiles_set_null_fkey'),
+      ('user_enforcement_events', 'user_id', 'user_enforcement_events_user_id_profiles_set_null_fkey'),
+      ('user_enforcement_events', 'actor_id', 'user_enforcement_events_actor_id_profiles_set_null_fkey')
+    ) as expected(table_name, column_name, constraint_name)
+  loop
+    select count(*) into fk_count
+    from pg_constraint c
+    join pg_attribute child
+      on child.attrelid = c.conrelid
+     and child.attnum = any(c.conkey)
+     and child.attname = target.column_name
+    join pg_attribute parent
+      on parent.attrelid = c.confrelid
+     and parent.attnum = any(c.confkey)
+     and parent.attname = 'id'
+    where c.conrelid = ('public.' || target.table_name)::regclass
+      and c.confrelid = 'public.profiles'::regclass
+      and c.contype = 'f';
+    if fk_count <> 1 then
+      raise exception 'expected exactly one %.% -> profiles(id) FK',
+        target.table_name, target.column_name;
+    end if;
+
+    select c.conname into fk_name
+    from pg_constraint c
+    join pg_attribute child
+      on child.attrelid = c.conrelid
+     and child.attnum = any(c.conkey)
+     and child.attname = target.column_name
+    join pg_attribute parent
+      on parent.attrelid = c.confrelid
+     and parent.attnum = any(c.confkey)
+     and parent.attname = 'id'
+    where c.conrelid = ('public.' || target.table_name)::regclass
+      and c.confrelid = 'public.profiles'::regclass
+      and c.contype = 'f';
+
+    if not exists (
+      select 1 from pg_constraint c
+      where c.conrelid = ('public.' || target.table_name)::regclass
+        and c.conname = target.constraint_name
+        and c.confdeltype = 'n'
+    ) then
+      execute format(
+        'alter table public.%I drop constraint %I',
+        target.table_name, fk_name
+      );
+      execute format(
+        'alter table public.%I add constraint %I foreign key (%I) references public.profiles(id) on delete set null',
+        target.table_name, target.constraint_name, target.column_name
+      );
+    end if;
+  end loop;
+end;
+$$;
 
 -- Si cualquiera de las tablas de auditoría ya existe con otra forma, no se
 -- altera silenciosamente: el preflight falla antes de crear los RPC.
