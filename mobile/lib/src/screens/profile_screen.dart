@@ -2590,17 +2590,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           sliver: SliverToBoxAdapter(
-            child: _ProfileHero(
-              user: user,
-              stats: _currentProfileStats,
-              progress: _fanProgress(_receivedStars),
-              onOpenSettings: () => _openSettings(),
-              onEditProfile: () => _openSettings(initialPanel: 'editProfile'),
-              onChangePhoto: _changeProfilePhoto,
-              onCreate: _openCreateSheet,
-              onShare: _openShareSheet,
-              onOpenStat: _openOwnStat,
-              onOpenInterest: _openProfileInterest,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 760),
+                child: _PremiumProfileHero(
+                  user: user,
+                  stats: _currentProfileStats,
+                  progress: _fanProgress(_receivedStars),
+                  onOpenSettings: () => _openSettings(),
+                  onEditProfile: () =>
+                      _openSettings(initialPanel: 'editProfile'),
+                  onChangePhoto: _changeProfilePhoto,
+                  onCreate: _openCreateSheet,
+                  onShare: _openShareSheet,
+                  onOpenStat: _openOwnStat,
+                  onOpenInterest: _openProfileInterest,
+                ),
+              ),
             ),
           ),
         ),
@@ -2926,6 +2932,338 @@ class _ProfilePostsFeedScreenState extends State<_ProfilePostsFeedScreen> {
   }
 }
 
+class _PremiumProfileHero extends StatelessWidget {
+  const _PremiumProfileHero({
+    required this.user,
+    required this.stats,
+    required this.progress,
+    required this.onOpenSettings,
+    required this.onEditProfile,
+    required this.onChangePhoto,
+    required this.onCreate,
+    required this.onShare,
+    required this.onOpenStat,
+    required this.onOpenInterest,
+  });
+
+  final AuthUser user;
+  final List<ProfileStat> stats;
+  final _FanProgress progress;
+  final VoidCallback onOpenSettings;
+  final VoidCallback onEditProfile;
+  final VoidCallback onChangePhoto;
+  final VoidCallback onCreate;
+  final VoidCallback onShare;
+  final ValueChanged<String> onOpenStat;
+  final ValueChanged<String> onOpenInterest;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = _profileBackgroundColors(user.profileBackground);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 420;
+        final avatarSize = compact ? 88.0 : 104.0;
+        return Container(
+          clipBehavior: Clip.antiAlias,
+          padding: EdgeInsets.all(compact ? 14 : 18),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF0A0D1B),
+                colors.first.withValues(alpha: .13),
+                const Color(0xFF070A14),
+                colors.last.withValues(alpha: .08),
+              ],
+              stops: const [0, .34, .76, 1],
+            ),
+            border: Border.all(color: AppTheme.violet.withValues(alpha: .34)),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.violet.withValues(alpha: .10),
+                blurRadius: 22,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withValues(alpha: .035),
+                        Colors.transparent,
+                        AppTheme.night.withValues(alpha: .28),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: -8,
+                right: -8,
+                child: IconButton(
+                  key: const ValueKey('profile-settings-open'),
+                  onPressed: onOpenSettings,
+                  icon: const Icon(Icons.tune_rounded, size: 19),
+                  tooltip: 'Ajustes',
+                  style: IconButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: const Color(
+                      0xFF111522,
+                    ).withValues(alpha: .9),
+                    minimumSize: const Size(40, 40),
+                    padding: EdgeInsets.zero,
+                    side: BorderSide(
+                      color: AppTheme.violet.withValues(alpha: .38),
+                    ),
+                  ),
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(3.5),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: const LinearGradient(
+                                colors: [
+                                  AppTheme.rose,
+                                  AppTheme.violet,
+                                  AppTheme.cyan,
+                                ],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.violet.withValues(alpha: .28),
+                                  blurRadius: 18,
+                                ),
+                              ],
+                            ),
+                            child: HubAvatar(
+                              asset: user.avatarAsset,
+                              size: avatarSize,
+                              isLive: true,
+                            ),
+                          ),
+                          Positioned(
+                            right: -3,
+                            bottom: -3,
+                            child: IconButton.filled(
+                              key: const ValueKey('profile-change-avatar'),
+                              onPressed: onChangePhoto,
+                              icon: const Icon(
+                                Icons.photo_camera_outlined,
+                                size: 17,
+                              ),
+                              tooltip: 'Cambiar foto de perfil',
+                              style: IconButton.styleFrom(
+                                backgroundColor: AppTheme.rose,
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size(32, 32),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                side: BorderSide(
+                                  color: Colors.white.withValues(alpha: .4),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(right: 42),
+                                child: Text(
+                                  user.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: compact ? 22 : 26,
+                                    height: 1.08,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                              if (user.accountVerified) ...[
+                                const SizedBox(height: 5),
+                                const _VerifiedBadge(label: 'Verificado'),
+                              ],
+                              const SizedBox(height: 6),
+                              Text(
+                                '${user.username} · ${user.publicLocationLabel}',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: AppTheme.cyan.withValues(alpha: .84),
+                                  fontSize: 13,
+                                  height: 1.15,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              if (user.bio.trim().isNotEmpty) ...[
+                                const SizedBox(height: 7),
+                                Text(
+                                  user.bio,
+                                  maxLines: compact ? 2 : 3,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: .78),
+                                    fontSize: 13,
+                                    height: 1.22,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  _InlineProfileStats(stats: stats, onTap: onOpenStat),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton.icon(
+                          key: const ValueKey('profile-create'),
+                          onPressed: onCreate,
+                          icon: const Icon(Icons.add_rounded, size: 19),
+                          label: const Text('Crear', maxLines: 1),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppTheme.rose,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size.fromHeight(44),
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            textStyle: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(13),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          key: const ValueKey('profile-edit'),
+                          onPressed: onEditProfile,
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                          label: const Text('Editar perfil', maxLines: 1),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: BorderSide(
+                              color: AppTheme.violet.withValues(alpha: .7),
+                            ),
+                            minimumSize: const Size.fromHeight(44),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            textStyle: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(13),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        key: const ValueKey('profile-share'),
+                        onPressed: onShare,
+                        icon: const Icon(Icons.share_outlined, size: 19),
+                        tooltip: 'Compartir perfil',
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.white.withValues(alpha: .07),
+                          foregroundColor: Colors.white,
+                          fixedSize: const Size(44, 44),
+                          padding: EdgeInsets.zero,
+                          side: BorderSide(
+                            color: AppTheme.cyan.withValues(alpha: .3),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(13),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Text(
+                        'Mis fandoms',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: .82),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        'Nivel ${progress.level}',
+                        style: const TextStyle(
+                          color: AppTheme.cyan,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  _FandomStrip(
+                    keyPrefix: 'profile',
+                    onTap: onOpenInterest,
+                    labels: [
+                      user.fandom.trim().isEmpty
+                          ? 'Agregar fandom'
+                          : user.fandom,
+                      user.bias.trim().isEmpty
+                          ? 'Agregar bias'
+                          : 'Bias: ${user.bias}',
+                      user.favoriteGroup.trim().isEmpty
+                          ? 'Agregar grupo favorito'
+                          : user.favoriteGroup,
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  _ProgressCard(progress: progress),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// Kept as a compatibility implementation for downstream profile variants.
+// ignore: unused_element
 class _ProfileHero extends StatelessWidget {
   const _ProfileHero({
     required this.user,
