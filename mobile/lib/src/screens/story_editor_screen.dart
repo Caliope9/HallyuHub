@@ -26,12 +26,14 @@ class StoryEditorScreen extends StatefulWidget {
     this.currentUser,
     this.followService = const LocalFollowService(),
     this.artistTagService = const LocalArtistTagService(),
+    this.supportsAdvancedAudiences = true,
   });
 
   final StoryDraft initialDraft;
   final AuthUser? currentUser;
   final LocalFollowService followService;
   final LocalArtistTagService artistTagService;
+  final bool supportsAdvancedAudiences;
 
   @override
   State<StoryEditorScreen> createState() => _StoryEditorScreenState();
@@ -67,14 +69,18 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
     _draft = widget.initialDraft;
     _selectedTaggedUsers = _draft.taggedUsers.toList(growable: true);
     _selectedTaggedEntities = _draft.taggedEntities.toList(growable: true);
-    final configuredPrivacy =
-        widget.currentUser?.storyPrivacy.trim().toLowerCase();
+    final configuredPrivacy = widget.currentUser?.storyPrivacy
+        .trim()
+        .toLowerCase();
     final configuredAudience = configuredPrivacy == 'todos'
         ? StoryAudienceType.publicAudience
         : StoryAudienceType.followers;
-    _audienceType = _draft.audienceType == StoryAudienceType.followers
+    final requestedAudience = _draft.audienceType == StoryAudienceType.followers
         ? configuredAudience
         : _draft.audienceType;
+    _audienceType = widget.supportsAdvancedAudiences
+        ? requestedAudience
+        : StoryAudienceType.followers;
     _selectedAudienceUsers = const [];
     _draft = _draft.copyWith(audienceType: _audienceType);
   }
@@ -637,6 +643,11 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
     return _audienceType.label;
   }
 
+  List<StoryAudienceType> get _supportedAudiences =>
+      widget.supportsAdvancedAudiences
+      ? StoryAudienceType.values
+      : const [StoryAudienceType.followers];
+
   Future<void> _chooseAudience() async {
     var pendingType = _audienceType;
     var pendingUsers = _selectedAudienceUsers.toList(growable: true);
@@ -668,7 +679,8 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                 const _StorySheetHeader(
                   icon: Icons.visibility_outlined,
                   title: 'Quién puede ver esta historia',
-                  subtitle: 'La privacidad del perfil y las reglas de edad siempre tienen prioridad.',
+                  subtitle:
+                      'La privacidad del perfil y las reglas de edad siempre tienen prioridad.',
                 ),
                 const SizedBox(height: 8),
                 RadioGroup<StoryAudienceType>(
@@ -683,10 +695,11 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                   },
                   child: Column(
                     children: [
-                      for (final audience in StoryAudienceType.values)
+                      for (final audience in _supportedAudiences)
                         RadioListTile<StoryAudienceType>(
                           value: audience,
-                          enabled: audience != StoryAudienceType.publicAudience ||
+                          enabled:
+                              audience != StoryAudienceType.publicAudience ||
                               _publicAudienceAllowed,
                           title: Text(audience.label),
                           subtitle:
@@ -694,6 +707,17 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                                   !_publicAudienceAllowed
                               ? const Text('No disponible para este perfil.')
                               : null,
+                        ),
+                      if (!widget.supportsAdvancedAudiences)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            'Más opciones de privacidad estarán disponibles próximamente.',
+                            style: TextStyle(
+                              color: Colors.white60,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
                     ],
                   ),

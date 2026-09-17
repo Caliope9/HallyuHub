@@ -1078,6 +1078,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           currentUser: widget.user,
           followService: widget.followService,
           artistTagService: widget.artistTagService,
+          supportsAdvancedAudiences: !widget.storyService.usesRealStories,
         ),
       ),
     );

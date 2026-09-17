@@ -1110,6 +1110,7 @@ class _HomeScreenState extends State<HomeScreen> {
           currentUser: widget.user,
           followService: widget.followService,
           artistTagService: widget.artistTagService,
+          supportsAdvancedAudiences: !widget.storyService.usesRealStories,
         ),
       ),
     );
