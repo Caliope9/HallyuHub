@@ -199,7 +199,7 @@ class _HallyFeatureTipState extends State<HallyFeatureTip> {
                   padding: EdgeInsets.zero,
                   onPressed: () => _dismiss(entry),
                   icon: Icon(
-                    Icons.close_rounded,
+                    Icons.close,
                     color: Colors.white.withValues(alpha: .72),
                     size: 19,
                   ),

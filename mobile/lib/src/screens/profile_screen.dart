@@ -3122,12 +3122,13 @@ class _ProfileHero extends StatelessWidget {
                         const SizedBox(height: 10),
                         Row(
                           children: [
-                            Expanded(
+                            Flexible(
+                              fit: FlexFit.tight,
                               child: FilledButton.icon(
                                 key: const ValueKey('profile-create'),
                                 onPressed: onCreate,
                                 icon: const Icon(Icons.add_rounded, size: 16),
-                                label: const Text('Crear'),
+                                label: const Text('Crear', maxLines: 1),
                                 style: FilledButton.styleFrom(
                                   backgroundColor: AppTheme.rose,
                                   foregroundColor: Colors.white,
@@ -3146,12 +3147,13 @@ class _ProfileHero extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 6),
-                            Expanded(
+                            Flexible(
+                              fit: FlexFit.tight,
                               child: OutlinedButton.icon(
                                 key: const ValueKey('profile-edit'),
                                 onPressed: onEditProfile,
                                 icon: const Icon(Icons.edit_outlined, size: 15),
-                                label: const Text('Editar'),
+                                label: const Text('Editar', maxLines: 1),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: Colors.white,
                                   side: BorderSide(

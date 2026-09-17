@@ -27,14 +27,11 @@ class SupabaseStoryService extends LocalStoryService {
   Future<List<Story>> restoreOwnStories() async {
     final currentUserId = _currentUserId;
     if (currentUserId == null) return [];
-    final rows = await _client
-        .from('stories')
-        .select(_storySelect)
-        .eq('author_id', currentUserId)
-        .filter('deleted_at', 'is', null)
-        .gt('expires_at', _nowIso())
-        .order('created_at', ascending: false)
-        .limit(40);
+    final rows = await _restoreStoryRows(
+      authorIds: [currentUserId],
+      limit: 40,
+      ownOnly: true,
+    );
     return _storiesFromRows(rows.cast<Map<String, dynamic>>());
   }
 
@@ -44,15 +41,42 @@ class SupabaseStoryService extends LocalStoryService {
   }) async {
     final currentUserId = _currentUserId;
     if (currentUserId == null || followingIds.isEmpty) return [];
-    final rows = await _client
-        .from('stories')
-        .select(_storySelect)
-        .inFilter('author_id', followingIds.toList())
-        .filter('deleted_at', 'is', null)
-        .gt('expires_at', _nowIso())
-        .order('created_at', ascending: false)
-        .limit(80);
+    final rows = await _restoreStoryRows(
+      authorIds: followingIds.toList(),
+      limit: 80,
+    );
     return _storiesFromRows(rows.cast<Map<String, dynamic>>());
+  }
+
+  Future<List<dynamic>> _restoreStoryRows({
+    required List<String> authorIds,
+    required int limit,
+    bool ownOnly = false,
+  }) async {
+    Future<List<dynamic>> query(String select) async {
+      final base = _client.from('stories').select(select);
+      final rows = ownOnly
+          ? await base
+                .eq('author_id', authorIds.single)
+                .filter('deleted_at', 'is', null)
+                .gt('expires_at', _nowIso())
+                .order('created_at', ascending: false)
+                .limit(limit)
+          : await base
+                .inFilter('author_id', authorIds)
+                .filter('deleted_at', 'is', null)
+                .gt('expires_at', _nowIso())
+                .order('created_at', ascending: false)
+                .limit(limit);
+      return rows;
+    }
+
+    try {
+      return await query(_storySelect);
+    } catch (error) {
+      if (!_isMissingAudienceSchema(error)) rethrow;
+      return query(_legacyStorySelect);
+    }
   }
 
   @override
@@ -77,35 +101,59 @@ class SupabaseStoryService extends LocalStoryService {
       );
     }
 
-    final insertedStory = await _client
-        .from('stories')
-        .insert({
-          'author_id': authUser.id,
-          'title': draft.title,
-          'detail': draft.detail,
-          'text': draft.text,
-          'music': draft.music,
-          'music_asset': draft.musicAsset,
-          'content_type': draft.type.name,
-          'duration_seconds': _durationForDraft(draft),
-          'visual_filter': draft.visualFilter.name,
-          'background_colors': draft.backgroundColors
-              .map((color) => color.toARGB32())
-              .toList(),
-          'elements': draft.elements.map(_elementToJson).toList(),
-          'media_transform': _transformFor(draft),
-          'audience_type': draft.audienceType.storageValue,
-          if (draft.sharedContentType.isNotEmpty)
-            'shared_content_type': draft.sharedContentType,
-          if (draft.sharedContentId.isNotEmpty)
-            'shared_content_id': draft.sharedContentId,
-          'expires_at': DateTime.now()
-              .toUtc()
-              .add(_storyLifetime)
-              .toIso8601String(),
-        })
-        .select('id,created_at')
-        .single();
+    final insertPayload = {
+      'author_id': authUser.id,
+      'title': draft.title,
+      'detail': draft.detail,
+      'text': draft.text,
+      'music': draft.music,
+      'music_asset': draft.musicAsset,
+      'content_type': draft.type.name,
+      'duration_seconds': _durationForDraft(draft),
+      'visual_filter': draft.visualFilter.name,
+      'background_colors': draft.backgroundColors
+          .map((color) => color.toARGB32())
+          .toList(),
+      'elements': draft.elements.map(_elementToJson).toList(),
+      'media_transform': _transformFor(draft),
+      'audience_type': draft.audienceType.storageValue,
+      if (draft.sharedContentType.isNotEmpty)
+        'shared_content_type': draft.sharedContentType,
+      if (draft.sharedContentId.isNotEmpty)
+        'shared_content_id': draft.sharedContentId,
+      'expires_at': DateTime.now()
+          .toUtc()
+          .add(_storyLifetime)
+          .toIso8601String(),
+    };
+
+    late final Map<String, dynamic> insertedStory;
+    try {
+      insertedStory = await _client
+          .from('stories')
+          .insert(insertPayload)
+          .select('id,created_at')
+          .single();
+    } catch (error) {
+      // The audience/repost migration is optional in older environments. A
+      // default followers story can still use the original schema safely.
+      if (draft.audienceType == StoryAudienceType.followers &&
+          draft.sharedContentType.isEmpty &&
+          draft.sharedContentId.isEmpty &&
+          _isMissingAudienceSchema(error)) {
+        try {
+          insertedStory = await _client
+              .from('stories')
+              .insert(_legacyInsertPayload(insertPayload))
+              .select('id,created_at')
+              .single();
+        } catch (legacyError) {
+          throw _publishError(legacyError);
+        }
+      } else {
+        throw _publishError(error);
+      }
+    }
 
     final storyId = insertedStory['id'] as String;
     _StoredStoryMedia? storedMedia;
@@ -192,33 +240,27 @@ class SupabaseStoryService extends LocalStoryService {
           'Elegí al menos una persona para Mejores amigos.',
         );
       }
-      await _client.from('close_friends').upsert(
-        draft.audienceUserIds
-            .where((id) => id.isNotEmpty && id != ownerId)
-            .map(
-              (friendId) => {
-                'owner_id': ownerId,
-                'friend_id': friendId,
-              },
-            )
-            .toList(growable: false),
-        onConflict: 'owner_id,friend_id',
-      );
+      await _client
+          .from('close_friends')
+          .upsert(
+            draft.audienceUserIds
+                .where((id) => id.isNotEmpty && id != ownerId)
+                .map((friendId) => {'owner_id': ownerId, 'friend_id': friendId})
+                .toList(growable: false),
+            onConflict: 'owner_id,friend_id',
+          );
       return;
     }
     if (draft.audienceType == StoryAudienceType.include ||
         draft.audienceType == StoryAudienceType.exclude) {
-      await _client.from('story_audience_users').insert(
-        draft.audienceUserIds
-            .where((id) => id.isNotEmpty && id != ownerId)
-            .map(
-              (userId) => {
-                'story_id': storyId,
-                'user_id': userId,
-              },
-            )
-            .toList(growable: false),
-      );
+      await _client
+          .from('story_audience_users')
+          .insert(
+            draft.audienceUserIds
+                .where((id) => id.isNotEmpty && id != ownerId)
+                .map((userId) => {'story_id': storyId, 'user_id': userId})
+                .toList(growable: false),
+          );
     }
   }
 
@@ -751,6 +793,46 @@ class SupabaseStoryService extends LocalStoryService {
       'expires_at,created_at,'
       'profiles:author_id(id,name,username,avatar_asset,avatar_url,fandom),'
       'story_media(id,media_type,storage_bucket,storage_path,public_url,sort_order,transform)';
+
+  static const _legacyStorySelect =
+      'id,author_id,title,detail,text,music,music_asset,content_type,'
+      'duration_seconds,visual_filter,background_colors,elements,'
+      'media_transform,expires_at,created_at,'
+      'profiles:author_id(id,name,username,avatar_asset,avatar_url,fandom),'
+      'story_media(id,media_type,storage_bucket,storage_path,public_url,sort_order,transform)';
+
+  static Map<String, dynamic> _legacyInsertPayload(
+    Map<String, dynamic> payload,
+  ) {
+    return Map<String, dynamic>.from(payload)
+      ..remove('audience_type')
+      ..remove('shared_content_type')
+      ..remove('shared_content_id');
+  }
+
+  static bool _isMissingAudienceSchema(Object error) {
+    if (error is! supabase.PostgrestException) return false;
+    final text = '${error.code} ${error.message} ${error.details} ${error.hint}'
+        .toLowerCase();
+    return (text.contains('audience_type') ||
+            text.contains('shared_content_type') ||
+            text.contains('shared_content_id')) &&
+        (text.contains('column') ||
+            text.contains('schema cache') ||
+            error.code == '42703');
+  }
+
+  static StoryServiceException _publishError(Object error) {
+    debugPrint('STORY_PUBLISH_DB_ERROR $error');
+    if (_isMissingAudienceSchema(error)) {
+      return const StoryServiceException(
+        'La privacidad avanzada de historias requiere una actualización pendiente de Supabase. Elegí Seguidores para publicar ahora.',
+      );
+    }
+    return const StoryServiceException(
+      'No pudimos guardar la historia. Revisá conexión e intentá otra vez.',
+    );
+  }
 }
 
 class _StoredStoryMedia {

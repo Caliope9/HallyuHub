@@ -101,7 +101,8 @@ class _KpopEntityProfileScreenState extends State<KpopEntityProfileScreen> {
         contentType: ProfileContentType.post,
         entityId: widget.entity.id,
       );
-      final posts = postIds.isEmpty && !widget.artistTagService.usesRealArtistTags
+      final posts =
+          postIds.isEmpty && !widget.artistTagService.usesRealArtistTags
           ? await widget.postService.restorePosts(limit: 24)
           : await widget.postService.restorePostsByIds(
               postIds,
@@ -484,9 +485,14 @@ class _KpopEntityProfileScreenState extends State<KpopEntityProfileScreen> {
     // Editorial news has its own section and must never be mixed into the
     // social/community publication stream below.
     final socialPosts = _posts
-        .where((post) => SharedNewsPostContent.fromCaption(post.caption).news == null)
+        .where(
+          (post) =>
+              SharedNewsPostContent.fromCaption(post.caption).news == null,
+        )
         .toList(growable: false);
-    final filteredPosts = socialPosts.where(_matchesFilter).toList(growable: false);
+    final filteredPosts = socialPosts
+        .where(_matchesFilter)
+        .toList(growable: false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -669,7 +675,9 @@ class _KpopEntityProfileScreenState extends State<KpopEntityProfileScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SharedNewsPostCard(news: news),
-          if (SharedNewsPostContent.fromCaption(post.caption).comment.isNotEmpty)
+          if (SharedNewsPostContent.fromCaption(
+            post.caption,
+          ).comment.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(6, 6, 6, 8),
               child: Text(
@@ -761,7 +769,6 @@ class _KpopEntityProfileScreenState extends State<KpopEntityProfileScreen> {
       },
     );
   }
-
 }
 
 class _EntityHeader extends StatelessWidget {
@@ -960,17 +967,27 @@ class _EntityHeaderScrim extends StatelessWidget {
   }
 }
 
-class _EntityImageCredit extends StatelessWidget {
+class _EntityImageCredit extends StatefulWidget {
   const _EntityImageCredit({required this.entity});
 
   final KpopEntity entity;
 
   @override
+  State<_EntityImageCredit> createState() => _EntityImageCreditState();
+}
+
+class _EntityImageCreditState extends State<_EntityImageCredit> {
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
     final details = <String>[
-      if (entity.imageSource.trim().isNotEmpty) entity.imageSource.trim(),
-      if (entity.imageLicense.trim().isNotEmpty) entity.imageLicense.trim(),
-      if (entity.attribution.trim().isNotEmpty) entity.attribution.trim(),
+      if (widget.entity.imageSource.trim().isNotEmpty)
+        widget.entity.imageSource.trim(),
+      if (widget.entity.imageLicense.trim().isNotEmpty)
+        widget.entity.imageLicense.trim(),
+      if (widget.entity.attribution.trim().isNotEmpty)
+        widget.entity.attribution.trim(),
     ];
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -978,24 +995,45 @@ class _EntityImageCredit extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppTheme.cyan.withValues(alpha: .18)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Padding(
-              padding: EdgeInsets.only(top: 1),
-              child: Icon(Icons.photo_camera_back_outlined,
-                  color: AppTheme.cyan, size: 16),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Crédito de imagen\n${details.join(' · ')}',
-                style: const TextStyle(color: Colors.white70, fontSize: 11),
+      child: InkWell(
+        key: const ValueKey('entity-image-credit'),
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => setState(() => _expanded = !_expanded),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.photo_camera_back_outlined,
+                    color: AppTheme.cyan,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Crédito de imagen',
+                      style: TextStyle(color: Colors.white70, fontSize: 11),
+                    ),
+                  ),
+                  Icon(
+                    _expanded ? Icons.expand_less : Icons.expand_more,
+                    color: Colors.white60,
+                    size: 18,
+                  ),
+                ],
               ),
-            ),
-          ],
+              if (_expanded) ...[
+                const SizedBox(height: 7),
+                Text(
+                  details.join(' · '),
+                  style: const TextStyle(color: Colors.white70, fontSize: 11),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
