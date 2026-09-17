@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import '../data/demo_data.dart';
 import '../models.dart';
 import '../screens/camera_capture_screen.dart';
+import '../screens/discover_people_screen.dart';
 import '../screens/kpop_entity_profile_screen.dart';
 import '../screens/post_editor_screen.dart';
 import '../screens/public_profile_screen.dart';
@@ -581,6 +582,27 @@ class _HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute<void>(
         builder: (context) => PublicProfileScreen(
           profile: profile,
+          currentUser: widget.user,
+          followService: widget.followService,
+          postService: widget.postService,
+          storyService: widget.storyService,
+          dropService: widget.dropService,
+          fancamService: widget.fancamService,
+          chatService: widget.chatService,
+          contentCategoryService: widget.contentCategoryService,
+          userTagService: widget.userTagService,
+          artistTagService: widget.artistTagService,
+          safetyService: widget.safetyService,
+          storeProfileService: widget.storeProfileService,
+        ),
+      ),
+    );
+  }
+
+  void _openDiscoverPeople() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => DiscoverPeopleScreen(
           currentUser: widget.user,
           followService: widget.followService,
           postService: widget.postService,
@@ -1420,6 +1442,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 realMode: widget.followService.usesRealProfiles,
                 onOpen: _openSuggestion,
                 onFollow: _toggleSuggestionFollow,
+                onViewAll: _openDiscoverPeople,
               ),
             ),
             if (widget.followService.usesRealProfiles &&
@@ -1598,9 +1621,15 @@ class _NeonAtmosphere extends StatelessWidget {
 }
 
 class _HomeSectionHeader extends StatelessWidget {
-  const _HomeSectionHeader({required this.title});
+  const _HomeSectionHeader({
+    required this.title,
+    this.actionLabel,
+    this.onAction,
+  });
 
   final String title;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -1616,6 +1645,21 @@ class _HomeSectionHeader extends StatelessWidget {
             ),
           ),
         ),
+        if (actionLabel != null && onAction != null)
+          TextButton(
+            key: ValueKey('home-section-action-$title'),
+            onPressed: onAction,
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.cyan,
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              minimumSize: const Size(44, 44),
+              tapTargetSize: MaterialTapTargetSize.padded,
+            ),
+            child: Text(
+              actionLabel!,
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+          ),
       ],
     );
   }
@@ -2050,6 +2094,7 @@ class _SuggestedProfilesRail extends StatelessWidget {
     required this.realMode,
     required this.onOpen,
     required this.onFollow,
+    required this.onViewAll,
   });
 
   final List<CommunityProfile> profiles;
@@ -2057,6 +2102,7 @@ class _SuggestedProfilesRail extends StatelessWidget {
   final bool realMode;
   final ValueChanged<CommunityProfile> onOpen;
   final ValueChanged<CommunityProfile> onFollow;
+  final VoidCallback onViewAll;
 
   @override
   Widget build(BuildContext context) {
@@ -2068,7 +2114,11 @@ class _SuggestedProfilesRail extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _HomeSectionHeader(title: 'Fans para descubrir'),
+        _HomeSectionHeader(
+          title: 'Fans para descubrir',
+          actionLabel: 'Ver todos',
+          onAction: onViewAll,
+        ),
         const SizedBox(height: 7),
         if (visibleProfiles.isEmpty)
           const _EmptyInlinePanel(
