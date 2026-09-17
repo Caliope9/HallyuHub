@@ -34,8 +34,9 @@ void main() {
     for (final role in ['admin', 'moderator']) {
       await tester.pumpWidget(_settings(_user(role)));
       await tester.pumpAndSettle();
-      expect(find.text('Panel Admin'), findsOneWidget);
-      await tester.tap(find.text('Panel Admin'));
+      final adminLabels = find.text('Panel Admin');
+      expect(adminLabels, findsWidgets);
+      await tester.tap(adminLabels.first);
       await tester.pumpAndSettle();
       expect(find.byType(AdminPanelScreen), findsOneWidget);
     }

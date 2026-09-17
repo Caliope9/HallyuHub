@@ -245,12 +245,25 @@ void main() {
     final sql = File(
       'docs/supabase_google_play_ugc_hardening_v1_review.sql',
     ).readAsStringSync();
+    final teenPrivacySql = File(
+      'docs/supabase_safety_age_deletion_v1_3.sql',
+    ).readAsStringSync();
     expect(sql, contains('hallyu_moderate_report_v1'));
     expect(sql, contains('hallyu_admin_set_enforcement_v1'));
-    expect(sql, contains('hallyu_enforce_teen_privacy_v1'));
     expect(sql, contains('hallyu_users_blocked_v1'));
     expect(sql, contains('as restrictive'));
     expect(sql, isNot(contains('service_role')));
+
+    // Teen privacy authority lives in the current v1.3 safety migration,
+    // rather than under the legacy function name formerly checked here.
+    expect(teenPrivacySql, contains('hallyu_age_years_v1_3'));
+    expect(teenPrivacySql, contains('hallyu_validate_profile_security_v1_3'));
+    expect(teenPrivacySql, contains('profiles_validate_security_v1_3'));
+    expect(teenPrivacySql, contains("between 16 and 17"));
+    expect(teenPrivacySql, contains('new.private_profile:=true'));
+    expect(teenPrivacySql, contains("new.message_privacy:='Seguidores'"));
+    expect(teenPrivacySql, contains("new.story_privacy:='Seguidores'"));
+    expect(teenPrivacySql, contains('revoke select (birth_date'));
   });
 
   test('account deletion worker covers retained PII and relationships', () {

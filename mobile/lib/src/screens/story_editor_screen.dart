@@ -672,35 +672,32 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                 ),
                 const SizedBox(height: 8),
                 RadioGroup<StoryAudienceType>(
-  groupValue: pendingType,
-  onChanged: (value) {
-    if (value == null) return;
-
-    if (value == StoryAudienceType.publicAudience &&
-        !_publicAudienceAllowed) {
-      return;
-    }
-
-    setSheetState(() => pendingType = value);
-  },
-  child: Column(
-    children: [
-      for (final audience in StoryAudienceType.values)
-        RadioListTile<StoryAudienceType>(
-          value: audience,
-          enabled:
-              audience != StoryAudienceType.publicAudience ||
-              _publicAudienceAllowed,
-          title: Text(audience.label),
-          subtitle:
-              audience == StoryAudienceType.publicAudience &&
-                  !_publicAudienceAllowed
-              ? const Text('No disponible para este perfil.')
-              : null,
-        ),
-    ],
-  ),
-),
+                  groupValue: pendingType,
+                  onChanged: (value) {
+                    if (value == null) return;
+                    if (value == StoryAudienceType.publicAudience &&
+                        !_publicAudienceAllowed) {
+                      return;
+                    }
+                    setSheetState(() => pendingType = value);
+                  },
+                  child: Column(
+                    children: [
+                      for (final audience in StoryAudienceType.values)
+                        RadioListTile<StoryAudienceType>(
+                          value: audience,
+                          enabled: audience != StoryAudienceType.publicAudience ||
+                              _publicAudienceAllowed,
+                          title: Text(audience.label),
+                          subtitle:
+                              audience == StoryAudienceType.publicAudience &&
+                                  !_publicAudienceAllowed
+                              ? const Text('No disponible para este perfil.')
+                              : null,
+                        ),
+                    ],
+                  ),
+                ),
                 if (pendingType == StoryAudienceType.closeFriends ||
                     pendingType == StoryAudienceType.exclude ||
                     pendingType == StoryAudienceType.include) ...[
