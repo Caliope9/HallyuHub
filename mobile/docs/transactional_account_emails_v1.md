@@ -29,15 +29,26 @@ La función también requiere los secretos backend ya existentes:
 
 ## Notificaciones nativas de Supabase Auth
 
-Supabase Auth ya contempla las notificaciones de seguridad
-`password_changed` y `email_changed`. HallyuHub no envía una segunda copia
-desde `account-email-events`: las plantillas nativas sugeridas están preparadas
-en `supabase/templates/password_changed_notification.html` y
+Supabase Auth contempla y puede enviar las notificaciones de seguridad
+`password_changed` y `email_changed`. Son el camino elegido para estos dos
+eventos: HallyuHub no los reenvía desde `account-email-events`, evitando
+duplicados. Las plantillas están preparadas en
+`supabase/templates/password_changed_notification.html` y
 `supabase/templates/email_changed_notification.html`.
+
+La notificación `email_changed` usa las variables nativas `{{ .OldEmail }}` y
+`{{ .Email }}` para informar el cambio al destinatario previsto por Supabase.
+El template de contraseña no inventa una fecha: Auth no expone una variable de
+timestamp para ese template. El texto dice “recientemente” para no presentar
+una hora falsa.
 
 Estas notificaciones se envían después de que Supabase Auth confirma el cambio.
 Si se activa un Send Email Hook global, debe manejar también esos tipos nativos
 y reemplazar el envío incorporado; no se deben activar ambos caminos a la vez.
+En un proyecto hosted, `config.toml` sirve como referencia/local config: la
+configuración efectiva de templates y security notifications debe verificarse
+en Authentication → Email Templates / Security Notifications o mediante la
+Management API, sin poner secretos en este repositorio.
 
 ## Activación pendiente en Supabase
 
@@ -58,7 +69,9 @@ Configurar:
 El webhook debe incluir `type`, `table`, el registro (`record`) y, para
 updates, el registro anterior (`old_record`). No se guardan cuerpos de email ni
 datos sensibles como logs de aplicación. Resend recibe únicamente el
-destinatario y los datos mínimos para personalizar el mensaje.
+destinatario y los datos mínimos para personalizar el mensaje. El webhook no
+debe configurarse para eventos `password_changed` o `email_changed`, porque
+esos ya quedan cubiertos por Auth nativo.
 
 ## Idempotencia y fallos
 
