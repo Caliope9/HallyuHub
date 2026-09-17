@@ -671,23 +671,36 @@ class _StoryEditorScreenState extends State<StoryEditorScreen> {
                   subtitle: 'La privacidad del perfil y las reglas de edad siempre tienen prioridad.',
                 ),
                 const SizedBox(height: 8),
-                for (final audience in StoryAudienceType.values)
-                  RadioListTile<StoryAudienceType>(
-                    value: audience,
-                    groupValue: pendingType,
-                    onChanged: audience == StoryAudienceType.publicAudience &&
-                            !_publicAudienceAllowed
-                        ? null
-                        : (value) {
-                            if (value == null) return;
-                            setSheetState(() => pendingType = value);
-                          },
-                    title: Text(audience.label),
-                    subtitle: audience == StoryAudienceType.publicAudience &&
-                            !_publicAudienceAllowed
-                        ? const Text('No disponible para este perfil.')
-                        : null,
-                  ),
+                RadioGroup<StoryAudienceType>(
+  groupValue: pendingType,
+  onChanged: (value) {
+    if (value == null) return;
+
+    if (value == StoryAudienceType.publicAudience &&
+        !_publicAudienceAllowed) {
+      return;
+    }
+
+    setSheetState(() => pendingType = value);
+  },
+  child: Column(
+    children: [
+      for (final audience in StoryAudienceType.values)
+        RadioListTile<StoryAudienceType>(
+          value: audience,
+          enabled:
+              audience != StoryAudienceType.publicAudience ||
+              _publicAudienceAllowed,
+          title: Text(audience.label),
+          subtitle:
+              audience == StoryAudienceType.publicAudience &&
+                  !_publicAudienceAllowed
+              ? const Text('No disponible para este perfil.')
+              : null,
+        ),
+    ],
+  ),
+),
                 if (pendingType == StoryAudienceType.closeFriends ||
                     pendingType == StoryAudienceType.exclude ||
                     pendingType == StoryAudienceType.include) ...[
