@@ -40,6 +40,20 @@ String? _registrationAgeErrorMessage(String message) {
   return null;
 }
 
+void _validateAccountPassword(String password) {
+  if (password.length < 8) {
+    throw const AuthException(
+      'La contraseña debe tener al menos 8 caracteres.',
+    );
+  }
+}
+
+void _validateAccountEmail(String email) {
+  if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+    throw const AuthException('Usa un email válido.');
+  }
+}
+
 abstract class AuthService {
   Future<AuthUser?> restoreSession();
 
@@ -65,6 +79,10 @@ abstract class AuthService {
   Future<void> savePrivateProfile(bool privateProfile);
 
   Future<void> saveLegalAcceptance(AuthUser user);
+
+  Future<void> changePassword({required String newPassword});
+
+  Future<void> requestEmailChange({required String newEmail});
 
   Future<BetaAccessState> ensureBetaAccess(AuthUser user);
 
@@ -239,6 +257,36 @@ class LocalAuthService implements AuthService {
 
   @override
   Future<void> saveLegalAcceptance(AuthUser user) => saveUser(user);
+
+  @override
+  Future<void> changePassword({required String newPassword}) async {
+    _validateAccountPassword(newPassword);
+    final preferences = await SharedPreferences.getInstance();
+    final session = preferences.getString(_sessionKey);
+    if (session == null) {
+      throw const AuthException('Necesitás iniciar sesión.');
+    }
+    final current = _userFromJson(jsonDecode(session) as Map<String, dynamic>);
+    final accounts = _readAccounts(preferences);
+    final index = accounts.indexWhere(
+      (entry) =>
+          (_userFromJson(entry['user'] as Map<String, dynamic>)).email ==
+          current.email,
+    );
+    if (index < 0) throw const AuthException('No encontramos tu cuenta local.');
+    accounts[index] = {
+      ...accounts[index],
+      'passwordHash': _hashPassword(newPassword),
+    };
+    await preferences.setString(_accountsKey, jsonEncode(accounts));
+  }
+
+  @override
+  Future<void> requestEmailChange({required String newEmail}) async {
+    throw const AuthException(
+      'El cambio de email requiere una cuenta conectada a Supabase.',
+    );
+  }
 
   @override
   Future<BetaAccessState> ensureBetaAccess(AuthUser user) async {
@@ -555,6 +603,43 @@ class SupabaseAuthService implements AuthService {
   }
 
   @override
+  Future<void> changePassword({required String newPassword}) async {
+    _validateAccountPassword(newPassword);
+    final authUser = _client.auth.currentUser;
+    if (authUser == null) {
+      throw const AuthException('Necesitás iniciar sesión.');
+    }
+    try {
+      await _client.auth.updateUser(
+        supabase.UserAttributes(password: newPassword),
+      );
+    } on supabase.AuthException catch (error) {
+      throw _accountSecurityExceptionFor(error);
+    } catch (_) {
+      throw const AuthException('No pudimos actualizar tu contraseña.');
+    }
+  }
+
+  @override
+  Future<void> requestEmailChange({required String newEmail}) async {
+    final authUser = _client.auth.currentUser;
+    if (authUser == null) {
+      throw const AuthException('Necesitás iniciar sesión.');
+    }
+    final normalizedEmail = newEmail.trim().toLowerCase();
+    _validateAccountEmail(normalizedEmail);
+    try {
+      await _client.auth.updateUser(
+        supabase.UserAttributes(email: normalizedEmail),
+      );
+    } on supabase.AuthException catch (error) {
+      throw _accountSecurityExceptionFor(error);
+    } catch (_) {
+      throw const AuthException('No pudimos iniciar el cambio de email.');
+    }
+  }
+
+  @override
   Future<void> savePrivateProfile(bool privateProfile) async {
     final authUser = _client.auth.currentUser;
     if (authUser == null) {
@@ -843,7 +928,37 @@ class SupabaseAuthService implements AuthService {
       return fallback;
     }
     debugPrint('LOGIN_PROFILE_QUERY_OK user_id=${user.id}');
-    return _userFromProfile(profile, user.email ?? '');
+    final confirmedProfile = await _syncConfirmedEmail(
+      userId: user.id,
+      profile: profile,
+      authEmail: user.email,
+    );
+    return _userFromProfile(confirmedProfile, user.email ?? '');
+  }
+
+  Future<Map<String, dynamic>> _syncConfirmedEmail({
+    required String userId,
+    required Map<String, dynamic> profile,
+    required String? authEmail,
+  }) async {
+    final normalizedAuthEmail = authEmail?.trim().toLowerCase();
+    final profileEmail = profile['email'];
+    if (normalizedAuthEmail == null ||
+        normalizedAuthEmail.isEmpty ||
+        profileEmail is! String ||
+        profileEmail.trim().toLowerCase() == normalizedAuthEmail) {
+      return profile;
+    }
+    try {
+      await _client
+          .from('profiles')
+          .update({'email': normalizedAuthEmail})
+          .eq('id', userId);
+      return {...profile, 'email': normalizedAuthEmail};
+    } catch (error) {
+      debugPrint('PROFILE_EMAIL_SYNC_ERROR user_id=$userId error=$error');
+      return profile;
+    }
   }
 
   Future<AuthUser> _profileForWithRetry(
@@ -1149,6 +1264,36 @@ class SupabaseAuthService implements AuthService {
         'No pudimos guardar la privacidad del perfil. Probá de nuevo.',
       );
     }
+  }
+
+  AuthException _accountSecurityExceptionFor(supabase.AuthException error) {
+    final message = error.message.toLowerCase();
+    final code = (error.code ?? '').toLowerCase();
+    if (code.contains('reauth') ||
+        message.contains('reauth') ||
+        message.contains('recent authentication')) {
+      return const AuthException(
+        'Por seguridad, volvé a iniciar sesión y probá nuevamente.',
+      );
+    }
+    if (code.contains('same') || message.contains('same password')) {
+      return const AuthException('Elegí una contraseña diferente.');
+    }
+    if (code.contains('email_exists') ||
+        code.contains('already') ||
+        message.contains('already registered') ||
+        message.contains('already exists')) {
+      return const AuthException('Ese email ya está registrado.');
+    }
+    if (error is supabase.AuthRetryableFetchException ||
+        message.contains('network') ||
+        message.contains('failed to fetch') ||
+        message.contains('connection')) {
+      return const AuthException('No pudimos conectar. Probá de nuevo.');
+    }
+    return const AuthException(
+      'No pudimos completar el cambio de seguridad. Probá de nuevo.',
+    );
   }
 
   AuthException _signInAuthExceptionFor(supabase.AuthException error) {
