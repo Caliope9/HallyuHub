@@ -2047,7 +2047,7 @@ class _SuggestedProfilesRail extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _HomeSectionHeader(title: 'Fans para descubrir'),
-        const SizedBox(height: 10),
+        const SizedBox(height: 7),
         if (visibleProfiles.isEmpty)
           const _EmptyInlinePanel(
             key: ValueKey('home-real-profiles-empty'),
@@ -2056,12 +2056,12 @@ class _SuggestedProfilesRail extends StatelessWidget {
           )
         else
           SizedBox(
-            height: 286,
+            height: 72,
             child: ListView.separated(
               key: const ValueKey('home-suggested-profiles'),
               scrollDirection: Axis.horizontal,
               itemCount: visibleProfiles.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 10),
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final profile = visibleProfiles[index];
                 return _SuggestedProfileCard(
@@ -2125,182 +2125,133 @@ class _SuggestedProfileCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final username = profile.username.trim();
     final visibleUsername = username.isEmpty
-        ? ''
+        ? reason
         : username.startsWith('@')
         ? username
         : '@$username';
-    final fandom = profile.fandom.trim();
-    final country = profile.country.trim();
+
     final avatarColors = profile.colors.length >= 2
         ? profile.colors
         : const [AppTheme.rose, AppTheme.violet, AppTheme.cyan];
 
     return SizedBox(
-      width: 178,
-      child: InkWell(
-        key: ValueKey('home-suggestion-open-${profile.id}'),
-        onTap: onOpen,
-        borderRadius: BorderRadius.circular(22),
-        child: Ink(
-          padding: const EdgeInsets.fromLTRB(14, 16, 14, 14),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                avatarColors.first.withValues(alpha: 0.16),
-                AppTheme.panelRaised.withValues(alpha: 0.98),
-                const Color(0xFF070B16),
-              ],
+      width: 252,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          key: ValueKey('home-suggestion-open-${profile.id}'),
+          onTap: onOpen,
+          borderRadius: BorderRadius.circular(18),
+          child: Ink(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 10,
+              vertical: 8,
             ),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: avatarColors.last.withValues(alpha: 0.52),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: avatarColors.first.withValues(alpha: 0.14),
-                blurRadius: 24,
-                offset: const Offset(0, 12),
+            decoration: BoxDecoration(
+              color: AppTheme.panelRaised.withValues(alpha: 0.76),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: avatarColors.first.withValues(alpha: 0.26),
               ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      avatarColors.first,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [
+                        avatarColors.first,
+                        AppTheme.violet,
+                        avatarColors.last,
+                      ],
+                    ),
+                  ),
+                  child: HubAvatar(
+                    asset: profile.avatarAsset,
+                    size: 44,
+                    isLive: profile.online,
+                    fallbackLabel: profile.name,
+                    fallbackColors: [
+                      avatarColors.first.withValues(alpha: 0.88),
                       AppTheme.violet,
-                      avatarColors.last,
+                      avatarColors.last.withValues(alpha: 0.9),
                     ],
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: avatarColors.first.withValues(alpha: 0.28),
-                      blurRadius: 16,
-                    ),
-                  ],
                 ),
-                child: HubAvatar(
-                  asset: profile.avatarAsset,
-                  size: 76,
-                  isLive: profile.online,
-                  fallbackLabel: profile.name,
-                  fallbackColors: [
-                    avatarColors.first.withValues(alpha: 0.88),
-                    AppTheme.violet,
-                    avatarColors.last.withValues(alpha: 0.9),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                profile.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              if (visibleUsername.isNotEmpty) ...[
-                const SizedBox(height: 2),
-                Text(
-                  visibleUsername,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.5),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 8),
-              if (fandom.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: avatarColors.first.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
-                      color: avatarColors.first.withValues(alpha: 0.62),
-                    ),
-                  ),
-                  child: Text(
-                    fandom.toUpperCase(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: avatarColors.last,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              const Spacer(),
-              if (country.isNotEmpty) ...[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.location_on_outlined,
-                      size: 14,
-                      color: Colors.white.withValues(alpha: 0.5),
-                    ),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        country,
+                const SizedBox(width: 10),
+
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        profile.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        visibleUsername,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.56),
-                          fontSize: 11,
+                          color: Colors.white.withValues(alpha: 0.5),
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 10),
+
+                const SizedBox(width: 8),
+
+                SizedBox(
+                  height: 34,
+                  child: OutlinedButton(
+                    key: ValueKey(
+                      'home-suggestion-follow-${profile.id}',
+                    ),
+                    onPressed: onFollow,
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: following
+                          ? AppTheme.cyan.withValues(alpha: 0.12)
+                          : Colors.white.withValues(alpha: 0.04),
+                      foregroundColor: Colors.white,
+                      side: BorderSide(
+                        color: following
+                            ? AppTheme.cyan.withValues(alpha: 0.72)
+                            : avatarColors.first.withValues(alpha: 0.62),
+                      ),
+                      minimumSize: const Size(76, 34),
+                      padding: const EdgeInsets.symmetric(horizontal: 11),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                    child: Text(
+                      following ? 'Siguiendo' : 'Seguir',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
               ],
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  key: ValueKey('home-suggestion-follow-${profile.id}'),
-                  onPressed: onFollow,
-                  icon: Icon(
-                    following ? Icons.check_rounded : Icons.person_add_alt_1,
-                    size: 17,
-                  ),
-                  label: Text(following ? 'Siguiendo' : 'Seguir'),
-                  style: OutlinedButton.styleFrom(
-                    backgroundColor: following
-                        ? AppTheme.cyan.withValues(alpha: 0.12)
-                        : Colors.black.withValues(alpha: 0.16),
-                    foregroundColor: Colors.white,
-                    side: BorderSide(
-                      color: following
-                          ? AppTheme.cyan.withValues(alpha: 0.78)
-                          : avatarColors.first.withValues(alpha: 0.82),
-                    ),
-                    visualDensity: VisualDensity.compact,
-                    minimumSize: const Size(0, 38),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
