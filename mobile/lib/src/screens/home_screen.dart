@@ -1380,83 +1380,105 @@ class _HomeScreenState extends State<HomeScreen> {
         ListView(
           key: const ValueKey('home-feed-scroll'),
           controller: _scrollController,
-          padding: const EdgeInsets.fromLTRB(14, 2, 14, 18),
+          padding: const EdgeInsets.fromLTRB(0, 2, 0, 18),
           children: [
-            _StoriesRail(
-              ownStories: _ownStories,
-              ownAvatarAsset: (widget.user ?? _fallbackPostAuthor).avatarAsset,
-              followingStories: _orderedFollowingStories,
-              viewedStoryIds: _viewedStoryIds,
-              onCreate: _openCreateContentSheet,
-              onOpenOwn: _openOwnStories,
-              onOpen: _openStory,
-              onSeeAll: _orderedFollowingStories.isEmpty
-                  ? null
-                  : () => _openStory(_orderedFollowingStories.first),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: _StoriesRail(
+                ownStories: _ownStories,
+                ownAvatarAsset:
+                    (widget.user ?? _fallbackPostAuthor).avatarAsset,
+                followingStories: _orderedFollowingStories,
+                viewedStoryIds: _viewedStoryIds,
+                onCreate: _openCreateContentSheet,
+                onOpenOwn: _openOwnStories,
+                onOpen: _openStory,
+                onSeeAll: _orderedFollowingStories.isEmpty
+                    ? null
+                    : () => _openStory(_orderedFollowingStories.first),
+              ),
             ),
             if (activeReminder != null) ...[
               const SizedBox(height: 8),
-              _HomeReminderCard(
-                reminder: activeReminder,
-                onTap: () => _openHomeFeature(
-                  activeReminder.label,
-                  activeReminder.title,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: _HomeReminderCard(
+                  reminder: activeReminder,
+                  onTap: () => _openHomeFeature(
+                    activeReminder.label,
+                    activeReminder.title,
+                  ),
                 ),
               ),
             ],
             const SizedBox(height: 16),
-            _SuggestedProfilesRail(
-              profiles: _suggestedProfiles,
-              followedProfiles: _followedSuggestions,
-              realMode: widget.followService.usesRealProfiles,
-              onOpen: _openSuggestion,
-              onFollow: _toggleSuggestionFollow,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: _SuggestedProfilesRail(
+                profiles: _suggestedProfiles,
+                followedProfiles: _followedSuggestions,
+                realMode: widget.followService.usesRealProfiles,
+                onOpen: _openSuggestion,
+                onFollow: _toggleSuggestionFollow,
+              ),
             ),
             if (widget.followService.usesRealProfiles &&
                 _followedSuggestions.isEmpty) ...[
               const SizedBox(height: 10),
-              const _EmptyInlinePanel(
-                key: ValueKey('home-real-feed-empty'),
-                text: 'Seguí fans para ver sus publicaciones en tu inicio.',
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 14),
+                child: _EmptyInlinePanel(
+                  key: ValueKey('home-real-feed-empty'),
+                  text: 'Seguí fans para ver sus publicaciones en tu inicio.',
+                ),
               ),
             ],
             const SizedBox(height: 20),
-            const _HomeSectionHeader(title: 'Para ti'),
-            const SizedBox(height: 10),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 14),
+              child: _HomeSectionHeader(title: 'Para ti'),
+            ),
+            const SizedBox(height: 8),
             ...feedPosts.map(
-              (post) => _PostCard(
-                post: post,
-                liked: _likedPosts.contains(post.id),
-                saved: _savedPosts.contains(post.id),
-                shared: _sharedPosts.contains(post.id),
-                likesLabel: _countWithDelta(
-                  post.likes,
-                  (_likedPosts.contains(post.id) ? 1 : 0) -
-                      (post.likedByCurrentUser ? 1 : 0),
+              (post) => Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 720),
+                  child: _PostCard(
+                    post: post,
+                    liked: _likedPosts.contains(post.id),
+                    saved: _savedPosts.contains(post.id),
+                    shared: _sharedPosts.contains(post.id),
+                    likesLabel: _countWithDelta(
+                      post.likes,
+                      (_likedPosts.contains(post.id) ? 1 : 0) -
+                          (post.likedByCurrentUser ? 1 : 0),
+                    ),
+                    commentsLabel: _countWithDelta(
+                      post.comments,
+                      _commentAdditions[post.id] ?? 0,
+                    ),
+                    sharesLabel: _countWithDelta(
+                      post.shares,
+                      _sharedPosts.contains(post.id) ? 1 : 0,
+                    ),
+                    savesLabel: _countWithDelta(
+                      post.saves,
+                      (_savedPosts.contains(post.id) ? 1 : 0) -
+                          (post.savedByCurrentUser ? 1 : 0),
+                    ),
+                    onLike: () => _toggleLike(post),
+                    onComment: () => _openComments(post),
+                    onShare: () => _openShare(post),
+                    onSave: () => _toggleSave(post),
+                    onOpenProfile: () => _openProfile(post),
+                    onOpenTaggedPerson: _openTaggedUsername,
+                    onOpenTaggedEntity: _openKpopEntity,
+                    onMore: () => _openMoreActions(post),
+                    videosMuted: _videosMuted,
+                    onToggleVideoSound: _toggleVideoSound,
+                  ),
                 ),
-                commentsLabel: _countWithDelta(
-                  post.comments,
-                  _commentAdditions[post.id] ?? 0,
-                ),
-                sharesLabel: _countWithDelta(
-                  post.shares,
-                  _sharedPosts.contains(post.id) ? 1 : 0,
-                ),
-                savesLabel: _countWithDelta(
-                  post.saves,
-                  (_savedPosts.contains(post.id) ? 1 : 0) -
-                      (post.savedByCurrentUser ? 1 : 0),
-                ),
-                onLike: () => _toggleLike(post),
-                onComment: () => _openComments(post),
-                onShare: () => _openShare(post),
-                onSave: () => _toggleSave(post),
-                onOpenProfile: () => _openProfile(post),
-                onOpenTaggedPerson: _openTaggedUsername,
-                onOpenTaggedEntity: _openKpopEntity,
-                onMore: () => _openMoreActions(post),
-                videosMuted: _videosMuted,
-                onToggleVideoSound: _toggleVideoSound,
               ),
             ),
             if (_feedLoading || _feedHasMore) const _FeedLoader(),
@@ -2143,10 +2165,7 @@ class _SuggestedProfileCard extends StatelessWidget {
           onTap: onOpen,
           borderRadius: BorderRadius.circular(18),
           child: Ink(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 10,
-              vertical: 8,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
               color: AppTheme.panelRaised.withValues(alpha: 0.76),
               borderRadius: BorderRadius.circular(18),
@@ -2219,9 +2238,7 @@ class _SuggestedProfileCard extends StatelessWidget {
                 SizedBox(
                   height: 34,
                   child: OutlinedButton(
-                    key: ValueKey(
-                      'home-suggestion-follow-${profile.id}',
-                    ),
+                    key: ValueKey('home-suggestion-follow-${profile.id}'),
                     onPressed: onFollow,
                     style: OutlinedButton.styleFrom(
                       backgroundColor: following

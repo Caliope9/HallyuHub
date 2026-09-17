@@ -80,7 +80,7 @@ class HallyuPostCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(4, 2, 2, 10),
+              padding: const EdgeInsets.fromLTRB(14, 2, 2, 8),
               child: Row(
                 children: [
                   Semantics(
@@ -168,7 +168,7 @@ class HallyuPostCard extends StatelessWidget {
               )
             else
               ClipRRect(
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(6),
                 child: _HallyuPostMediaStage(
                   post: post,
                   child: Stack(
@@ -208,7 +208,7 @@ class HallyuPostCard extends StatelessWidget {
                   ),
                 ),
               ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 8),
             _HallyuPostGlassActionBar(
               children: [
                 _HallyuPostAction(
@@ -265,7 +265,7 @@ class HallyuPostCard extends StatelessWidget {
               ],
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(4, 7, 4, 18),
+              padding: const EdgeInsets.fromLTRB(14, 4, 14, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -410,8 +410,10 @@ class _HallyuPostMediaStage extends StatelessWidget {
           math.max(viewport.height * 0.7, 320.0),
           620.0,
         );
-        final preferredHeight = post.hasVideoMedia ? width / (9 / 16) : width;
-        final height = math.min(math.max(preferredHeight, 280.0), maxHeight);
+        final preferredHeight = post.hasVideoMedia
+            ? width / (16 / 9)
+            : width / (4 / 5);
+        final height = math.min(math.max(preferredHeight, 240.0), maxHeight);
 
         return SizedBox(width: double.infinity, height: height, child: child);
       },
