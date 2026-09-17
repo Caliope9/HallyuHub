@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../models.dart';
+import '../services/local_safety_service.dart';
 import '../theme/app_theme.dart';
 import 'hub_avatar.dart';
+import 'safety_report_sheet.dart';
 
 typedef CommentSubmitCallback =
     Future<PostComment> Function(String body, String parentId);
@@ -21,6 +23,8 @@ class CommentsSheet extends StatefulWidget {
     this.onDeleteComment,
     this.onOpenAuthor,
     this.onCommentsRemoved,
+    this.safetyService = const LocalSafetyService(),
+    this.reportContentType = 'comment',
     this.currentUserName = 'Tu perfil',
     this.currentUsername = '@mika.hallyu',
     this.currentUserAvatar = 'assets/demo-users/user-01.jpg',
@@ -35,6 +39,8 @@ class CommentsSheet extends StatefulWidget {
   final CommentDeleteCallback? onDeleteComment;
   final CommentAuthorCallback? onOpenAuthor;
   final ValueChanged<int>? onCommentsRemoved;
+  final LocalSafetyService safetyService;
+  final String reportContentType;
   final String currentUserName;
   final String currentUsername;
   final String currentUserAvatar;
@@ -240,6 +246,24 @@ class _CommentsSheetState extends State<CommentsSheet> {
     widget.onChanged([..._comments]);
   }
 
+  Future<void> _reportComment(PostComment comment) async {
+    final sent = await showSafetyReportSheet(
+      context: context,
+      safetyService: widget.safetyService,
+      contentType: widget.reportContentType,
+      contentId: comment.id,
+      reportedUserId: comment.authorId,
+      title: comment.parentId.isEmpty
+          ? 'Reportar comentario'
+          : 'Reportar respuesta',
+      metadata: {'thread_id': widget.threadId},
+    );
+    if (!mounted || !sent) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Gracias. Recibimos tu reporte.')),
+    );
+  }
+
   void _startReply(String commentId, PostComment comment) {
     setState(() {
       _replyTarget = _ReplyTarget(
@@ -380,6 +404,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
                           onLike: _toggleLike,
                           onReply: _startReply,
                           onDelete: _deleteComment,
+                          onReport: _reportComment,
                           onOpenAuthor: widget.onOpenAuthor,
                         ),
                       ),
@@ -508,6 +533,7 @@ class _CommentTile extends StatelessWidget {
     required this.onLike,
     required this.onReply,
     required this.onDelete,
+    required this.onReport,
     this.onOpenAuthor,
     this.depth = 0,
   });
@@ -520,6 +546,7 @@ class _CommentTile extends StatelessWidget {
   final ValueChanged<String> onLike;
   final void Function(String commentId, PostComment comment) onReply;
   final void Function(String commentId, PostComment comment) onDelete;
+  final ValueChanged<PostComment> onReport;
   final CommentAuthorCallback? onOpenAuthor;
   final int depth;
 
@@ -588,6 +615,14 @@ class _CommentTile extends StatelessWidget {
                         color: Colors.white.withValues(alpha: 0.5),
                         tooltip: 'Eliminar comentario',
                       ),
+                    if (!comment.isOwn)
+                      IconButton(
+                        key: ValueKey('comment-report-$commentId'),
+                        onPressed: () => onReport(comment),
+                        icon: const Icon(Icons.flag_outlined),
+                        color: Colors.white.withValues(alpha: 0.5),
+                        tooltip: 'Reportar',
+                      ),
                   ],
                 ),
                 Text(
@@ -647,6 +682,7 @@ class _CommentTile extends StatelessWidget {
                       onLike: onLike,
                       onReply: onReply,
                       onDelete: onDelete,
+                      onReport: onReport,
                       onOpenAuthor: onOpenAuthor,
                       depth: depth + 1,
                     ),

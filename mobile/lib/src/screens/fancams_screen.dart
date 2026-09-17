@@ -522,6 +522,8 @@ class _FancamsScreenState extends State<FancamsScreen> {
         currentUserName: _fancamAuthor.name,
         currentUsername: _fancamAuthor.username,
         currentUserAvatar: _fancamAuthor.avatarAsset,
+        safetyService: widget.safetyService,
+        reportContentType: 'fancam_comment',
         onSubmitComment: (body, parentId) => widget.fancamService.addComment(
           author: _fancamAuthor,
           fancamId: key,

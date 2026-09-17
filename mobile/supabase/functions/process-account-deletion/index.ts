@@ -9,7 +9,7 @@ const admin = createClient(url, serviceRole, { auth: { persistSession: false, au
 
 type RequestRow = { id: string; user_id: string | null; status: string; requested_at: string; recoverable_until: string | null; processing_token: string | null; audit_fk_on_delete?: string }
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-const BUCKETS = ['avatars', 'post_media', 'story_media', 'drop_media', 'fancam_media', 'collection_media'] as const
+const BUCKETS = ['avatars', 'post_media', 'story_media', 'drop_media', 'fancam_media', 'collection_media', 'message_media', 'feedback_attachments'] as const
 
 async function updateOwned(table: string, values: Record<string, unknown>, column: string, userId: string) {
   const { error } = await admin.from(table).update(values).eq(column, userId)
@@ -123,6 +123,15 @@ export async function processOne(requestId: string) {
     await touchLease(request.id, token)
     await deleteOwned('follows', 'following_id', userId)
     await deleteOwned('user_blocks', 'blocked_id', userId)
+    await deleteOwned('content_user_tags', 'tagged_by', userId)
+    await deleteOwned('content_user_tags', 'tagged_user_id', userId)
+    await deleteOwned('community_messages', 'sender_id', userId)
+    await deleteOwned('community_members', 'user_id', userId)
+    await updateOwned('communities', { owner_id: null, updated_at: now }, 'owner_id', userId)
+    // Conversation rows contain participant metadata. Removing either side
+    // cascades its messages and memberships before the profile disappears.
+    await deleteOwned('conversations', 'created_by', userId)
+    await deleteOwned('conversations', 'recipient_id', userId)
     await deleteOwned('notifications', 'recipient_id', userId)
     await deleteOwned('notifications', 'actor_id', userId)
     await deleteOwned('comments', 'author_id', userId)
@@ -131,6 +140,16 @@ export async function processOne(requestId: string) {
     // Retain report content/reason/status as audit, but remove each user link independently.
     await updateOwned('content_reports', { reporter_id: null }, 'reporter_id', userId)
     await updateOwned('content_reports', { reported_user_id: null }, 'reported_user_id', userId)
+    await updateOwned('feedback_reports', {
+      user_id: null,
+      email: null,
+      device_info: null,
+      attachment_url: null,
+      updated_at: now,
+    }, 'user_id', userId)
+    await deleteOwned('beta_access', 'user_id', userId)
+    await updateOwned('artist_suggestions', { suggested_by: null, updated_at: now }, 'suggested_by', userId)
+    await updateOwned('kpop_entity_suggestions', { suggested_by: null }, 'suggested_by', userId)
     await touchLease(request.id, token)
     await removeOwnedStorage(userId)
     // profiles.id -> auth.users.id is ON DELETE CASCADE in the deployed schema.

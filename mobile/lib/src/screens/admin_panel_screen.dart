@@ -357,6 +357,61 @@ class _AdminContentReportsPanelScreenState
     }
   }
 
+  Future<void> _enforce(ContentReport report, String status) async {
+    if (report.reportedUserId.isEmpty) return;
+    final controller = TextEditingController();
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Aplicar ${_enforcementLabel(status)}'),
+        content: TextField(
+          controller: controller,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            labelText: 'Motivo obligatorio',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = controller.text.trim();
+              if (value.isNotEmpty) Navigator.of(context).pop(value);
+            },
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (reason == null || !mounted) return;
+    try {
+      await widget.moderationService.enforceUser(
+        userId: report.reportedUserId,
+        status: status,
+        reason: reason,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${_enforcementLabel(status)} aplicada.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is ContentModerationException
+                ? error.message
+                : 'No pudimos aplicar la medida.',
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!widget.user.canAccessAdminPanel) {
@@ -426,6 +481,7 @@ class _AdminContentReportsPanelScreenState
                             report: report,
                             onStatus: (status) => _update(report, status),
                             onHide: () => _hide(report),
+                            onEnforce: (status) => _enforce(report, status),
                           );
                         },
                       ),
@@ -443,11 +499,13 @@ class _ReportCard extends StatelessWidget {
     required this.report,
     required this.onStatus,
     required this.onHide,
+    required this.onEnforce,
   });
 
   final ContentReport report;
   final ValueChanged<String> onStatus;
   final VoidCallback onHide;
+  final ValueChanged<String> onEnforce;
 
   @override
   Widget build(BuildContext context) {
@@ -519,6 +577,25 @@ class _ReportCard extends StatelessWidget {
                 ],
               ],
             ),
+            if (report.reportedUserId.isNotEmpty &&
+                (report.status == 'pending' || report.status == 'reviewing'))
+              Wrap(
+                spacing: 8,
+                children: [
+                  TextButton(
+                    onPressed: () => onEnforce('restricted'),
+                    child: const Text('Restringir usuario'),
+                  ),
+                  TextButton(
+                    onPressed: () => onEnforce('suspended'),
+                    child: const Text('Suspender usuario'),
+                  ),
+                  TextButton(
+                    onPressed: () => onEnforce('banned'),
+                    child: const Text('Banear usuario'),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
@@ -560,6 +637,13 @@ String _reportStatusLabel(String status) {
   };
 }
 
+String _enforcementLabel(String status) => switch (status) {
+  'restricted' => 'restricción',
+  'suspended' => 'suspensión',
+  'banned' => 'ban',
+  _ => status,
+};
+
 const _moderatableContentTypes = <String>{
   'post',
   'drop',
@@ -568,6 +652,9 @@ const _moderatableContentTypes = <String>{
   'drop_comment',
   'fancam_comment',
   'story',
+  'direct_message',
+  'community',
+  'community_message',
 };
 
 class _AdminAccessDenied extends StatelessWidget {

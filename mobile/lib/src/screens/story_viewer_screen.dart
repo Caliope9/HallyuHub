@@ -10,6 +10,7 @@ import '../services/local_drop_service.dart';
 import '../services/local_fancam_service.dart';
 import '../services/local_follow_service.dart';
 import '../services/local_post_service.dart';
+import '../services/local_safety_service.dart';
 import '../services/local_story_service.dart';
 import '../services/share_links.dart';
 import '../services/story_audio_controller.dart';
@@ -19,6 +20,7 @@ import '../widgets/hub_avatar.dart';
 import '../widgets/share_sheet.dart';
 import '../widgets/story_canvas.dart';
 import '../widgets/story_stats_sheet.dart';
+import '../widgets/safety_report_sheet.dart';
 
 class StoryViewerScreen extends StatefulWidget {
   const StoryViewerScreen({
@@ -38,6 +40,7 @@ class StoryViewerScreen extends StatefulWidget {
     this.dropService = const LocalDropService(),
     this.fancamService = const LocalFancamService(),
     this.chatService = const LocalChatService(),
+    this.safetyService = const LocalSafetyService(),
   });
 
   final List<Story> stories;
@@ -55,6 +58,7 @@ class StoryViewerScreen extends StatefulWidget {
   final LocalDropService dropService;
   final LocalFancamService fancamService;
   final LocalChatService chatService;
+  final LocalSafetyService safetyService;
 
   @override
   State<StoryViewerScreen> createState() => _StoryViewerScreenState();
@@ -341,6 +345,21 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
     ).whenComplete(_resume);
   }
 
+  Future<void> _reportStory() async {
+    _pause();
+    final sent = await showSafetyReportSheet(
+      context: context,
+      safetyService: widget.safetyService,
+      contentType: 'story',
+      contentId: _story.id,
+      reportedUserId: _story.authorId,
+      title: 'Reportar historia',
+    );
+    if (!mounted) return;
+    if (sent) _showSnack('Gracias. Recibimos tu reporte.');
+    _resume();
+  }
+
   Future<void> _deleteOwnStory() async {
     final onDelete = widget.onDelete;
     if (onDelete == null) return;
@@ -609,6 +628,13 @@ class _StoryViewerScreenState extends State<StoryViewerScreen>
                           icon: const Icon(Icons.share_outlined),
                           color: Colors.white,
                           tooltip: 'Compartir historia',
+                        ),
+                        IconButton(
+                          key: const ValueKey('story-report'),
+                          onPressed: _reportStory,
+                          icon: const Icon(Icons.flag_outlined),
+                          color: Colors.white,
+                          tooltip: 'Reportar',
                         ),
                       ],
                     ),

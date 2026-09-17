@@ -374,6 +374,8 @@ class _DropsScreenState extends State<DropsScreen> {
         currentUserName: _dropAuthor.name,
         currentUsername: _dropAuthor.username,
         currentUserAvatar: _dropAuthor.avatarAsset,
+        safetyService: widget.safetyService,
+        reportContentType: 'drop_comment',
         onSubmitComment: (body, parentId) => widget.dropService.addComment(
           author: _dropAuthor,
           dropId: id,

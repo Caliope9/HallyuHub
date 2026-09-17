@@ -485,6 +485,8 @@ class _HomeScreenState extends State<HomeScreen> {
         currentUsername: widget.user?.username ?? '@mika.hallyu',
         currentUserAvatar:
             widget.user?.avatarAsset ?? 'assets/demo-users/user-01.jpg',
+        safetyService: widget.safetyService,
+        reportContentType: 'comment',
         onSubmitComment: servicePost
             ? (body, parentId) => widget.postService.addComment(
                 author: widget.user ?? _fallbackPostAuthor,
@@ -789,6 +791,7 @@ class _HomeScreenState extends State<HomeScreen> {
           dropService: widget.dropService,
           fancamService: widget.fancamService,
           chatService: widget.chatService,
+          safetyService: widget.safetyService,
         ),
       ),
     );

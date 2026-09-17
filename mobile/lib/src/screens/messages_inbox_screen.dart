@@ -18,6 +18,7 @@ import '../theme/app_theme.dart';
 import '../widgets/hub_avatar.dart';
 import '../widgets/hally_feature_tip.dart';
 import '../widgets/post_video_player.dart';
+import '../widgets/safety_report_sheet.dart';
 import 'public_profile_screen.dart';
 
 class MessagesInboxScreen extends StatefulWidget {
@@ -1800,6 +1801,20 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
     );
   }
 
+  Future<void> _reportMessage(DirectMessage message) async {
+    final sent = await showSafetyReportSheet(
+      context: context,
+      safetyService: widget.safetyService,
+      contentType: 'direct_message',
+      contentId: message.id,
+      reportedUserId: widget.profile.id,
+      title: 'Reportar mensaje',
+      metadata: {'conversation_profile_id': widget.profile.id},
+    );
+    if (!mounted || !sent) return;
+    _showSnack('Gracias. Recibimos tu reporte.');
+  }
+
   void _showSnack(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -1880,8 +1895,12 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
                     controller: _scrollController,
                     padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
                     itemCount: messages.length,
-                    itemBuilder: (context, index) =>
-                        _MessageBubble(message: messages[index]),
+                    itemBuilder: (context, index) => _MessageBubble(
+                      message: messages[index],
+                      onReport: messages[index].isOwn
+                          ? null
+                          : () => _reportMessage(messages[index]),
+                    ),
                   ),
           ),
           SafeArea(
@@ -2252,9 +2271,10 @@ class _VideoPreviewPlaceholder extends StatelessWidget {
 }
 
 class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({required this.message});
+  const _MessageBubble({required this.message, this.onReport});
 
   final DirectMessage message;
+  final VoidCallback? onReport;
 
   @override
   Widget build(BuildContext context) {
@@ -2310,6 +2330,20 @@ class _MessageBubble extends StatelessWidget {
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
+                ),
+              ),
+            if (onReport != null)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  key: ValueKey('dm-report-${message.id}'),
+                  onPressed: onReport,
+                  icon: const Icon(Icons.flag_outlined, size: 16),
+                  label: const Text('Reportar'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white70,
+                    visualDensity: VisualDensity.compact,
+                  ),
                 ),
               ),
           ],

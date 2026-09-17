@@ -21,6 +21,7 @@ class CommunityChatMessageTile extends StatelessWidget {
     required this.timeLabel,
     required this.isCurrentUser,
     this.onOpenProfile,
+    this.onReport,
   });
 
   final CommunityProfile? profile;
@@ -28,6 +29,7 @@ class CommunityChatMessageTile extends StatelessWidget {
   final String timeLabel;
   final bool isCurrentUser;
   final ValueChanged<CommunityProfile>? onOpenProfile;
+  final VoidCallback? onReport;
 
   @override
   Widget build(BuildContext context) {
@@ -102,6 +104,17 @@ class CommunityChatMessageTile extends StatelessWidget {
                         fontSize: 11,
                       ),
                     ),
+                    if (onReport != null)
+                      IconButton(
+                        key: ValueKey(
+                          'community-message-report-${profile?.id ?? 'unknown'}',
+                        ),
+                        onPressed: onReport,
+                        icon: const Icon(Icons.flag_outlined, size: 17),
+                        color: Colors.white54,
+                        tooltip: 'Reportar',
+                        visualDensity: VisualDensity.compact,
+                      ),
                   ],
                 ),
                 const SizedBox(height: 5),

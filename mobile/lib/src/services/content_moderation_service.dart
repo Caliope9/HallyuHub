@@ -49,6 +49,13 @@ abstract class ContentModerationService {
   });
 
   Future<bool> isPubliclyVisible(ContentReport report);
+
+  Future<void> enforceUser({
+    required String userId,
+    required String status,
+    required String reason,
+    DateTime? until,
+  });
 }
 
 class ContentModerationException implements Exception {
@@ -95,6 +102,18 @@ class LocalContentModerationService implements ContentModerationService {
       'La moderación requiere conexión con Supabase.',
     );
   }
+
+  @override
+  Future<void> enforceUser({
+    required String userId,
+    required String status,
+    required String reason,
+    DateTime? until,
+  }) async {
+    throw const ContentModerationException(
+      'La moderación requiere conexión con Supabase.',
+    );
+  }
 }
 
 /// Prevents the Admin panel from presenting local/demo data as a real inbox.
@@ -129,6 +148,16 @@ class UnavailableContentModerationService implements ContentModerationService {
 
   @override
   Future<bool> isPubliclyVisible(ContentReport report) async {
+    throw const ContentModerationException(_message);
+  }
+
+  @override
+  Future<void> enforceUser({
+    required String userId,
+    required String status,
+    required String reason,
+    DateTime? until,
+  }) async {
     throw const ContentModerationException(_message);
   }
 }
@@ -229,20 +258,16 @@ class SupabaseContentModerationService implements ContentModerationService {
       throw const ContentModerationException('Estado de reporte inválido.');
     }
     try {
-      final row = await _client
-          .from('content_reports')
-          .update({
-            'status': status,
-            'reviewer_id': _client.auth.currentUser?.id,
-            'reviewed_at': DateTime.now().toUtc().toIso8601String(),
-            'resolution_action': resolutionAction.trim().isEmpty
-                ? null
-                : resolutionAction.trim(),
-            'resolution_note': resolutionNote.trim(),
-          })
-          .eq('id', id)
-          .select(_select)
-          .single();
+      final result = await _client.rpc(
+        'hallyu_moderate_report_v1',
+        params: {
+          'p_report_id': id,
+          'p_status': status,
+          'p_action': resolutionAction.trim(),
+          'p_note': resolutionNote.trim(),
+        },
+      );
+      final row = result is List ? result.first : result;
       return _fromRow(Map<String, dynamic>.from(row));
     } catch (error) {
       debugPrint('CONTENT_MODERATION_UPDATE_ERROR id=$id error=$error');
@@ -271,91 +296,19 @@ class SupabaseContentModerationService implements ContentModerationService {
     }
 
     try {
-      // Keep the table allow-list explicit. RLS decides whether this caller
-      // has the admin/moderator update permission for the target row.
-      switch (report.contentType.trim().toLowerCase()) {
-        case 'post':
-          await _client
-              .from('posts')
-              .update({
-                'status': 'deleted',
-                'deleted_at': DateTime.now().toUtc().toIso8601String(),
-                'updated_at': DateTime.now().toUtc().toIso8601String(),
-              })
-              .eq('id', contentId);
-        case 'drop':
-          await _client
-              .from('drops')
-              .update({
-                'status': 'deleted',
-                'deleted_at': DateTime.now().toUtc().toIso8601String(),
-                'updated_at': DateTime.now().toUtc().toIso8601String(),
-              })
-              .eq('id', contentId);
-        case 'fancam':
-          await _client
-              .from('fancams')
-              .update({
-                'status': 'deleted',
-                'deleted_at': DateTime.now().toUtc().toIso8601String(),
-                'updated_at': DateTime.now().toUtc().toIso8601String(),
-              })
-              .eq('id', contentId);
-        case 'comment':
-          await _client
-              .from('comments')
-              .update({
-                'deleted_at': DateTime.now().toUtc().toIso8601String(),
-                'updated_at': DateTime.now().toUtc().toIso8601String(),
-              })
-              .eq('id', contentId);
-        case 'drop_comment':
-          await _client
-              .from('drop_comments')
-              .update({
-                'deleted_at': DateTime.now().toUtc().toIso8601String(),
-                'updated_at': DateTime.now().toUtc().toIso8601String(),
-              })
-              .eq('id', contentId);
-        case 'fancam_comment':
-          await _client
-              .from('fancam_comments')
-              .update({
-                'deleted_at': DateTime.now().toUtc().toIso8601String(),
-                'updated_at': DateTime.now().toUtc().toIso8601String(),
-              })
-              .eq('id', contentId);
-        case 'story':
-          final now = DateTime.now().toUtc().toIso8601String();
-          await _client
-              .from('stories')
-              .update({
-                'deleted_at': now,
-                'archived_at': now,
-                'expires_at': now,
-                'updated_at': now,
-              })
-              .eq('id', contentId);
-        default:
-          throw const ContentModerationException(
-            'Este tipo de contenido todavía no admite ocultamiento seguro.',
-          );
-      }
-
-      if (await isPubliclyVisible(report)) {
-        throw const ContentModerationException(
-          'El contenido sigue visible; la denuncia no fue resuelta.',
-        );
-      }
-
-      final updated = await updateReport(
-        id: report.id,
-        status: 'resolved',
-        resolutionAction: 'hidden',
-        resolutionNote: reason.trim().isEmpty
-            ? 'Contenido ocultado por moderación.'
-            : reason.trim(),
+      final result = await _client.rpc(
+        'hallyu_moderate_report_v1',
+        params: {
+          'p_report_id': report.id,
+          'p_status': 'resolved',
+          'p_action': 'hidden',
+          'p_note': reason.trim().isEmpty
+              ? 'Contenido ocultado por moderación.'
+              : reason.trim(),
+        },
       );
+      final row = result is List ? result.first : result;
+      final updated = _fromRow(Map<String, dynamic>.from(row));
       debugPrint(
         'CONTENT_MODERATION_HIDE_OK type=${report.contentType} content=$contentId report=${report.id}',
       );
@@ -368,6 +321,34 @@ class SupabaseContentModerationService implements ContentModerationService {
       );
       throw const ContentModerationException(
         'No pudimos ocultar el contenido. Revisá permisos o conexión.',
+      );
+    }
+  }
+
+  @override
+  Future<void> enforceUser({
+    required String userId,
+    required String status,
+    required String reason,
+    DateTime? until,
+  }) async {
+    if (!const {'active', 'restricted', 'suspended', 'banned'}.contains(status)) {
+      throw const ContentModerationException('Medida de usuario inválida.');
+    }
+    try {
+      await _client.rpc(
+        'hallyu_admin_set_enforcement_v1',
+        params: {
+          'p_user_id': userId,
+          'p_status': status,
+          'p_until': until?.toUtc().toIso8601String(),
+          'p_reason': reason.trim(),
+        },
+      );
+    } catch (error) {
+      debugPrint('CONTENT_MODERATION_ENFORCEMENT_ERROR error=$error');
+      throw const ContentModerationException(
+        'No pudimos aplicar la medida al usuario.',
       );
     }
   }

@@ -27,6 +27,7 @@ import '../widgets/hally_feature_tip.dart';
 import '../widgets/licensed_discover_visual.dart';
 import '../widgets/premium_form_shell.dart';
 import '../widgets/shared_news_post_card.dart';
+import '../widgets/safety_report_sheet.dart';
 import 'discover_detail_screens.dart';
 import 'kpop_entity_profile_screen.dart';
 import 'post_editor_screen.dart';
@@ -390,7 +391,7 @@ class _SearchScreenState extends State<SearchScreen> {
       final rows = await client
           .from('communities')
           .select(
-            'id,name,country,region,city,fandom,description,privacy,status',
+            'id,owner_id,name,country,region,city,fandom,description,privacy,status',
           )
           .eq('status', 'active')
           .order('name', ascending: true);
@@ -441,7 +442,7 @@ class _SearchScreenState extends State<SearchScreen> {
       privacy: (row['privacy'] as String? ?? 'public') == 'private'
           ? 'Privada'
           : 'Pública',
-      createdBy: 'beta',
+      createdBy: row['owner_id'] as String? ?? '',
     );
   }
 
@@ -1545,6 +1546,7 @@ class _SearchScreenState extends State<SearchScreen> {
           community: community,
           initiallyJoined: _joinedCommunityIds.contains(community.id),
           followService: widget.followService,
+          safetyService: widget.safetyService,
           onOpenProfile: _openProfile,
           onMembershipChanged: () async {
             await _restoreRealDiscoverData();
@@ -8888,6 +8890,7 @@ class _BetaCommunityDetailView extends StatefulWidget {
     required this.community,
     required this.initiallyJoined,
     required this.followService,
+    required this.safetyService,
     required this.onOpenProfile,
     required this.onMembershipChanged,
   });
@@ -8895,6 +8898,7 @@ class _BetaCommunityDetailView extends StatefulWidget {
   final DiscoverCommunity community;
   final bool initiallyJoined;
   final LocalFollowService followService;
+  final LocalSafetyService safetyService;
   final ValueChanged<CommunityProfile> onOpenProfile;
   final Future<void> Function() onMembershipChanged;
 
@@ -9048,6 +9052,31 @@ class _BetaCommunityDetailViewState extends State<_BetaCommunityDetailView> {
     );
   }
 
+  Future<void> _reportCommunity() async {
+    final sent = await showSafetyReportSheet(
+      context: context,
+      safetyService: widget.safetyService,
+      contentType: 'community',
+      contentId: widget.community.id,
+      reportedUserId: widget.community.createdBy,
+      title: 'Reportar comunidad',
+    );
+    if (sent) _showLocalSnack('Gracias. Recibimos tu reporte.');
+  }
+
+  Future<void> _reportMessage(_CommunityMessage message) async {
+    final sent = await showSafetyReportSheet(
+      context: context,
+      safetyService: widget.safetyService,
+      contentType: 'community_message',
+      contentId: message.id,
+      reportedUserId: message.senderId,
+      title: 'Reportar mensaje',
+      metadata: {'community_id': widget.community.id},
+    );
+    if (sent) _showLocalSnack('Gracias. Recibimos tu reporte.');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -9116,6 +9145,13 @@ class _BetaCommunityDetailViewState extends State<_BetaCommunityDetailView> {
             ),
             if (!_joined)
               FilledButton(onPressed: _join, child: const Text('Unirme')),
+            IconButton(
+              key: const ValueKey('community-report'),
+              onPressed: _reportCommunity,
+              icon: const Icon(Icons.flag_outlined),
+              tooltip: 'Reportar comunidad',
+              color: Colors.white70,
+            ),
           ],
         ),
       ),
@@ -9167,6 +9203,9 @@ class _BetaCommunityDetailViewState extends State<_BetaCommunityDetailView> {
           timeLabel: message.clockLabel,
           isCurrentUser: message.senderId == currentUserId,
           onOpenProfile: widget.onOpenProfile,
+          onReport: message.senderId == currentUserId
+              ? null
+              : () => _reportMessage(message),
         );
       },
     );

@@ -751,6 +751,8 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         currentUserName: commenter.name,
         currentUsername: commenter.username,
         currentUserAvatar: commenter.avatarAsset,
+        safetyService: widget.safetyService,
+        reportContentType: 'comment',
         onSubmitComment: (body, parentId) => widget.postService.addComment(
           author: commenter,
           postId: post.id,
