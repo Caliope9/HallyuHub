@@ -14,6 +14,9 @@ class _SafetyFixture extends LocalSafetyService {
   final reports = <Map<String, Object?>>[];
 
   @override
+  Future<bool> isInteractionBlocked(String userId) async => false;
+
+  @override
   Future<void> reportContent({
     required String contentType,
     String contentId = '',
