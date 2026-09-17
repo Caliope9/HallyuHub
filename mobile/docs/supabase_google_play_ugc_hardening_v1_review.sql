@@ -30,15 +30,22 @@ declare
 begin
   for required_column in
     select * from (values
-      ('posts', 'author_id'), ('posts', 'status'), ('posts', 'updated_at'),
+      ('profiles', 'id'), ('profiles', 'birth_date'),
+      ('profiles', 'private_profile'), ('profiles', 'message_privacy'),
+      ('profiles', 'story_privacy'), ('profiles', 'enforcement_status'),
+      ('profiles', 'enforcement_until'), ('profiles', 'role'),
+      ('posts', 'author_id'), ('posts', 'status'), ('posts', 'deleted_at'),
+      ('posts', 'updated_at'),
       ('comments', 'content_type'), ('comments', 'content_id'),
-      ('comments', 'author_id'), ('comments', 'updated_at'),
+      ('comments', 'author_id'), ('comments', 'deleted_at'),
+      ('comments', 'updated_at'),
       ('drop_comments', 'drop_id'), ('drop_comments', 'author_id'),
-      ('drop_comments', 'updated_at'),
+      ('drop_comments', 'deleted_at'), ('drop_comments', 'updated_at'),
       ('fancam_comments', 'fancam_id'), ('fancam_comments', 'author_id'),
-      ('fancam_comments', 'updated_at'),
-      ('stories', 'author_id'), ('stories', 'expires_at'),
-      ('stories', 'archived_at'),
+      ('fancam_comments', 'deleted_at'), ('fancam_comments', 'updated_at'),
+      ('stories', 'author_id'), ('stories', 'deleted_at'),
+      ('stories', 'expires_at'), ('stories', 'archived_at'),
+      ('stories', 'updated_at'),
       ('drops', 'author_id'), ('drops', 'status'), ('drops', 'deleted_at'),
       ('drops', 'updated_at'),
       ('fancams', 'author_id'), ('fancams', 'status'),
@@ -67,20 +74,6 @@ begin
     end if;
   end loop;
 end;
-$$;
-
-create or replace function public.hallyu_is_admin_or_moderator_v1()
-returns boolean
-language sql
-stable
-security definer
-set search_path = pg_catalog, public
-as $$
-  select exists (
-    select 1 from public.profiles
-    where id = auth.uid()
-      and lower(coalesce(role, 'user')) in ('admin', 'moderator')
-  );
 $$;
 
 create or replace function public.hallyu_users_blocked_v1(p_left uuid, p_right uuid)
@@ -133,14 +126,12 @@ begin
 end;
 $$;
 
-revoke all on function public.hallyu_is_admin_or_moderator_v1() from public, anon, authenticated;
 revoke all on function public.hallyu_users_blocked_v1(uuid, uuid) from public, anon, authenticated;
 revoke all on function public.hallyu_conversation_blocked_v1(uuid) from public, anon, authenticated;
 revoke all on function public.hallyu_content_owner_v1(text, uuid) from public, anon, authenticated;
 grant execute on function public.hallyu_users_blocked_v1(uuid, uuid) to authenticated;
 grant execute on function public.hallyu_conversation_blocked_v1(uuid) to authenticated;
 grant execute on function public.hallyu_content_owner_v1(text, uuid) to authenticated;
-grant execute on function public.hallyu_is_admin_or_moderator_v1() to authenticated;
 
 -- Restrictive policies are ANDed with existing visibility/ownership policies.
 -- They do not broaden access and preserve anonymous public pages.
@@ -262,7 +253,7 @@ for select to authenticated
 using (
   status = 'active'
   or owner_id = auth.uid()
-  or public.hallyu_is_admin_or_moderator_v1()
+  or public.is_admin_or_moderator()
 );
 
 drop policy if exists "blocks restrict community membership" on public.community_members;
@@ -305,40 +296,9 @@ with check (
   )
 );
 
--- Teen settings are enforced on every relevant update, not only at signup.
-create or replace function public.hallyu_enforce_teen_privacy_v1()
-returns trigger
-language plpgsql
-security definer
-set search_path = pg_catalog, public
-as $$
-begin
-  if new.birth_date is null or new.birth_date > current_date then
-    raise exception 'valid_birth_date_required' using errcode = '22007';
-  end if;
-  if new.birth_date > (current_date - interval '16 years')::date then
-    raise exception 'minimum_age_16_required' using errcode = '23514';
-  end if;
-  if new.birth_date > (current_date - interval '18 years')::date then
-    new.private_profile := true;
-    new.message_privacy := 'Seguidores';
-    new.story_privacy := 'Seguidores';
-  end if;
-  return new;
-end;
-$$;
-
-drop trigger if exists profiles_enforce_teen_privacy_v1 on public.profiles;
-create trigger profiles_enforce_teen_privacy_v1
-before insert or update of birth_date, private_profile, message_privacy, story_privacy
-on public.profiles
-for each row execute function public.hallyu_enforce_teen_privacy_v1();
-
-revoke all on function public.hallyu_enforce_teen_privacy_v1() from public, anon, authenticated;
-
--- Suspended/banned/restricted accounts cannot bypass Flutter with direct API
--- writes. Deletes remain available so users can remove their own content.
-create or replace function public.hallyu_reject_enforced_ugc_writes_v1()
+-- The deployed v1.3 trigger already protects INSERT. Add only the missing
+-- UPDATE coverage, without creating a second INSERT enforcement trigger.
+create or replace function public.hallyu_reject_non_active_ugc_updates_v1_3()
 returns trigger
 language plpgsql
 security definer
@@ -348,48 +308,9 @@ begin
   if auth.uid() is not null and coalesce((
     select enforcement_status from public.profiles where id=auth.uid()
   ), 'banned') <> 'active' then
-    raise exception 'account_not_allowed_to_write_ugc' using errcode='42501';
+    raise exception 'account_not_allowed_to_update_ugc' using errcode='42501';
   end if;
   return new;
-end;
-$$;
-
--- Estas tablas no tenían un campo de ocultación documentado. Se agrega uno
--- explícitamente y con CHECK para que la moderación no dependa de columnas
--- inventadas ni de deleted_at.
-alter table public.comments
-  add column if not exists moderation_status text not null default 'active';
-alter table public.drop_comments
-  add column if not exists moderation_status text not null default 'active';
-alter table public.fancam_comments
-  add column if not exists moderation_status text not null default 'active';
-
-do $$
-begin
-  if not exists (
-    select 1 from pg_constraint
-    where conrelid = 'public.comments'::regclass
-      and conname = 'comments_moderation_status_v1_check'
-  ) then
-    alter table public.comments add constraint comments_moderation_status_v1_check
-      check (moderation_status in ('active', 'hidden')) not valid;
-  end if;
-  if not exists (
-    select 1 from pg_constraint
-    where conrelid = 'public.drop_comments'::regclass
-      and conname = 'drop_comments_moderation_status_v1_check'
-  ) then
-    alter table public.drop_comments add constraint drop_comments_moderation_status_v1_check
-      check (moderation_status in ('active', 'hidden')) not valid;
-  end if;
-  if not exists (
-    select 1 from pg_constraint
-    where conrelid = 'public.fancam_comments'::regclass
-      and conname = 'fancam_comments_moderation_status_v1_check'
-  ) then
-    alter table public.fancam_comments add constraint fancam_comments_moderation_status_v1_check
-      check (moderation_status in ('active', 'hidden')) not valid;
-  end if;
 end;
 $$;
 
@@ -402,18 +323,18 @@ begin
     'community_members', 'community_messages', 'content_user_tags'
   ] loop
     execute format(
-      'drop trigger if exists reject_enforced_ugc_writes_v1 on public.%I',
+      'drop trigger if exists reject_non_active_ugc_updates_v1_3 on public.%I',
       target_table
     );
     execute format(
-      'create trigger reject_enforced_ugc_writes_v1 before insert or update on public.%I for each row execute function public.hallyu_reject_enforced_ugc_writes_v1()',
+      'create trigger reject_non_active_ugc_updates_v1_3 before update on public.%I for each row execute function public.hallyu_reject_non_active_ugc_updates_v1_3()',
       target_table
     );
   end loop;
 end;
 $$;
 
-revoke all on function public.hallyu_reject_enforced_ugc_writes_v1() from public, anon, authenticated;
+revoke all on function public.hallyu_reject_non_active_ugc_updates_v1_3() from public, anon, authenticated;
 
 -- Moderation fields for UGC that did not previously support soft removal.
 alter table public.content_reports
@@ -458,15 +379,15 @@ for select to authenticated using (moderation_status = 'active');
 
 drop policy if exists "moderation hides comments" on public.comments;
 create policy "moderation hides comments" on public.comments as restrictive
-for select using (moderation_status = 'active');
+for select using (deleted_at is null);
 
 drop policy if exists "moderation hides drop comments" on public.drop_comments;
 create policy "moderation hides drop comments" on public.drop_comments as restrictive
-for select using (moderation_status = 'active');
+for select using (deleted_at is null);
 
 drop policy if exists "moderation hides fancam comments" on public.fancam_comments;
 create policy "moderation hides fancam comments" on public.fancam_comments as restrictive
-for select using (moderation_status = 'active');
+for select using (deleted_at is null);
 
 -- El worker anonimiza reporter_id antes de eliminar auth.users. La denuncia
 -- conserva id, timestamps, status, motivo, metadata y el usuario reportado;
@@ -474,7 +395,7 @@ for select using (moderation_status = 'active');
 do $$
 declare reporter_type text;
 begin
-  select data_type into reporter_type
+  select udt_name into reporter_type
   from information_schema.columns
   where table_schema = 'public'
     and table_name = 'content_reports'
@@ -485,6 +406,60 @@ begin
 end;
 $$;
 alter table public.content_reports alter column reporter_id drop not null;
+
+-- Reemplaza únicamente la FK reporter_id -> profiles(id), conservando la
+-- fila de auditoría cuando el usuario reportante sea eliminado.
+do $$
+declare
+  reporter_fk_name text;
+  reporter_fk_count integer;
+begin
+  select count(*) into reporter_fk_count
+  from pg_constraint c
+  join pg_attribute child
+    on child.attrelid = c.conrelid
+   and child.attnum = any(c.conkey)
+   and child.attname = 'reporter_id'
+  join pg_attribute parent
+    on parent.attrelid = c.confrelid
+   and parent.attnum = any(c.confkey)
+   and parent.attname = 'id'
+  where c.conrelid = 'public.content_reports'::regclass
+    and c.confrelid = 'public.profiles'::regclass
+    and c.contype = 'f';
+  if reporter_fk_count <> 1 then
+    raise exception 'expected exactly one content_reports.reporter_id -> profiles(id) FK';
+  end if;
+
+  select c.conname into reporter_fk_name
+  from pg_constraint c
+  join pg_attribute child
+    on child.attrelid = c.conrelid
+   and child.attnum = any(c.conkey)
+   and child.attname = 'reporter_id'
+  join pg_attribute parent
+    on parent.attrelid = c.confrelid
+   and parent.attnum = any(c.confkey)
+   and parent.attname = 'id'
+  where c.conrelid = 'public.content_reports'::regclass
+    and c.confrelid = 'public.profiles'::regclass
+    and c.contype = 'f';
+
+  if not exists (
+    select 1 from pg_constraint c
+    where c.conrelid = 'public.content_reports'::regclass
+      and c.conname = 'content_reports_reporter_id_profiles_set_null_fkey'
+      and c.confdeltype = 'n'
+  ) then
+    execute format(
+      'alter table public.content_reports drop constraint %I', reporter_fk_name
+    );
+    alter table public.content_reports
+      add constraint content_reports_reporter_id_profiles_set_null_fkey
+      foreign key (reporter_id) references public.profiles(id) on delete set null;
+  end if;
+end;
+$$;
 
 create table if not exists public.moderation_actions (
   id uuid primary key default gen_random_uuid(),
@@ -573,7 +548,7 @@ declare
   r public.content_reports;
   v_now timestamptz := now();
 begin
-  if not public.hallyu_is_admin_or_moderator_v1() then
+  if not public.is_admin_or_moderator() then
     raise exception 'moderator_required' using errcode = '42501';
   end if;
   if p_status not in ('pending', 'reviewing', 'resolved', 'dismissed') then
@@ -584,13 +559,13 @@ begin
 
   if p_action = 'hidden' then
     case lower(r.content_type)
-      when 'post' then update public.posts set status='deleted', updated_at=v_now where id=r.content_id;
+      when 'post' then update public.posts set status='deleted', deleted_at=coalesce(deleted_at, v_now), updated_at=v_now where id=r.content_id;
       when 'drop' then update public.drops set status='deleted', deleted_at=v_now, updated_at=v_now where id=r.content_id;
       when 'fancam' then update public.fancams set status='deleted', deleted_at=v_now, updated_at=v_now where id=r.content_id;
-      when 'comment' then update public.comments set moderation_status='hidden', updated_at=v_now where id=r.content_id;
-      when 'drop_comment' then update public.drop_comments set moderation_status='hidden', updated_at=v_now where id=r.content_id;
-      when 'fancam_comment' then update public.fancam_comments set moderation_status='hidden', updated_at=v_now where id=r.content_id;
-      when 'story' then update public.stories set archived_at=v_now, expires_at=v_now where id=r.content_id;
+      when 'comment' then update public.comments set deleted_at=coalesce(deleted_at, v_now), updated_at=v_now where id=r.content_id;
+      when 'drop_comment' then update public.drop_comments set deleted_at=coalesce(deleted_at, v_now), updated_at=v_now where id=r.content_id;
+      when 'fancam_comment' then update public.fancam_comments set deleted_at=coalesce(deleted_at, v_now), updated_at=v_now where id=r.content_id;
+      when 'story' then update public.stories set deleted_at=coalesce(deleted_at, v_now), archived_at=coalesce(archived_at, v_now), expires_at=v_now, updated_at=v_now where id=r.content_id;
       when 'direct_message' then update public.messages set moderation_status='hidden' where id=r.content_id;
       when 'community_message' then update public.community_messages set moderation_status='hidden' where id=r.content_id;
       when 'community' then update public.communities set status='moderated', updated_at=v_now where id=r.content_id;
@@ -630,7 +605,7 @@ security definer
 set search_path = pg_catalog, public
 as $$
 begin
-  if not public.hallyu_is_admin_or_moderator_v1() then
+  if not public.is_admin_or_moderator() then
     raise exception 'moderator_required' using errcode = '42501';
   end if;
   if p_user_id is null or p_user_id = auth.uid() then raise exception 'invalid_target_user'; end if;
