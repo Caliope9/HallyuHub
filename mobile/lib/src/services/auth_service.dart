@@ -865,7 +865,13 @@ class SupabaseAuthService implements AuthService {
   Future<Map<String, dynamic>?> _profileRow(String userId) async {
     try {
       final response = await _client.rpc('get_my_profile_settings');
-      if (response is Map) return response.cast<String, dynamic>();
+      if (response is Map) {
+        final row = response.cast<String, dynamic>();
+        if (row['role'] is String) return row;
+        debugPrint(
+          'PROFILE_SETTINGS_RPC_ROLE_MISSING fallback=profiles_select',
+        );
+      }
     } on supabase.PostgrestException catch (error) {
       final message = error.message.toLowerCase();
       final details = error.details.toString().toLowerCase();
