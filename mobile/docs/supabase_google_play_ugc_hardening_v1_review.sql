@@ -531,17 +531,17 @@ begin
       ('moderation_actions', 'action', 'text'),
       ('moderation_actions', 'reason', 'text'),
       ('moderation_actions', 'metadata', 'jsonb'),
-      ('moderation_actions', 'created_at', 'timestamp with time zone'),
+      ('moderation_actions', 'created_at', 'timestamptz'),
       ('user_enforcement_events', 'id', 'uuid'),
       ('user_enforcement_events', 'user_id', 'uuid'),
       ('user_enforcement_events', 'actor_id', 'uuid'),
       ('user_enforcement_events', 'status', 'text'),
       ('user_enforcement_events', 'reason', 'text'),
-      ('user_enforcement_events', 'enforcement_until', 'timestamp with time zone'),
-      ('user_enforcement_events', 'created_at', 'timestamp with time zone')
+      ('user_enforcement_events', 'enforcement_until', 'timestamptz'),
+      ('user_enforcement_events', 'created_at', 'timestamptz')
     ) as columns(table_name, column_name, expected_type)
   loop
-    select data_type into actual_type
+    select udt_name into actual_type
     from information_schema.columns
     where table_schema = 'public'
       and table_name = expected.table_name
