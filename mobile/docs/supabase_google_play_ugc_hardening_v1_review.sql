@@ -22,6 +22,53 @@ begin
 end;
 $$;
 
+-- Prechecks de columnas críticas. No se crean columnas implícitamente aquí:
+-- si el esquema base no coincide, la revisión se detiene con un error claro.
+do $$
+declare
+  required_column record;
+begin
+  for required_column in
+    select * from (values
+      ('posts', 'author_id'), ('posts', 'status'), ('posts', 'updated_at'),
+      ('comments', 'content_type'), ('comments', 'content_id'),
+      ('comments', 'author_id'), ('comments', 'updated_at'),
+      ('drop_comments', 'drop_id'), ('drop_comments', 'author_id'),
+      ('drop_comments', 'updated_at'),
+      ('fancam_comments', 'fancam_id'), ('fancam_comments', 'author_id'),
+      ('fancam_comments', 'updated_at'),
+      ('stories', 'author_id'), ('stories', 'expires_at'),
+      ('stories', 'archived_at'),
+      ('drops', 'author_id'), ('drops', 'status'), ('drops', 'deleted_at'),
+      ('drops', 'updated_at'),
+      ('fancams', 'author_id'), ('fancams', 'status'),
+      ('fancams', 'deleted_at'), ('fancams', 'updated_at'),
+      ('content_reports', 'id'), ('content_reports', 'reporter_id'),
+      ('content_reports', 'reported_user_id'), ('content_reports', 'content_type'),
+      ('content_reports', 'content_id'), ('content_reports', 'status'),
+      ('content_reports', 'reason'), ('content_reports', 'metadata'),
+      ('conversations', 'id'), ('conversations', 'created_by'),
+      ('conversations', 'recipient_id'),
+      ('messages', 'id'), ('messages', 'conversation_id'),
+      ('community_members', 'community_id'), ('community_members', 'user_id'),
+      ('community_messages', 'id'), ('community_messages', 'community_id'),
+      ('community_messages', 'sender_id'),
+      ('content_user_tags', 'tagged_by'), ('content_user_tags', 'tagged_user_id')
+    ) as columns(table_name, column_name)
+  loop
+    if not exists (
+      select 1 from information_schema.columns
+      where table_schema = 'public'
+        and table_name = required_column.table_name
+        and column_name = required_column.column_name
+    ) then
+      raise exception 'required column is missing: public.%.%',
+        required_column.table_name, required_column.column_name;
+    end if;
+  end loop;
+end;
+$$;
+
 create or replace function public.hallyu_is_admin_or_moderator_v1()
 returns boolean
 language sql
@@ -229,6 +276,19 @@ with check (
   )
 );
 
+drop policy if exists "blocks restrict community membership read" on public.community_members;
+create policy "blocks restrict community membership read" on public.community_members as restrictive
+for select to authenticated
+using (
+  not exists (
+    select 1
+    from public.communities c
+    where c.id = community_id
+      and public.hallyu_users_blocked_v1(auth.uid(), c.owner_id)
+  )
+  and not public.hallyu_users_blocked_v1(auth.uid(), user_id)
+);
+
 drop policy if exists "blocks restrict community messages read" on public.community_messages;
 create policy "blocks restrict community messages read" on public.community_messages as restrictive
 for select to authenticated
@@ -291,6 +351,45 @@ begin
     raise exception 'account_not_allowed_to_write_ugc' using errcode='42501';
   end if;
   return new;
+end;
+$$;
+
+-- Estas tablas no tenían un campo de ocultación documentado. Se agrega uno
+-- explícitamente y con CHECK para que la moderación no dependa de columnas
+-- inventadas ni de deleted_at.
+alter table public.comments
+  add column if not exists moderation_status text not null default 'active';
+alter table public.drop_comments
+  add column if not exists moderation_status text not null default 'active';
+alter table public.fancam_comments
+  add column if not exists moderation_status text not null default 'active';
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.comments'::regclass
+      and conname = 'comments_moderation_status_v1_check'
+  ) then
+    alter table public.comments add constraint comments_moderation_status_v1_check
+      check (moderation_status in ('active', 'hidden')) not valid;
+  end if;
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.drop_comments'::regclass
+      and conname = 'drop_comments_moderation_status_v1_check'
+  ) then
+    alter table public.drop_comments add constraint drop_comments_moderation_status_v1_check
+      check (moderation_status in ('active', 'hidden')) not valid;
+  end if;
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.fancam_comments'::regclass
+      and conname = 'fancam_comments_moderation_status_v1_check'
+  ) then
+    alter table public.fancam_comments add constraint fancam_comments_moderation_status_v1_check
+      check (moderation_status in ('active', 'hidden')) not valid;
+  end if;
 end;
 $$;
 
@@ -357,6 +456,36 @@ drop policy if exists "moderation hides community messages" on public.community_
 create policy "moderation hides community messages" on public.community_messages as restrictive
 for select to authenticated using (moderation_status = 'active');
 
+drop policy if exists "moderation hides comments" on public.comments;
+create policy "moderation hides comments" on public.comments as restrictive
+for select using (moderation_status = 'active');
+
+drop policy if exists "moderation hides drop comments" on public.drop_comments;
+create policy "moderation hides drop comments" on public.drop_comments as restrictive
+for select using (moderation_status = 'active');
+
+drop policy if exists "moderation hides fancam comments" on public.fancam_comments;
+create policy "moderation hides fancam comments" on public.fancam_comments as restrictive
+for select using (moderation_status = 'active');
+
+-- El worker anonimiza reporter_id antes de eliminar auth.users. La denuncia
+-- conserva id, timestamps, status, motivo, metadata y el usuario reportado;
+-- reporter_id NULL evita retener PII y no rompe la FK.
+do $$
+declare reporter_type text;
+begin
+  select data_type into reporter_type
+  from information_schema.columns
+  where table_schema = 'public'
+    and table_name = 'content_reports'
+    and column_name = 'reporter_id';
+  if reporter_type <> 'uuid' then
+    raise exception 'content_reports.reporter_id must be uuid, found %', reporter_type;
+  end if;
+end;
+$$;
+alter table public.content_reports alter column reporter_id drop not null;
+
 create table if not exists public.moderation_actions (
   id uuid primary key default gen_random_uuid(),
   actor_id uuid not null references public.profiles(id) on delete restrict,
@@ -384,6 +513,51 @@ create table if not exists public.user_enforcement_events (
 alter table public.user_enforcement_events enable row level security;
 revoke all on table public.user_enforcement_events from public, anon, authenticated;
 
+-- Si cualquiera de las tablas de auditoría ya existe con otra forma, no se
+-- altera silenciosamente: el preflight falla antes de crear los RPC.
+do $$
+declare
+  expected record;
+  actual_type text;
+begin
+  for expected in
+    select * from (values
+      ('moderation_actions', 'id', 'uuid'),
+      ('moderation_actions', 'actor_id', 'uuid'),
+      ('moderation_actions', 'report_id', 'uuid'),
+      ('moderation_actions', 'target_user_id', 'uuid'),
+      ('moderation_actions', 'content_type', 'text'),
+      ('moderation_actions', 'content_id', 'uuid'),
+      ('moderation_actions', 'action', 'text'),
+      ('moderation_actions', 'reason', 'text'),
+      ('moderation_actions', 'metadata', 'jsonb'),
+      ('moderation_actions', 'created_at', 'timestamp with time zone'),
+      ('user_enforcement_events', 'id', 'uuid'),
+      ('user_enforcement_events', 'user_id', 'uuid'),
+      ('user_enforcement_events', 'actor_id', 'uuid'),
+      ('user_enforcement_events', 'status', 'text'),
+      ('user_enforcement_events', 'reason', 'text'),
+      ('user_enforcement_events', 'enforcement_until', 'timestamp with time zone'),
+      ('user_enforcement_events', 'created_at', 'timestamp with time zone')
+    ) as columns(table_name, column_name, expected_type)
+  loop
+    select data_type into actual_type
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = expected.table_name
+      and column_name = expected.column_name;
+    if actual_type is null then
+      raise exception 'incompatible audit table: public.%.% is missing',
+        expected.table_name, expected.column_name;
+    end if;
+    if actual_type <> expected.expected_type then
+      raise exception 'incompatible audit table: public.%.% must be %, found %',
+        expected.table_name, expected.column_name, expected.expected_type, actual_type;
+    end if;
+  end loop;
+end;
+$$;
+
 create or replace function public.hallyu_moderate_report_v1(
   p_report_id uuid,
   p_status text,
@@ -410,13 +584,13 @@ begin
 
   if p_action = 'hidden' then
     case lower(r.content_type)
-      when 'post' then update public.posts set status='deleted', deleted_at=v_now, updated_at=v_now where id=r.content_id;
+      when 'post' then update public.posts set status='deleted', updated_at=v_now where id=r.content_id;
       when 'drop' then update public.drops set status='deleted', deleted_at=v_now, updated_at=v_now where id=r.content_id;
       when 'fancam' then update public.fancams set status='deleted', deleted_at=v_now, updated_at=v_now where id=r.content_id;
-      when 'comment' then update public.comments set deleted_at=v_now, updated_at=v_now where id=r.content_id;
-      when 'drop_comment' then update public.drop_comments set deleted_at=v_now, updated_at=v_now where id=r.content_id;
-      when 'fancam_comment' then update public.fancam_comments set deleted_at=v_now, updated_at=v_now where id=r.content_id;
-      when 'story' then update public.stories set deleted_at=v_now, archived_at=v_now, expires_at=v_now, updated_at=v_now where id=r.content_id;
+      when 'comment' then update public.comments set moderation_status='hidden', updated_at=v_now where id=r.content_id;
+      when 'drop_comment' then update public.drop_comments set moderation_status='hidden', updated_at=v_now where id=r.content_id;
+      when 'fancam_comment' then update public.fancam_comments set moderation_status='hidden', updated_at=v_now where id=r.content_id;
+      when 'story' then update public.stories set archived_at=v_now, expires_at=v_now where id=r.content_id;
       when 'direct_message' then update public.messages set moderation_status='hidden' where id=r.content_id;
       when 'community_message' then update public.community_messages set moderation_status='hidden' where id=r.content_id;
       when 'community' then update public.communities set status='moderated', updated_at=v_now where id=r.content_id;
