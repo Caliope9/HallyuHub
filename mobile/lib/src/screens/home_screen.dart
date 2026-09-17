@@ -2056,7 +2056,7 @@ class _SuggestedProfilesRail extends StatelessWidget {
           )
         else
           SizedBox(
-            height: 72,
+            height: 96,
             child: ListView.separated(
               key: const ValueKey('home-suggested-profiles'),
               scrollDirection: Axis.horizontal,
@@ -2135,7 +2135,7 @@ class _SuggestedProfileCard extends StatelessWidget {
         : const [AppTheme.rose, AppTheme.violet, AppTheme.cyan];
 
     return SizedBox(
-      width: 252,
+      width: 208,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
