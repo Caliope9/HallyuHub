@@ -1,6 +1,7 @@
 // Prepared worker. Do not deploy or invoke from Flutter.
 // service_role exists only in this Edge Function environment.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { sendAccountEmail } from '../_shared/account_email.ts'
 
 const url = Deno.env.get('SUPABASE_URL')
 const serviceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -104,6 +105,9 @@ export async function processOne(requestId: string) {
   const userId = request.user_id
   const token = request.processing_token
   try {
+    let completionEmail: string | null = null
+    const authUser = await admin.auth.admin.getUserById(userId)
+    completionEmail = authUser.data.user?.email ?? null
     const now = new Date().toISOString()
     await touchLease(request.id, token)
     await updateOwned('posts', { status: 'deleted', deleted_at: now, updated_at: now }, 'author_id', userId)
@@ -158,6 +162,18 @@ export async function processOne(requestId: string) {
     // Final irreversible step. Never call this from Flutter.
     const { error: authError } = await admin.auth.admin.deleteUser(userId)
     if (authError) throw new Error(`auth delete: ${authError.message}`)
+    if (completionEmail) {
+      try {
+        await sendAccountEmail({
+          event: 'account_deletion_completed',
+          to: completionEmail,
+          requestId: request.id,
+        })
+      } catch (error) {
+        // Email delivery must never prevent the irreversible deletion audit.
+        console.warn('account deletion email unavailable', error instanceof Error ? error.message : 'unknown_error')
+      }
+    }
     const { data: completed, error: completeError } = await admin.from('account_deletion_requests').update({ status: 'completed', completed_at: new Date().toISOString(), user_id: null, processing_token: null, processing_started_at: null }).eq('id', request.id).eq('processing_token', token).eq('status', 'in_review').select('id').maybeSingle()
     if (completeError) throw new Error('completion audit failed')
     if (!completed) throw new Error('completion lease is no longer current')

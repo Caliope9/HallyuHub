@@ -2,3 +2,8 @@ project_id = "utohoznutswcofruuong"
 
 [functions.news-auto-import]
 verify_jwt = false
+
+[functions.account-email-events]
+# Database Webhooks authenticate with the dedicated backend token checked by
+# the function, rather than a user JWT.
+verify_jwt = false
