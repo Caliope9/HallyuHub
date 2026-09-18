@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 import '../data/demo_data.dart';
+import '../data/discover_data.dart';
 import '../models.dart';
 import '../screens/camera_capture_screen.dart';
 import '../screens/discover_people_screen.dart';
@@ -11,6 +12,7 @@ import '../screens/post_editor_screen.dart';
 import '../screens/public_profile_screen.dart';
 import '../screens/story_editor_screen.dart';
 import '../screens/story_viewer_screen.dart';
+import '../screens/home_feature_placeholder_screen.dart';
 import '../services/local_artist_tag_service.dart';
 import '../services/local_chat_service.dart';
 import '../services/local_content_category_service.dart';
@@ -59,6 +61,7 @@ class HomeScreen extends StatefulWidget {
     this.storeProfileService = const LocalStoreProfileService(),
     this.user,
     this.resetSignal = 0,
+    this.onOpenDiscoverSection,
   });
 
   final LocalStoryService storyService;
@@ -74,6 +77,7 @@ class HomeScreen extends StatefulWidget {
   final StoreProfileService storeProfileService;
   final AuthUser? user;
   final int resetSignal;
+  final ValueChanged<DiscoverSection>? onOpenDiscoverSection;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -725,6 +729,14 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => _FeatureSheet(title: title, detail: detail),
+    );
+  }
+
+  void _openPlaceholder(HomeFeature feature) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => HomeFeaturePlaceholderScreen(feature: feature),
+      ),
     );
   }
 
@@ -1407,6 +1419,29 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: _HomeQuickAccessRail(
+                onViral: () => _openPlaceholder(HomeFeature.viral),
+                onOutfit: () => _openPlaceholder(HomeFeature.outfit),
+                onEvents: widget.onOpenDiscoverSection == null
+                    ? () => _openHomeFeature(
+                        'Eventos',
+                        'Encontrá eventos desde Buscar > Eventos.',
+                      )
+                    : () => widget.onOpenDiscoverSection!.call(
+                        DiscoverSection.events,
+                      ),
+                onIdols: widget.onOpenDiscoverSection == null
+                    ? () => _openHomeFeature(
+                        'Idols',
+                        'Descubrí grupos y artistas desde Buscar > Idols.',
+                      )
+                    : () => widget.onOpenDiscoverSection!.call(
+                        DiscoverSection.idols,
+                      ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
               child: _StoriesRail(
                 ownStories: _ownStories,
                 ownAvatarAsset:
@@ -1762,6 +1797,131 @@ class _HomeReminderCard extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.54),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeQuickAccessRail extends StatelessWidget {
+  const _HomeQuickAccessRail({
+    required this.onViral,
+    required this.onOutfit,
+    required this.onEvents,
+    required this.onIdols,
+  });
+
+  final VoidCallback onViral;
+  final VoidCallback onOutfit;
+  final VoidCallback onEvents;
+  final VoidCallback onIdols;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      (
+        'Viral',
+        '🔥',
+        AppTheme.rose,
+        onViral,
+        const ValueKey('home-quick-viral'),
+      ),
+      (
+        'Outfit',
+        '👕',
+        AppTheme.violet,
+        onOutfit,
+        const ValueKey('home-quick-outfit'),
+      ),
+      (
+        'Eventos',
+        '✦',
+        AppTheme.cyan,
+        onEvents,
+        const ValueKey('home-quick-events'),
+      ),
+      (
+        'Idols',
+        '★',
+        AppTheme.teal,
+        onIdols,
+        const ValueKey('home-quick-idols'),
+      ),
+    ];
+    return SizedBox(
+      height: 78,
+      child: ListView.separated(
+        key: const ValueKey('home-quick-access'),
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final item = items[index];
+          return _HomeQuickAccessCard(
+            key: item.$5,
+            label: item.$1,
+            glyph: item.$2,
+            color: item.$3,
+            onTap: item.$4,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _HomeQuickAccessCard extends StatelessWidget {
+  const _HomeQuickAccessCard({
+    super.key,
+    required this.label,
+    required this.glyph,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final String glyph;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 106,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18),
+          child: Ink(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppTheme.panelRaised.withValues(alpha: 0.72),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: color.withValues(alpha: 0.34)),
+              boxShadow: [
+                BoxShadow(color: color.withValues(alpha: 0.08), blurRadius: 12),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(glyph, style: const TextStyle(fontSize: 19)),
+                const SizedBox(height: 3),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

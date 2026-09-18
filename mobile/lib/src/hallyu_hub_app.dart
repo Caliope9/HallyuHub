@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import 'models.dart';
+import 'data/discover_data.dart';
 import 'screens/auth_screen.dart';
 import 'screens/beta_access_screen.dart';
 import 'screens/beta_signup_screen.dart';
@@ -305,11 +306,15 @@ class _HallyuHubShellState extends State<HallyuHubShell>
   bool _tabSwipeHandled = false;
   bool _tabSwipeSuppressed = false;
   final _tabResetSignals = List<int>.filled(5, 0);
+  DiscoverSection? _requestedSearchSection;
+  int _searchSectionRequestSignal = 0;
   List<HallyuNotification> _notifications = const [];
   bool _notificationsLoading = false;
 
   static const _minimumTabSwipeDistance = 86.0;
-  static const _horizontalRailGuardHeight = 150.0;
+  // Home now has a compact intro and quick-access rail above Stories. Keep
+  // horizontal gestures in those rails from changing the main tab.
+  static const _horizontalRailGuardHeight = 220.0;
 
   static const titles = [
     'Tu universo K-pop latino',
@@ -375,6 +380,20 @@ class _HallyuHubShellState extends State<HallyuHubShell>
     setState(() {
       selectedIndex = nextIndex;
       _tabResetSignals[nextIndex]++;
+    });
+  }
+
+  void _openHomeSearch() => _selectTab(1);
+
+  void _openHomeDiscoverSection(DiscoverSection section) {
+    unawaited(
+      VideoPlaybackCoordinator.pauseActive(reason: 'home_discover_section'),
+    );
+    setState(() {
+      _requestedSearchSection = section;
+      _searchSectionRequestSignal++;
+      selectedIndex = 1;
+      _tabResetSignals[1]++;
     });
   }
 
@@ -593,6 +612,7 @@ class _HallyuHubShellState extends State<HallyuHubShell>
         safetyService: widget.safetyService,
         storeProfileService: widget.storeProfileService,
         resetSignal: _tabResetSignals[0],
+        onOpenDiscoverSection: _openHomeDiscoverSection,
       ),
       SearchScreen(
         user: widget.user,
@@ -608,6 +628,8 @@ class _HallyuHubShellState extends State<HallyuHubShell>
         safetyService: widget.safetyService,
         storeProfileService: widget.storeProfileService,
         resetSignal: _tabResetSignals[1],
+        initialSection: _requestedSearchSection,
+        sectionRequestSignal: _searchSectionRequestSignal,
       ),
       DropsScreen(
         user: widget.user,
@@ -675,6 +697,8 @@ class _HallyuHubShellState extends State<HallyuHubShell>
                 children: [
                   _TopBar(
                     title: titles[selectedIndex],
+                    onSearch: _openHomeSearch,
+                    onNotifications: _openNotifications,
                     onMessages: _openMessages,
                   ),
                   Expanded(
@@ -911,10 +935,14 @@ class _HallyuBottomNavItem extends StatelessWidget {
 class _TopBar extends StatelessWidget {
   const _TopBar({
     required this.title,
+    required this.onSearch,
+    required this.onNotifications,
     required this.onMessages,
   });
 
   final String title;
+  final VoidCallback onSearch;
+  final VoidCallback onNotifications;
   final VoidCallback onMessages;
 
   @override
@@ -951,7 +979,46 @@ class _TopBar extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 4),
+              Semantics(
+                button: true,
+                label: 'Buscar',
+                child: IconButton(
+                  key: const ValueKey('header-search-button'),
+                  onPressed: onSearch,
+                  icon: const Icon(Icons.search_rounded),
+                  tooltip: 'Buscar',
+                  style: IconButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: AppTheme.panelRaised.withValues(
+                      alpha: 0.86,
+                    ),
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.08),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 2),
+              Semantics(
+                button: true,
+                label: 'Notificaciones',
+                child: IconButton(
+                  key: const ValueKey('header-notifications-button'),
+                  onPressed: onNotifications,
+                  icon: const Icon(Icons.notifications_none_rounded),
+                  style: IconButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: AppTheme.panelRaised.withValues(
+                      alpha: 0.86,
+                    ),
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.08),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 2),
               IconButton.filledTonal(
                 key: const ValueKey('header-messages-button'),
                 onPressed: onMessages,

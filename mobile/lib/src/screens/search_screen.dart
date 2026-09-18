@@ -49,6 +49,8 @@ class SearchScreen extends StatefulWidget {
     this.safetyService = const LocalSafetyService(),
     this.storeProfileService = const LocalStoreProfileService(),
     this.resetSignal = 0,
+    this.initialSection,
+    this.sectionRequestSignal = 0,
   });
 
   final AuthUser? user;
@@ -64,6 +66,8 @@ class SearchScreen extends StatefulWidget {
   final LocalSafetyService safetyService;
   final StoreProfileService storeProfileService;
   final int resetSignal;
+  final DiscoverSection? initialSection;
+  final int sectionRequestSignal;
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -123,6 +127,7 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialSection != null) _section = widget.initialSection!;
     LocalFollowService.revision.addListener(_reloadFollowing);
     _restoreFollowing();
     if (_isBetaReal) {
@@ -178,6 +183,10 @@ class _SearchScreenState extends State<SearchScreen> {
   void didUpdateWidget(covariant SearchScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.resetSignal != widget.resetSignal) _resetToTop();
+    if (oldWidget.sectionRequestSignal != widget.sectionRequestSignal &&
+        widget.initialSection != null) {
+      _selectSection(widget.initialSection!);
+    }
     if (!oldWidget.followService.usesRealProfiles && _isBetaReal) {
       _restoreRealStats();
       _restoreRealDiscoverData();

@@ -927,7 +927,10 @@ void main() {
 
     expect(find.text('HallyuHub'), findsOneWidget);
     expect(find.text('Historias'), findsOneWidget);
-    expect(find.text('Viral'), findsNothing);
+    expect(find.byKey(const ValueKey('home-quick-viral')), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-quick-outfit')), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-quick-events')), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-quick-idols')), findsOneWidget);
     expect(find.byKey(const ValueKey('home-auto-reminder')), findsOneWidget);
 
     await tester.drag(
