@@ -1981,6 +1981,7 @@ class DropClip {
     required this.imageAsset,
     required this.views,
     required this.likes,
+    this.viewCount = 0,
     this.creatorId = '',
     this.creatorName = '',
     this.creatorAvatarAsset = '',
@@ -2010,6 +2011,7 @@ class DropClip {
   final String imageAsset;
   final String views;
   final String likes;
+  final int viewCount;
   final String creatorId;
   final String creatorName;
   final String creatorAvatarAsset;

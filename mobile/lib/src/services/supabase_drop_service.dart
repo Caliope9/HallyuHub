@@ -27,6 +27,18 @@ class SupabaseDropService extends LocalDropService {
   bool get usesRealDrops => true;
 
   @override
+  Future<void> recordView({
+    required String dropId,
+    required String playbackSessionId,
+  }) async {
+    if (dropId.isEmpty || playbackSessionId.isEmpty) return;
+    await _client.rpc(
+      'record_drop_view',
+      params: {'p_drop_id': dropId, 'p_playback_session_id': playbackSessionId},
+    );
+  }
+
+  @override
   Future<List<DropClip>> restoreDrops({
     int limit = 24,
     int offset = 0,
@@ -44,7 +56,7 @@ class SupabaseDropService extends LocalDropService {
         .select(
           'id,author_id,caption,artist_name,group_name,group_id,artist_id,'
           'audio,filter,location,video_url,storage_bucket,storage_path,'
-          'duration_seconds,file_size,thumbnail_url,created_at,'
+          'duration_seconds,file_size,thumbnail_url,created_at,view_count,'
           'profiles:author_id(id,name,username,avatar_asset,avatar_url)',
         )
         .eq('status', 'published')
@@ -183,6 +195,7 @@ class SupabaseDropService extends LocalDropService {
       audio: audio,
       imageAsset: 'assets/demo-posts/post-08.jpg',
       views: '0',
+      viewCount: 0,
       likes: '0',
       comments: '0',
       groupId: groupId,
@@ -213,10 +226,7 @@ class SupabaseDropService extends LocalDropService {
     } catch (_) {
       await _client
           .from('drops')
-          .update({
-            'deleted_at': DateTime.now().toUtc().toIso8601String(),
-            'updated_at': DateTime.now().toUtc().toIso8601String(),
-          })
+          .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
           .eq('id', id)
           .eq('author_id', authUser.id);
     }
@@ -697,6 +707,7 @@ class SupabaseDropService extends LocalDropService {
         'assets/demo-posts/post-08.jpg',
       ),
       views: '0',
+      viewCount: (row['view_count'] as num?)?.toInt() ?? 0,
       likes: '$likes',
       comments: '$comments',
       groupId: row['group_id'] as String? ?? '',

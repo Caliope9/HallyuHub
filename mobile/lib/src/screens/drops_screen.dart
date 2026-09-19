@@ -22,6 +22,7 @@ import '../services/media_permission_service.dart';
 import '../services/store_profile_service.dart';
 import '../services/video_audio_preference.dart';
 import '../services/video_playback_coordinator.dart';
+import '../services/drop_view_tracking.dart';
 import '../theme/app_theme.dart';
 import '../utils/kpop_entity_reference.dart';
 import '../widgets/comments_sheet.dart';
@@ -36,6 +37,16 @@ import '../widgets/user_tag_selector.dart';
 import '../widgets/video_loading_backdrop.dart';
 import 'kpop_entity_profile_screen.dart';
 import 'public_profile_screen.dart';
+
+String formatDropViewCount(int count) {
+  if (count < 1000) return '$count';
+  if (count < 1000000) {
+    final value = count / 1000;
+    return '${value.toStringAsFixed(value >= 100 ? 0 : 1).replaceAll('.0', '')}K';
+  }
+  final value = count / 1000000;
+  return '${value.toStringAsFixed(value >= 100 ? 0 : 1).replaceAll('.0', '')}M';
+}
 
 class DropsScreen extends StatefulWidget {
   const DropsScreen({
@@ -755,6 +766,12 @@ class _DropsScreenState extends State<DropsScreen> {
     return '$value';
   }
 
+  String _dropViewsLabel(DropClip clip) {
+    return widget.dropService.usesRealDrops
+        ? formatDropViewCount(clip.viewCount)
+        : clip.views;
+  }
+
   String _dropError(Object error) {
     if (error is DropServiceException && error.message.isNotEmpty) {
       return error.message;
@@ -778,6 +795,17 @@ class _DropsScreenState extends State<DropsScreen> {
   void _log(String event, Map<String, Object?> data) {
     debugPrint(
       '$event ${data.entries.map((entry) => '${entry.key}=${entry.value}').join(' ')}',
+    );
+  }
+
+  void _recordView(DropClip clip, String playbackSessionId) {
+    if (!widget.dropService.usesRealDrops || clip.id.isEmpty) return;
+    unawaited(
+      widget.dropService
+          .recordView(dropId: clip.id, playbackSessionId: playbackSessionId)
+          .catchError((error) {
+            debugPrint('DROP_VIEW_ERROR id=${clip.id} error=$error');
+          }),
     );
   }
 
@@ -836,7 +864,10 @@ class _DropsScreenState extends State<DropsScreen> {
                     onOpenTaggedPerson: _openTaggedUsername,
                     onOpenTaggedEntity: _openKpopEntity,
                     onOpenPrimaryEntity: () => _openDropEntity(clip),
-                    onViews: () => _showSnack('${clip.views} reproducciones'),
+                    viewsLabel: _dropViewsLabel(clip),
+                    onViews: () =>
+                        _showSnack('${_dropViewsLabel(clip)} reproducciones'),
+                    onView: (sessionId) => _recordView(clip, sessionId),
                   );
                 },
               ),
@@ -1024,6 +1055,7 @@ class _DropReelCard extends StatelessWidget {
     required this.saved,
     required this.likesLabel,
     required this.commentsLabel,
+    required this.viewsLabel,
     required this.onToggleSound,
     required this.onStar,
     required this.onSave,
@@ -1035,6 +1067,7 @@ class _DropReelCard extends StatelessWidget {
     required this.onOpenTaggedEntity,
     required this.onOpenPrimaryEntity,
     required this.onViews,
+    required this.onView,
   });
 
   final DropClip clip;
@@ -1047,6 +1080,7 @@ class _DropReelCard extends StatelessWidget {
   final bool saved;
   final String likesLabel;
   final String commentsLabel;
+  final String viewsLabel;
   final VoidCallback onToggleSound;
   final VoidCallback onStar;
   final VoidCallback onSave;
@@ -1058,6 +1092,7 @@ class _DropReelCard extends StatelessWidget {
   final ValueChanged<KpopEntity> onOpenTaggedEntity;
   final VoidCallback onOpenPrimaryEntity;
   final VoidCallback onViews;
+  final ValueChanged<String> onView;
 
   @override
   Widget build(BuildContext context) {
@@ -1081,6 +1116,7 @@ class _DropReelCard extends StatelessWidget {
               screenActive: screenActive,
               autoplaySignal: autoplaySignal,
               muted: muted,
+              onView: onView,
             ),
             _DropFilterOverlay(filter: clip.filter),
             DecoratedBox(
@@ -1151,7 +1187,7 @@ class _DropReelCard extends StatelessWidget {
                       ),
                     _DropAction(
                       icon: Icons.visibility_rounded,
-                      label: clip.views,
+                      label: viewsLabel,
                       tooltip: 'Ver reproducciones',
                       onPressed: onViews,
                     ),
@@ -1427,6 +1463,7 @@ class _DropMedia extends StatefulWidget {
     required this.screenActive,
     required this.autoplaySignal,
     required this.muted,
+    required this.onView,
   });
 
   final DropClip clip;
@@ -1434,6 +1471,7 @@ class _DropMedia extends StatefulWidget {
   final bool screenActive;
   final int autoplaySignal;
   final bool muted;
+  final ValueChanged<String> onView;
 
   @override
   State<_DropMedia> createState() => _DropMediaState();
@@ -1447,10 +1485,13 @@ class _DropMediaState extends State<_DropMedia> {
   bool _ready = false;
   bool _playing = false;
   bool _videoError = false;
+  String _playbackSessionId = '';
+  late final DropViewSessionTracker _viewTracker;
 
   @override
   void initState() {
     super.initState();
+    _viewTracker = DropViewSessionTracker();
     _setupVideo();
   }
 
@@ -1499,6 +1540,7 @@ class _DropMediaState extends State<_DropMedia> {
       _videoUri(widget.clip.videoPath),
     );
     _controller = controller;
+    controller.addListener(_checkViewThreshold);
     unawaited(
       controller
           .initialize()
@@ -1539,7 +1581,10 @@ class _DropMediaState extends State<_DropMedia> {
     _controller = null;
     _ready = false;
     _videoError = false;
-    if (controller != null) unawaited(controller.dispose());
+    if (controller != null) {
+      controller.removeListener(_checkViewThreshold);
+      unawaited(controller.dispose());
+    }
   }
 
   Future<void> _startPlayback({required String reason}) async {
@@ -1563,6 +1608,8 @@ class _DropMediaState extends State<_DropMedia> {
       return;
     }
     try {
+      _playbackSessionId = newDropPlaybackSessionId();
+      _viewTracker.start();
       await controller.play();
       if (mounted) setState(() => _playing = true);
       _logAudio('VIDEO_PLAYBACK_START', {'reason': reason});
@@ -1570,6 +1617,19 @@ class _DropMediaState extends State<_DropMedia> {
       VideoPlaybackCoordinator.release(_playbackOwner);
       _logAudio('VIDEO_AUDIO_ERROR', {'step': 'play', 'error': '$error'});
     }
+  }
+
+  void _checkViewThreshold() {
+    final controller = _controller;
+    if (controller == null || !_playing || _playbackSessionId.isEmpty) return;
+    final value = controller.value;
+    if (!_viewTracker.shouldRecord(
+      position: value.position,
+      duration: value.duration,
+    )) {
+      return;
+    }
+    widget.onView(_playbackSessionId);
   }
 
   Future<void> _pausePlayback({

@@ -24,6 +24,11 @@ class LocalDropService {
 
   bool get usesRealDrops => false;
 
+  Future<void> recordView({
+    required String dropId,
+    required String playbackSessionId,
+  }) async {}
+
   Future<List<DropClip>> restoreDrops({
     int limit = _maxDrops,
     int offset = 0,
@@ -209,6 +214,7 @@ class LocalDropService {
           json['imageAsset'] as String? ?? 'assets/demo-posts/post-08.jpg',
       views: json['views'] as String? ?? '0',
       likes: json['likes'] as String? ?? '0',
+      viewCount: (json['viewCount'] as num?)?.toInt() ?? 0,
       creatorId: json['creatorId'] as String? ?? '',
       creatorName: json['creatorName'] as String? ?? '',
       creatorAvatarAsset: json['creatorAvatarAsset'] as String? ?? '',
@@ -241,6 +247,7 @@ class LocalDropService {
       'imageAsset': drop.imageAsset,
       'views': drop.views,
       'likes': drop.likes,
+      'viewCount': drop.viewCount,
       'creatorId': drop.creatorId,
       'creatorName': drop.creatorName,
       'creatorAvatarAsset': drop.creatorAvatarAsset,
