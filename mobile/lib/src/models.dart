@@ -2055,6 +2055,7 @@ class Fancam {
     this.comments = '0',
     this.saves = '0',
     this.shares = '0',
+    this.viewCount = 0,
     this.taggedPeople = const [],
     this.taggedUserIds = const [],
     this.taggedEntities = const [],
@@ -2082,6 +2083,7 @@ class Fancam {
   final String comments;
   final String saves;
   final String shares;
+  final int viewCount;
   final List<String> taggedPeople;
   final List<String> taggedUserIds;
   final List<KpopEntity> taggedEntities;

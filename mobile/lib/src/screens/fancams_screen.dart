@@ -19,6 +19,7 @@ import '../services/local_story_service.dart';
 import '../services/local_user_tag_service.dart';
 import '../services/local_artist_tag_service.dart';
 import '../services/media_permission_service.dart';
+import '../services/fancam_view_tracking.dart';
 import '../services/store_profile_service.dart';
 import '../services/video_audio_preference.dart';
 import '../services/video_playback_coordinator.dart';
@@ -786,6 +787,17 @@ class _FancamsScreenState extends State<FancamsScreen> {
     return 'No pudimos completar la acción en Fancams. Probá de nuevo en unos segundos.';
   }
 
+  void _recordView(Fancam fancam, String playbackSessionId) {
+    if (!widget.fancamService.usesRealFancams || fancam.id.isEmpty) return;
+    unawaited(
+      widget.fancamService
+          .recordView(fancamId: fancam.id, playbackSessionId: playbackSessionId)
+          .catchError((error) {
+            debugPrint('FANCAM_VIEW_ERROR id=${fancam.id} error=$error');
+          }),
+    );
+  }
+
   void _showSnack(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
@@ -862,6 +874,7 @@ class _FancamsScreenState extends State<FancamsScreen> {
                     onOpenTaggedEntity: _openKpopEntity,
                     onFollow: () =>
                         _showSnack('Ahora seguís a ${fancam.creator}'),
+                    onView: (sessionId) => _recordView(fancam, sessionId),
                   );
                 },
               ),
@@ -944,6 +957,7 @@ class _FancamReelCard extends StatelessWidget {
     required this.onOpenTaggedPerson,
     required this.onOpenTaggedEntity,
     required this.onFollow,
+    required this.onView,
   });
 
   final Fancam fancam;
@@ -969,6 +983,7 @@ class _FancamReelCard extends StatelessWidget {
   final ValueChanged<String> onOpenTaggedPerson;
   final ValueChanged<KpopEntity> onOpenTaggedEntity;
   final VoidCallback onFollow;
+  final ValueChanged<String> onView;
 
   @override
   Widget build(BuildContext context) {
@@ -986,6 +1001,7 @@ class _FancamReelCard extends StatelessWidget {
               selected: selected,
               screenActive: screenActive,
               autoplaySignal: autoplaySignal,
+              onView: onView,
             ),
             DecoratedBox(
               decoration: BoxDecoration(
@@ -1297,6 +1313,7 @@ class _FancamMedia extends StatefulWidget {
     required this.selected,
     required this.screenActive,
     required this.autoplaySignal,
+    required this.onView,
   });
 
   final Fancam fancam;
@@ -1304,6 +1321,7 @@ class _FancamMedia extends StatefulWidget {
   final bool selected;
   final bool screenActive;
   final int autoplaySignal;
+  final ValueChanged<String> onView;
 
   @override
   State<_FancamMedia> createState() => _FancamMediaState();
@@ -1317,10 +1335,13 @@ class _FancamMediaState extends State<_FancamMedia> {
   bool _playing = false;
   bool _ready = false;
   bool _videoError = false;
+  String _playbackSessionId = '';
+  late final FancamViewSessionTracker _viewTracker;
 
   @override
   void initState() {
     super.initState();
+    _viewTracker = FancamViewSessionTracker();
     _setupVideo();
   }
 
@@ -1369,6 +1390,7 @@ class _FancamMediaState extends State<_FancamMedia> {
       _videoUri(widget.fancam.videoPath),
     );
     _controller = controller;
+    controller.addListener(_checkViewThreshold);
     unawaited(
       controller
           .initialize()
@@ -1409,7 +1431,10 @@ class _FancamMediaState extends State<_FancamMedia> {
     _controller = null;
     _ready = false;
     _videoError = false;
-    if (controller != null) unawaited(controller.dispose());
+    if (controller != null) {
+      controller.removeListener(_checkViewThreshold);
+      unawaited(controller.dispose());
+    }
   }
 
   Future<void> _startPlayback({required String reason}) async {
@@ -1433,6 +1458,8 @@ class _FancamMediaState extends State<_FancamMedia> {
       return;
     }
     try {
+      _playbackSessionId = newFancamPlaybackSessionId();
+      _viewTracker.start();
       await controller.play();
       if (mounted) setState(() => _playing = true);
       _logAudio('VIDEO_PLAYBACK_START', {'reason': reason});
@@ -1440,6 +1467,19 @@ class _FancamMediaState extends State<_FancamMedia> {
       VideoPlaybackCoordinator.release(_playbackOwner);
       _logAudio('VIDEO_AUDIO_ERROR', {'step': 'play', 'error': '$error'});
     }
+  }
+
+  void _checkViewThreshold() {
+    final controller = _controller;
+    if (controller == null || !_playing || _playbackSessionId.isEmpty) return;
+    final value = controller.value;
+    if (!_viewTracker.shouldRecord(
+      position: value.position,
+      duration: value.duration,
+    )) {
+      return;
+    }
+    widget.onView(_playbackSessionId);
   }
 
   Future<void> _pausePlayback({

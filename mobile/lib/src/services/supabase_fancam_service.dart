@@ -25,6 +25,21 @@ class SupabaseFancamService extends LocalFancamService {
   bool get usesRealFancams => true;
 
   @override
+  Future<void> recordView({
+    required String fancamId,
+    required String playbackSessionId,
+  }) async {
+    if (fancamId.isEmpty || playbackSessionId.isEmpty) return;
+    await _client.rpc(
+      'record_fancam_view',
+      params: {
+        'p_fancam_id': fancamId,
+        'p_playback_session_id': playbackSessionId,
+      },
+    );
+  }
+
+  @override
   Future<List<Fancam>> restoreFancams({
     int limit = 24,
     int offset = 0,
@@ -43,6 +58,7 @@ class SupabaseFancamService extends LocalFancamService {
           'id,author_id,caption,artist_name,group_name,group_id,artist_id,'
           'event_name,song_name,tags,audio,location,video_url,storage_bucket,'
           'storage_path,duration_seconds,file_size,thumbnail_url,created_at,'
+          'view_count,'
           'profiles:author_id(id,name,username,avatar_asset,avatar_url)',
         )
         .eq('status', 'published')
@@ -79,6 +95,7 @@ class SupabaseFancamService extends LocalFancamService {
             likes: likes[row['id']] ?? 0,
             saves: saves[row['id']] ?? 0,
             comments: comments[row['id']] ?? 0,
+            viewCount: (row['view_count'] as num?)?.toInt() ?? 0,
             tags: userTags[row['id']] ?? const [],
             artistTags: artistTags[row['id']] ?? const [],
             isOwn: currentUserId != null && row['author_id'] == currentUserId,
@@ -657,6 +674,7 @@ class SupabaseFancamService extends LocalFancamService {
     required int likes,
     required int saves,
     required int comments,
+    required int viewCount,
     required List<ContentUserTag> tags,
     required List<ContentArtistTag> artistTags,
     required bool isOwn,
@@ -694,6 +712,7 @@ class SupabaseFancamService extends LocalFancamService {
       comments: '$comments',
       saves: '$saves',
       shares: '0',
+      viewCount: viewCount,
       taggedPeople: tags
           .map((tag) => tag.displayUsername)
           .where((username) => username.isNotEmpty)

@@ -24,6 +24,11 @@ class LocalFancamService {
 
   bool get usesRealFancams => false;
 
+  Future<void> recordView({
+    required String fancamId,
+    required String playbackSessionId,
+  }) async {}
+
   Future<List<Fancam>> restoreFancams({
     int limit = _maxFancams,
     int offset = 0,
@@ -215,6 +220,7 @@ class LocalFancamService {
       comments: json['comments'] as String? ?? '0',
       saves: json['saves'] as String? ?? '0',
       shares: json['shares'] as String? ?? '0',
+      viewCount: (json['viewCount'] as num?)?.toInt() ?? 0,
       createdAt: json['createdAt'] == null
           ? null
           : DateTime.tryParse(json['createdAt'] as String),
@@ -244,6 +250,7 @@ class LocalFancamService {
       'comments': fancam.comments,
       'saves': fancam.saves,
       'shares': fancam.shares,
+      'viewCount': fancam.viewCount,
       if (fancam.createdAt != null)
         'createdAt': fancam.createdAt!.toIso8601String(),
       'isOwn': fancam.isOwn,
