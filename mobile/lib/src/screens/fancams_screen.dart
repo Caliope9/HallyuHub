@@ -20,6 +20,7 @@ import '../services/local_user_tag_service.dart';
 import '../services/local_artist_tag_service.dart';
 import '../services/media_permission_service.dart';
 import '../services/fancam_view_tracking.dart';
+import '../services/repost_service.dart';
 import '../services/store_profile_service.dart';
 import '../services/video_audio_preference.dart';
 import '../services/video_playback_coordinator.dart';
@@ -28,7 +29,6 @@ import '../utils/kpop_entity_reference.dart';
 import '../widgets/comments_sheet.dart';
 import '../widgets/contextual_permission_sheet.dart';
 import '../widgets/hub_avatar.dart';
-import '../widgets/hally_feature_tip.dart';
 import '../widgets/profile_category_chips.dart';
 import '../widgets/artist_tag_selector.dart';
 import '../widgets/premium_form_shell.dart';
@@ -94,6 +94,7 @@ class _FancamsScreenState extends State<FancamsScreen> {
   final Set<String> _saved = {};
   final Set<String> _loadedLiked = {};
   final Set<String> _loadedSaved = {};
+  final Set<String> _reposted = {};
   final Set<String> _busyFancamActions = {};
   final Map<String, int> _likeAdjustments = {};
   final Map<String, int> _commentAdditions = {};
@@ -107,10 +108,14 @@ class _FancamsScreenState extends State<FancamsScreen> {
   String _appliedInitialFancamId = '';
   int _autoplaySignal = 0;
   FancamFeedMode _feedMode = FancamFeedMode.forYou;
+  late final RepostService _repostService;
 
   @override
   void initState() {
     super.initState();
+    _repostService = widget.fancamService.usesRealFancams
+        ? SupabaseRepostService()
+        : LocalRepostService();
     LocalFancamService.revision.addListener(_restoreFancamState);
     LocalSafetyService.revision.addListener(_restoreFancamState);
     VideoAudioPreference.muted.addListener(_syncVideoAudioPreference);
@@ -501,6 +506,39 @@ class _FancamsScreenState extends State<FancamsScreen> {
     }
   }
 
+  Future<void> _toggleRepost(Fancam fancam) async {
+    final key = _fancamKey(fancam);
+    final actionKey = 'repost-$key';
+    if (_busyFancamActions.contains(actionKey)) return;
+    final wasReposted = _reposted.contains(key);
+    setState(() => _busyFancamActions.add(actionKey));
+    try {
+      if (wasReposted) {
+        await _repostService.removeRepost(
+          contentType: RepostContentType.fancam,
+          contentId: key,
+        );
+        if (mounted) {
+          setState(() => _reposted.remove(key));
+          _showSnack('Repost quitado');
+        }
+      } else {
+        await _repostService.createRepost(
+          contentType: RepostContentType.fancam,
+          contentId: key,
+        );
+        if (mounted) {
+          setState(() => _reposted.add(key));
+          _showSnack('Fancam reposteada a tus seguidores');
+        }
+      }
+    } catch (error) {
+      if (mounted) _showSnack(_fancamError(error));
+    } finally {
+      if (mounted) setState(() => _busyFancamActions.remove(actionKey));
+    }
+  }
+
   Future<void> _openComments(Fancam fancam) async {
     final key = _fancamKey(fancam);
     var initialComments = _commentsByFancam[key];
@@ -862,10 +900,10 @@ class _FancamsScreenState extends State<FancamsScreen> {
                     key: ValueKey('fancam-reel-$key'),
                     fancam: fancam,
                     creator: _creatorFor(fancam),
-                    title: widget.title,
                     muted: _muted,
                     liked: _liked.contains(key),
                     saved: _saved.contains(key),
+                    reposted: _reposted.contains(key),
                     selected: index == _activeIndex,
                     screenActive: widget.isActive,
                     autoplaySignal: _autoplaySignal,
@@ -877,6 +915,7 @@ class _FancamsScreenState extends State<FancamsScreen> {
                     ),
                     onLike: () => _toggleLike(fancam),
                     onSave: () => _toggleSaved(fancam),
+                    onRepost: () => _toggleRepost(fancam),
                     onComment: () => _openComments(fancam),
                     onShare: () => _openShare(fancam),
                     onReport: () => _reportFancam(fancam),
@@ -902,20 +941,6 @@ class _FancamsScreenState extends State<FancamsScreen> {
                   backgroundColor: Colors.black.withValues(alpha: 0.52),
                   foregroundColor: Colors.white,
                   child: const Icon(Icons.arrow_back_rounded),
-                ),
-              ),
-            if (!widget.showBackButton && widget.isActive)
-              Positioned(
-                left: 16,
-                right: 16,
-                top: 72,
-                child: const HallyFeatureTip(
-                  featureId: 'fancams_intro',
-                  title: 'Fancams de tus artistas 🎤',
-                  message:
-                      'Compartí y descubrí videos de performances y momentos de tus artistas.',
-                  mascotAsset: 'assets/brand/hally_mascot_wave_transparent.png',
-                  compact: true,
                 ),
               ),
             if (!widget.showBackButton)
@@ -1033,10 +1058,10 @@ class _FancamReelCard extends StatelessWidget {
     super.key,
     required this.fancam,
     required this.creator,
-    required this.title,
     required this.muted,
     required this.liked,
     required this.saved,
+    required this.reposted,
     required this.selected,
     required this.screenActive,
     required this.autoplaySignal,
@@ -1045,6 +1070,7 @@ class _FancamReelCard extends StatelessWidget {
     required this.onToggleSound,
     required this.onLike,
     required this.onSave,
+    required this.onRepost,
     required this.onComment,
     required this.onShare,
     required this.onReport,
@@ -1059,10 +1085,10 @@ class _FancamReelCard extends StatelessWidget {
 
   final Fancam fancam;
   final CommunityProfile creator;
-  final String title;
   final bool muted;
   final bool liked;
   final bool saved;
+  final bool reposted;
   final bool selected;
   final bool screenActive;
   final int autoplaySignal;
@@ -1071,6 +1097,7 @@ class _FancamReelCard extends StatelessWidget {
   final VoidCallback onToggleSound;
   final VoidCallback onLike;
   final VoidCallback onSave;
+  final VoidCallback onRepost;
   final VoidCallback onComment;
   final VoidCallback onShare;
   final VoidCallback onReport;
@@ -1115,21 +1142,10 @@ class _FancamReelCard extends StatelessWidget {
             ),
             Positioned(
               left: 14,
-              right: 68,
-              top: 14,
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _GlassPill(
-                    icon: Icons.play_circle_outline_rounded,
-                    label: title,
-                  ),
-                  _GlassPill(
-                    icon: Icons.schedule_rounded,
-                    label: fancam.duration,
-                  ),
-                ],
+              top: 76,
+              child: _GlassPill(
+                icon: Icons.schedule_rounded,
+                label: fancam.duration,
               ),
             ),
             Positioned(
@@ -1143,9 +1159,11 @@ class _FancamReelCard extends StatelessWidget {
                   likes: likesCount,
                   comments: commentsCount,
                   views: formatFancamViewCount(fancam.viewCount),
+                  reposted: reposted,
                   onLike: onLike,
                   onComment: onComment,
                   onSave: onSave,
+                  onRepost: onRepost,
                   onShare: onShare,
                   onReport: fancam.isOwn ? null : onReport,
                   onDelete: onDelete,
@@ -1819,12 +1837,14 @@ class _FancamActionRail extends StatelessWidget {
   const _FancamActionRail({
     required this.liked,
     required this.saved,
+    required this.reposted,
     required this.likes,
     required this.comments,
     required this.views,
     required this.onLike,
     required this.onComment,
     required this.onSave,
+    required this.onRepost,
     required this.onShare,
     required this.onReport,
     required this.onDelete,
@@ -1832,12 +1852,14 @@ class _FancamActionRail extends StatelessWidget {
 
   final bool liked;
   final bool saved;
+  final bool reposted;
   final String likes;
   final String comments;
   final String views;
   final VoidCallback onLike;
   final VoidCallback onComment;
   final VoidCallback onSave;
+  final VoidCallback onRepost;
   final VoidCallback onShare;
   final VoidCallback? onReport;
   final VoidCallback? onDelete;
@@ -1861,15 +1883,21 @@ class _FancamActionRail extends StatelessWidget {
           onTap: onComment,
         ),
         _FancamActionButton(
+          icon: Icons.ios_share_rounded,
+          label: 'Compartir',
+          onTap: onShare,
+        ),
+        _FancamActionButton(
           icon: saved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
           label: saved ? 'Guardado' : 'Guardar',
           active: saved,
           onTap: onSave,
         ),
         _FancamActionButton(
-          icon: Icons.ios_share_rounded,
-          label: 'Compartir',
-          onTap: onShare,
+          icon: reposted ? Icons.repeat_on_rounded : Icons.repeat_rounded,
+          label: reposted ? 'Reposteada' : 'Repost',
+          active: reposted,
+          onTap: onRepost,
         ),
         if (onReport != null)
           _FancamActionButton(
