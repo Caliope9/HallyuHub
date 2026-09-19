@@ -187,6 +187,20 @@ class _FancamsScreenState extends State<FancamsScreen> {
       );
       final liked = await widget.fancamService.restoreLikedFancamIds();
       final saved = await widget.fancamService.restoreSavedFancamIds();
+      final reposted = <String>{};
+      if (widget.fancamService.usesRealFancams) {
+        final states = await Future.wait(
+          local.map(
+            (fancam) => _repostService.hasReposted(
+              contentType: RepostContentType.fancam,
+              contentId: _fancamKey(fancam),
+            ),
+          ),
+        );
+        for (var index = 0; index < states.length; index++) {
+          if (states[index]) reposted.add(_fancamKey(local[index]));
+        }
+      }
       final blocked = await widget.safetyService.restoreBlockedUserIds();
       if (!mounted) return;
       setState(() {
@@ -200,6 +214,9 @@ class _FancamsScreenState extends State<FancamsScreen> {
         _saved
           ..clear()
           ..addAll(saved);
+        _reposted
+          ..clear()
+          ..addAll(reposted);
         _loadedLiked
           ..clear()
           ..addAll(liked);
@@ -1178,6 +1195,14 @@ class _FancamReelCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (fancam.repostedByUsername.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _FancamInlineNotice(
+                        message:
+                            '↻ Reposteado por ${fancam.repostedByUsername}',
+                      ),
+                    ),
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: onCreator,

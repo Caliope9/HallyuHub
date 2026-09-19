@@ -191,22 +191,13 @@ class SupabaseFancamService extends LocalFancamService {
   Future<List<Map<String, dynamic>>> _followingRows({
     required int limit,
   }) async {
-    final profileIds = await _followedProfileIds();
-    final entityIds = await _followedEntityIds();
-    if (profileIds.isEmpty && entityIds.isEmpty) return const [];
-    final rows = <Map<String, dynamic>>[];
-    for (final id in profileIds) {
-      rows.addAll(
-        await _fetchFancamRows(limit: limit, offset: 0, authorId: id),
-      );
-    }
-    for (final id in entityIds) {
-      rows.addAll(
-        await _fetchFancamRows(limit: limit, offset: 0, artistId: id),
-      );
-      rows.addAll(await _fetchFancamRows(limit: limit, offset: 0, groupId: id));
-    }
-    return _dedupeRows(rows).take(limit).toList(growable: false);
+    final response = await _client.rpc(
+      'hallyu_following_fancams_v1',
+      params: {'p_limit': limit, 'p_offset': 0},
+    );
+    return response is List
+        ? response.cast<Map<String, dynamic>>()
+        : const <Map<String, dynamic>>[];
   }
 
   Future<List<Map<String, dynamic>>> _forYouRows({required int limit}) async {
@@ -856,6 +847,9 @@ class SupabaseFancamService extends LocalFancamService {
           .whereType<KpopEntity>()
           .toList(growable: false),
       createdAt: createdAt,
+      repostedByUserId: row['reposted_by_user_id'] as String? ?? '',
+      repostedByUsername: row['reposted_by_username'] as String? ?? '',
+      repostedAt: DateTime.tryParse(row['reposted_at'] as String? ?? ''),
       isOwn: isOwn,
     );
   }

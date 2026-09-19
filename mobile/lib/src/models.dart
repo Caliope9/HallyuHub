@@ -2060,6 +2060,9 @@ class Fancam {
     this.taggedUserIds = const [],
     this.taggedEntities = const [],
     this.createdAt,
+    this.repostedByUserId = '',
+    this.repostedByUsername = '',
+    this.repostedAt,
     this.isOwn = false,
   });
 
@@ -2088,6 +2091,9 @@ class Fancam {
   final List<String> taggedUserIds;
   final List<KpopEntity> taggedEntities;
   final DateTime? createdAt;
+  final String repostedByUserId;
+  final String repostedByUsername;
+  final DateTime? repostedAt;
   final bool isOwn;
 
   bool get hasVideo => videoPath.isNotEmpty;

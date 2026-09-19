@@ -52,4 +52,49 @@ void main() {
     );
     expect(service.contains(RepostContentType.post, 'post-1'), isFalse);
   });
+
+  test(
+    'local fancam repost state is active, idempotent, and removable',
+    () async {
+      final service = LocalRepostService();
+
+      expect(
+        await service.hasReposted(
+          contentType: RepostContentType.fancam,
+          contentId: 'fancam-1',
+        ),
+        isFalse,
+      );
+
+      final first = await service.createRepost(
+        contentType: RepostContentType.fancam,
+        contentId: 'fancam-1',
+      );
+      final second = await service.createRepost(
+        contentType: RepostContentType.fancam,
+        contentId: 'fancam-1',
+      );
+
+      expect(second.id, first.id);
+      expect(
+        await service.hasReposted(
+          contentType: RepostContentType.fancam,
+          contentId: 'fancam-1',
+        ),
+        isTrue,
+      );
+
+      await service.removeRepost(
+        contentType: RepostContentType.fancam,
+        contentId: 'fancam-1',
+      );
+      expect(
+        await service.hasReposted(
+          contentType: RepostContentType.fancam,
+          contentId: 'fancam-1',
+        ),
+        isFalse,
+      );
+    },
+  );
 }

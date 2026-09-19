@@ -227,6 +227,11 @@ class LocalFancamService {
       createdAt: json['createdAt'] == null
           ? null
           : DateTime.tryParse(json['createdAt'] as String),
+      repostedByUserId: json['repostedByUserId'] as String? ?? '',
+      repostedByUsername: json['repostedByUsername'] as String? ?? '',
+      repostedAt: json['repostedAt'] == null
+          ? null
+          : DateTime.tryParse(json['repostedAt'] as String),
       isOwn: json['isOwn'] as bool? ?? true,
     );
   }
@@ -256,6 +261,10 @@ class LocalFancamService {
       'viewCount': fancam.viewCount,
       if (fancam.createdAt != null)
         'createdAt': fancam.createdAt!.toIso8601String(),
+      'repostedByUserId': fancam.repostedByUserId,
+      'repostedByUsername': fancam.repostedByUsername,
+      if (fancam.repostedAt != null)
+        'repostedAt': fancam.repostedAt!.toIso8601String(),
       'isOwn': fancam.isOwn,
     };
   }
