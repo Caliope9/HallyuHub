@@ -223,7 +223,6 @@ class SupabaseFancamService extends LocalFancamService {
           .from('fancams')
           .update({
             'deleted_at': DateTime.now().toUtc().toIso8601String(),
-            'updated_at': DateTime.now().toUtc().toIso8601String(),
           })
           .eq('id', id)
           .eq('author_id', authUser.id);
