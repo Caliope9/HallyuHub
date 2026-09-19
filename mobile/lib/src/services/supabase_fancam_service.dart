@@ -45,6 +45,7 @@ class SupabaseFancamService extends LocalFancamService {
     int offset = 0,
     String? authorId,
     bool onlyCurrentUser = false,
+    FancamFeedMode feedMode = FancamFeedMode.forYou,
   }) async {
     final stopwatch = Stopwatch()..start();
     final currentUserId = _client.auth.currentUser?.id;
@@ -52,24 +53,12 @@ class SupabaseFancamService extends LocalFancamService {
     _logPerformance(
       'PERF_FANCAMS_FETCH_START limit=$limit offset=$offset authorId=${effectiveAuthorId ?? ''}',
     );
-    var query = _client
-        .from('fancams')
-        .select(
-          'id,author_id,caption,artist_name,group_name,group_id,artist_id,'
-          'event_name,song_name,tags,audio,location,video_url,storage_bucket,'
-          'storage_path,duration_seconds,file_size,thumbnail_url,created_at,'
-          'view_count,'
-          'profiles:author_id(id,name,username,avatar_asset,avatar_url)',
-        )
-        .eq('status', 'published')
-        .filter('deleted_at', 'is', null);
-    if (effectiveAuthorId != null && effectiveAuthorId.isNotEmpty) {
-      query = query.eq('author_id', effectiveAuthorId);
-    }
-    final rows = await query
-        .order('created_at', ascending: false)
-        .range(offset, offset + limit - 1);
-    final fancamRows = rows.cast<Map<String, dynamic>>();
+    final fancamRows = await _restoreFeedRows(
+      limit: limit,
+      offset: offset,
+      authorId: effectiveAuthorId,
+      feedMode: feedMode,
+    );
     if (fancamRows.isEmpty) {
       _logPerformance(
         'PERF_FANCAMS_FETCH_OK count=0 elapsedMs=${stopwatch.elapsedMilliseconds}',
@@ -106,6 +95,151 @@ class SupabaseFancamService extends LocalFancamService {
       'PERF_FANCAMS_FETCH_OK count=${fancams.length} elapsedMs=${stopwatch.elapsedMilliseconds}',
     );
     return fancams;
+  }
+
+  static const _fancamSelect =
+      'id,author_id,caption,artist_name,group_name,group_id,artist_id,'
+      'event_name,song_name,tags,audio,location,video_url,storage_bucket,'
+      'storage_path,duration_seconds,file_size,thumbnail_url,created_at,'
+      'view_count,profiles:author_id(id,name,username,avatar_asset,avatar_url)';
+
+  Future<List<Map<String, dynamic>>> _restoreFeedRows({
+    required int limit,
+    required int offset,
+    required String? authorId,
+    required FancamFeedMode feedMode,
+  }) async {
+    if (authorId != null && authorId.isNotEmpty) {
+      return _fetchFancamRows(
+        limit: limit,
+        offset: offset,
+        authorId: authorId,
+        orderByViews: false,
+      );
+    }
+    switch (feedMode) {
+      case FancamFeedMode.viral:
+        return _fetchFancamRows(
+          limit: limit,
+          offset: offset,
+          orderByViews: true,
+        );
+      case FancamFeedMode.following:
+        return _followingRows(limit: limit);
+      case FancamFeedMode.forYou:
+        return _forYouRows(limit: limit);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchFancamRows({
+    required int limit,
+    required int offset,
+    bool orderByViews = false,
+    String? authorId,
+    String? artistId,
+    String? groupId,
+  }) async {
+    var query = _client
+        .from('fancams')
+        .select(_fancamSelect)
+        .eq('status', 'published')
+        .filter('deleted_at', 'is', null);
+    if (authorId != null && authorId.isNotEmpty) {
+      query = query.eq('author_id', authorId);
+    }
+    if (artistId != null && artistId.isNotEmpty) {
+      query = query.eq('artist_id', artistId);
+    }
+    if (groupId != null && groupId.isNotEmpty) {
+      query = query.eq('group_id', groupId);
+    }
+    final ordered = query
+        .order(orderByViews ? 'view_count' : 'created_at', ascending: false)
+        .order('created_at', ascending: false);
+    final rows = await ordered.range(offset, offset + limit - 1);
+    return rows.cast<Map<String, dynamic>>();
+  }
+
+  Future<Set<String>> _followedProfileIds() async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null || userId.isEmpty) return <String>{};
+    final rows = await _client
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', userId);
+    return rows
+        .cast<Map<String, dynamic>>()
+        .map((row) => row['following_id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet();
+  }
+
+  Future<Set<String>> _followedEntityIds() async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null || userId.isEmpty) return <String>{};
+    final rows = await _client
+        .from('kpop_entity_follows')
+        .select('entity_id')
+        .eq('user_id', userId);
+    return rows
+        .cast<Map<String, dynamic>>()
+        .map((row) => row['entity_id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet();
+  }
+
+  Future<List<Map<String, dynamic>>> _followingRows({
+    required int limit,
+  }) async {
+    final profileIds = await _followedProfileIds();
+    final entityIds = await _followedEntityIds();
+    if (profileIds.isEmpty && entityIds.isEmpty) return const [];
+    final rows = <Map<String, dynamic>>[];
+    for (final id in profileIds) {
+      rows.addAll(
+        await _fetchFancamRows(limit: limit, offset: 0, authorId: id),
+      );
+    }
+    for (final id in entityIds) {
+      rows.addAll(
+        await _fetchFancamRows(limit: limit, offset: 0, artistId: id),
+      );
+      rows.addAll(await _fetchFancamRows(limit: limit, offset: 0, groupId: id));
+    }
+    return _dedupeRows(rows).take(limit).toList(growable: false);
+  }
+
+  Future<List<Map<String, dynamic>>> _forYouRows({required int limit}) async {
+    final profileIds = await _followedProfileIds();
+    final entityIds = await _followedEntityIds();
+    final rows = <Map<String, dynamic>>[];
+    for (final id in entityIds) {
+      rows.addAll(
+        await _fetchFancamRows(limit: limit, offset: 0, artistId: id),
+      );
+      rows.addAll(await _fetchFancamRows(limit: limit, offset: 0, groupId: id));
+    }
+    for (final id in profileIds) {
+      rows.addAll(
+        await _fetchFancamRows(limit: limit, offset: 0, authorId: id),
+      );
+    }
+    rows.addAll(await _fetchFancamRows(limit: limit, offset: 0));
+    rows.addAll(
+      await _fetchFancamRows(limit: limit, offset: 0, orderByViews: true),
+    );
+    return _dedupeRows(rows).take(limit).toList(growable: false);
+  }
+
+  static List<Map<String, dynamic>> _dedupeRows(
+    Iterable<Map<String, dynamic>> rows,
+  ) {
+    final byId = <String, Map<String, dynamic>>{};
+    for (final row in rows) {
+      final id = row['id']?.toString() ?? '';
+      if (id.isNotEmpty) byId.putIfAbsent(id, () => row);
+    }
+    return byId.values.toList(growable: false);
   }
 
   @override
@@ -221,9 +355,7 @@ class SupabaseFancamService extends LocalFancamService {
     } catch (_) {
       await _client
           .from('fancams')
-          .update({
-            'deleted_at': DateTime.now().toUtc().toIso8601String(),
-          })
+          .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
           .eq('id', id)
           .eq('author_id', authUser.id);
     }

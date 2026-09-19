@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models.dart';
 import 'media_upload_limits.dart';
 
+enum FancamFeedMode { forYou, viral, following }
+
 class LocalFancamService {
   const LocalFancamService();
 
@@ -34,6 +36,7 @@ class LocalFancamService {
     int offset = 0,
     String? authorId,
     bool onlyCurrentUser = false,
+    FancamFeedMode feedMode = FancamFeedMode.forYou,
   }) async {
     final preferences = await SharedPreferences.getInstance();
     final stored = preferences.getString(_fancamsKey);

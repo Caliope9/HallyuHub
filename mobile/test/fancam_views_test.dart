@@ -1,8 +1,16 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hallyuhub/src/screens/fancams_screen.dart';
 import 'package:hallyuhub/src/models.dart';
 import 'package:hallyuhub/src/services/fancam_view_tracking.dart';
 
 void main() {
+  test('view counts use compact social-feed notation', () {
+    expect(formatFancamViewCount(999), '999');
+    expect(formatFancamViewCount(1200), '1.2K');
+    expect(formatFancamViewCount(48000), '48K');
+    expect(formatFancamViewCount(1100000), '1.1M');
+  });
+
   test('Fancam viewCount defaults to zero', () {
     const fancam = Fancam(
       title: 'Stage focus',

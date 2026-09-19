@@ -106,6 +106,7 @@ class _FancamsScreenState extends State<FancamsScreen> {
   bool _publishingFancam = false;
   String _appliedInitialFancamId = '';
   int _autoplaySignal = 0;
+  FancamFeedMode _feedMode = FancamFeedMode.forYou;
 
   @override
   void initState() {
@@ -176,7 +177,9 @@ class _FancamsScreenState extends State<FancamsScreen> {
       setState(() => _loadingFancams = true);
     }
     try {
-      final local = await widget.fancamService.restoreFancams();
+      final local = await widget.fancamService.restoreFancams(
+        feedMode: _feedMode,
+      );
       final liked = await widget.fancamService.restoreLikedFancamIds();
       final saved = await widget.fancamService.restoreSavedFancamIds();
       final blocked = await widget.safetyService.restoreBlockedUserIds();
@@ -798,6 +801,16 @@ class _FancamsScreenState extends State<FancamsScreen> {
     );
   }
 
+  Future<void> _changeFeedMode(FancamFeedMode mode) async {
+    if (_feedMode == mode) return;
+    setState(() {
+      _feedMode = mode;
+      _loadingFancams = true;
+    });
+    _resetToTop();
+    await _restoreFancamState();
+  }
+
   void _showSnack(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
@@ -919,12 +932,96 @@ class _FancamsScreenState extends State<FancamsScreen> {
                   child: const Icon(Icons.add_rounded),
                 ),
               ),
+            Positioned(
+              left: widget.showBackButton ? 68 : 16,
+              right: 68,
+              top: 16,
+              child: _FancamFeedModeSelector(
+                selected: _feedMode,
+                onChanged: _changeFeedMode,
+              ),
+            ),
             if (_publishingFancam)
               Container(
                 color: AppTheme.night.withValues(alpha: 0.74),
                 child: const Center(child: _FancamPublishingStatus()),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+String formatFancamViewCount(int count) {
+  if (count < 1000) return '$count';
+  if (count < 1000000) {
+    final value = count / 1000;
+    return value >= 100 || value == value.roundToDouble()
+        ? '${value.round()}K'
+        : '${value.toStringAsFixed(1)}K';
+  }
+  final value = count / 1000000;
+  return value >= 100 || value == value.roundToDouble()
+      ? '${value.round()}M'
+      : '${value.toStringAsFixed(1)}M';
+}
+
+class _FancamFeedModeSelector extends StatelessWidget {
+  const _FancamFeedModeSelector({
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final FancamFeedMode selected;
+  final ValueChanged<FancamFeedMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.center,
+      child: Container(
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: .5),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: AppTheme.cyan.withValues(alpha: .32)),
+        ),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _mode('Para ti', FancamFeedMode.forYou),
+              _mode('Más virales', FancamFeedMode.viral),
+              _mode('Siguiendo', FancamFeedMode.following),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _mode(String label, FancamFeedMode mode) {
+    final active = selected == mode;
+    return GestureDetector(
+      onTap: () => onChanged(mode),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: active
+              ? AppTheme.violet.withValues(alpha: .9)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: active ? 1 : .72),
+            fontSize: 11,
+            fontWeight: active ? FontWeight.w900 : FontWeight.w700,
+          ),
         ),
       ),
     );
@@ -1045,6 +1142,7 @@ class _FancamReelCard extends StatelessWidget {
                   saved: saved,
                   likes: likesCount,
                   comments: commentsCount,
+                  views: formatFancamViewCount(fancam.viewCount),
                   onLike: onLike,
                   onComment: onComment,
                   onSave: onSave,
@@ -1723,6 +1821,7 @@ class _FancamActionRail extends StatelessWidget {
     required this.saved,
     required this.likes,
     required this.comments,
+    required this.views,
     required this.onLike,
     required this.onComment,
     required this.onSave,
@@ -1735,6 +1834,7 @@ class _FancamActionRail extends StatelessWidget {
   final bool saved;
   final String likes;
   final String comments;
+  final String views;
   final VoidCallback onLike;
   final VoidCallback onComment;
   final VoidCallback onSave;
@@ -1748,6 +1848,7 @@ class _FancamActionRail extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        _FancamMetric(icon: Icons.visibility_outlined, label: views),
         _FancamActionButton(
           icon: liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
           label: likes,
@@ -1783,6 +1884,43 @@ class _FancamActionRail extends StatelessWidget {
             onTap: onDelete!,
           ),
       ],
+    );
+  }
+}
+
+class _FancamMetric extends StatelessWidget {
+  const _FancamMetric({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.black.withValues(alpha: 0.38),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+            ),
+            child: Icon(icon, color: Colors.white, size: 22),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
