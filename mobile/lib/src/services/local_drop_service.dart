@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models.dart';
 import 'media_upload_limits.dart';
 
+enum DropFeedMode { forYou, viral, following }
+
 class LocalDropService {
   const LocalDropService();
 
@@ -34,6 +36,7 @@ class LocalDropService {
     int offset = 0,
     String? authorId,
     bool onlyCurrentUser = false,
+    DropFeedMode feedMode = DropFeedMode.forYou,
   }) async {
     final preferences = await SharedPreferences.getInstance();
     final stored = preferences.getString(_dropsKey);

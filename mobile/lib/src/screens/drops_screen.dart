@@ -19,6 +19,7 @@ import '../services/local_story_service.dart';
 import '../services/local_user_tag_service.dart';
 import '../services/local_artist_tag_service.dart';
 import '../services/media_permission_service.dart';
+import '../services/repost_service.dart';
 import '../services/store_profile_service.dart';
 import '../services/video_audio_preference.dart';
 import '../services/video_playback_coordinator.dart';
@@ -101,6 +102,7 @@ class _DropsScreenState extends State<DropsScreen> {
   final Map<String, int> _commentAdditions = {};
   final Map<String, int> _commentRemovals = {};
   final Map<String, int> _likeAdjustments = {};
+  final Set<String> _repostedDrops = {};
   List<DropClip> _localDrops = [];
   final Set<String> _blockedUserIds = {};
   int _activeIndex = 0;
@@ -109,10 +111,23 @@ class _DropsScreenState extends State<DropsScreen> {
   bool _publishingDrop = false;
   String _appliedInitialDropId = '';
   int _autoplaySignal = 0;
+  DropFeedMode _feedMode = DropFeedMode.forYou;
+  late final RepostService _repostService;
 
   @override
   void initState() {
     super.initState();
+    if (!widget.dropService.usesRealDrops) {
+      _repostService = LocalRepostService();
+    } else {
+      try {
+        _repostService = SupabaseRepostService();
+      } catch (_) {
+        // Isolated widget tests can use a real-drop-shaped fake without
+        // bootstrapping Supabase; production receives the real service.
+        _repostService = LocalRepostService();
+      }
+    }
     LocalDropService.revision.addListener(_restoreDropState);
     LocalSafetyService.revision.addListener(_restoreDropState);
     VideoAudioPreference.muted.addListener(_syncVideoAudioPreference);
@@ -177,9 +192,23 @@ class _DropsScreenState extends State<DropsScreen> {
       setState(() => _loadingDrops = true);
     }
     try {
-      final local = await widget.dropService.restoreDrops();
+      final local = await widget.dropService.restoreDrops(feedMode: _feedMode);
       final liked = await widget.dropService.restoreLikedDropIds();
       final saved = await widget.dropService.restoreSavedDropIds();
+      final reposted = <String>{};
+      if (widget.dropService.usesRealDrops) {
+        final states = await Future.wait(
+          local.map(
+            (drop) => _repostService.hasReposted(
+              contentType: RepostContentType.drop,
+              contentId: _dropId(drop),
+            ),
+          ),
+        );
+        for (var index = 0; index < states.length; index++) {
+          if (states[index]) reposted.add(_dropId(local[index]));
+        }
+      }
       final blocked = await widget.safetyService.restoreBlockedUserIds();
       if (!mounted) return;
       setState(() {
@@ -193,6 +222,9 @@ class _DropsScreenState extends State<DropsScreen> {
         _savedDrops
           ..clear()
           ..addAll(saved);
+        _repostedDrops
+          ..clear()
+          ..addAll(reposted);
         _loadedStarredDrops
           ..clear()
           ..addAll(liked);
@@ -215,9 +247,18 @@ class _DropsScreenState extends State<DropsScreen> {
     final source = widget.dropService.usesRealDrops
         ? _localDrops
         : [..._localDrops, ...drops];
-    return source
+    final visible = source
         .where((clip) => !_blockedUserIds.contains(clip.creatorId))
         .toList(growable: false);
+    if (_feedMode != DropFeedMode.viral) return visible;
+    return [...visible]
+      ..sort((a, b) {
+        final views = b.viewCount.compareTo(a.viewCount);
+        if (views != 0) return views;
+        return (b.createdAt ?? DateTime(1970)).compareTo(
+          a.createdAt ?? DateTime(1970),
+        );
+      });
   }
 
   String _dropId(DropClip clip) {
@@ -337,6 +378,39 @@ class _DropsScreenState extends State<DropsScreen> {
       if (mounted) {
         setState(() => _busyDropActions.remove('save-$id'));
       }
+    }
+  }
+
+  Future<void> _toggleRepost(DropClip clip) async {
+    final id = _dropId(clip);
+    final actionKey = 'repost-$id';
+    if (_busyDropActions.contains(actionKey)) return;
+    final wasReposted = _repostedDrops.contains(id);
+    setState(() => _busyDropActions.add(actionKey));
+    try {
+      if (wasReposted) {
+        await _repostService.removeRepost(
+          contentType: RepostContentType.drop,
+          contentId: id,
+        );
+        if (mounted) {
+          setState(() => _repostedDrops.remove(id));
+          _showSnack('Repost quitado');
+        }
+      } else {
+        await _repostService.createRepost(
+          contentType: RepostContentType.drop,
+          contentId: id,
+        );
+        if (mounted) {
+          setState(() => _repostedDrops.add(id));
+          _showSnack('Drop reposteado a tus seguidores');
+        }
+      }
+    } catch (error) {
+      if (mounted) _showSnack(_dropError(error));
+    } finally {
+      if (mounted) setState(() => _busyDropActions.remove(actionKey));
     }
   }
 
@@ -809,6 +883,16 @@ class _DropsScreenState extends State<DropsScreen> {
     );
   }
 
+  Future<void> _changeFeedMode(DropFeedMode mode) async {
+    if (_feedMode == mode) return;
+    setState(() {
+      _feedMode = mode;
+      _loadingDrops = true;
+    });
+    _resetToTop();
+    await _restoreDropState();
+  }
+
   @override
   Widget build(BuildContext context) {
     final visibleDrops = _visibleDrops;
@@ -851,12 +935,14 @@ class _DropsScreenState extends State<DropsScreen> {
                     muted: _muted,
                     starred: _starredDrops.contains(id),
                     saved: _savedDrops.contains(id),
+                    reposted: _repostedDrops.contains(id),
                     likesLabel: _dropLikeLabel(clip),
                     commentsLabel: _dropCommentLabel(clip),
                     onToggleSound: () =>
                         VideoAudioPreference.setMuted(!_muted, source: 'drops'),
                     onStar: () => _toggleStar(clip),
                     onSave: () => _toggleSaved(clip),
+                    onRepost: () => _toggleRepost(clip),
                     onComment: () => _openComments(clip),
                     onReport: () => _reportDrop(clip),
                     onDelete: clip.isOwn ? () => _deleteDrop(clip) : null,
@@ -898,6 +984,15 @@ class _DropsScreenState extends State<DropsScreen> {
                   compact: true,
                 ),
               ),
+            Positioned(
+              left: widget.showBackButton ? 68 : 16,
+              right: 68,
+              top: 16,
+              child: _DropFeedModeSelector(
+                selected: _feedMode,
+                onChanged: _changeFeedMode,
+              ),
+            ),
             if (_publishingDrop)
               Container(
                 color: AppTheme.night.withValues(alpha: 0.74),
@@ -918,6 +1013,64 @@ class _DropsScreenState extends State<DropsScreen> {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DropFeedModeSelector extends StatelessWidget {
+  const _DropFeedModeSelector({required this.selected, required this.onChanged});
+
+  final DropFeedMode selected;
+  final ValueChanged<DropFeedMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.center,
+      child: Container(
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: .5),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: AppTheme.cyan.withValues(alpha: .32)),
+        ),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _mode('Para ti', DropFeedMode.forYou),
+              _mode('Más virales', DropFeedMode.viral),
+              _mode('Siguiendo', DropFeedMode.following),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _mode(String label, DropFeedMode mode) {
+    final active = selected == mode;
+    return GestureDetector(
+      onTap: () => onChanged(mode),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: active
+              ? AppTheme.violet.withValues(alpha: .9)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: active ? 1 : .72),
+            fontSize: 11,
+            fontWeight: active ? FontWeight.w900 : FontWeight.w700,
+          ),
         ),
       ),
     );
@@ -1053,12 +1206,14 @@ class _DropReelCard extends StatelessWidget {
     required this.muted,
     required this.starred,
     required this.saved,
+    required this.reposted,
     required this.likesLabel,
     required this.commentsLabel,
     required this.viewsLabel,
     required this.onToggleSound,
     required this.onStar,
     required this.onSave,
+    required this.onRepost,
     required this.onComment,
     required this.onReport,
     required this.onDelete,
@@ -1078,12 +1233,14 @@ class _DropReelCard extends StatelessWidget {
   final bool muted;
   final bool starred;
   final bool saved;
+  final bool reposted;
   final String likesLabel;
   final String commentsLabel;
   final String viewsLabel;
   final VoidCallback onToggleSound;
   final VoidCallback onStar;
   final VoidCallback onSave;
+  final VoidCallback onRepost;
   final VoidCallback onComment;
   final VoidCallback onReport;
   final VoidCallback? onDelete;
@@ -1133,11 +1290,6 @@ class _DropReelCard extends StatelessWidget {
               ),
             ),
             Positioned(
-              left: 14,
-              top: 14,
-              child: _TopChip(icon: Icons.bolt_rounded, label: 'Drops'),
-            ),
-            Positioned(
               right: 8,
               top: 0,
               bottom: 0,
@@ -1185,6 +1337,15 @@ class _DropReelCard extends StatelessWidget {
                         tooltip: 'Eliminar Drop',
                         onPressed: onDelete!,
                       ),
+                    _DropAction(
+                      icon: reposted
+                          ? Icons.repeat_on_rounded
+                          : Icons.repeat_rounded,
+                      label: reposted ? 'Reposteado' : 'Repost',
+                      active: reposted,
+                      tooltip: reposted ? 'Quitar repost' : 'Repostear Drop',
+                      onPressed: onRepost,
+                    ),
                     _DropAction(
                       icon: Icons.visibility_rounded,
                       label: viewsLabel,
@@ -1302,6 +1463,19 @@ class _DropReelCard extends StatelessWidget {
                       ),
                     ],
                   ),
+                  if (clip.repostedByUsername.isNotEmpty) ...[
+                    const SizedBox(height: 7),
+                    Text(
+                      '↻ Reposteado por ${clip.repostedByUsername}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppTheme.cyan.withValues(alpha: .9),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -2780,40 +2954,6 @@ class _DropAction extends StatelessWidget {
               ),
             ),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-class _TopChip extends StatelessWidget {
-  const _TopChip({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.42),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: AppTheme.violet, size: 15),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
         ],
       ),
     );

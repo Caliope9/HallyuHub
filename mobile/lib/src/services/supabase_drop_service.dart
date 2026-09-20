@@ -44,6 +44,7 @@ class SupabaseDropService extends LocalDropService {
     int offset = 0,
     String? authorId,
     bool onlyCurrentUser = false,
+    DropFeedMode feedMode = DropFeedMode.forYou,
   }) async {
     final stopwatch = Stopwatch()..start();
     final currentUserId = _client.auth.currentUser?.id;
@@ -51,23 +52,12 @@ class SupabaseDropService extends LocalDropService {
     _logPerformance(
       'PERF_DROPS_FETCH_START limit=$limit offset=$offset authorId=${effectiveAuthorId ?? ''}',
     );
-    var query = _client
-        .from('drops')
-        .select(
-          'id,author_id,caption,artist_name,group_name,group_id,artist_id,'
-          'audio,filter,location,video_url,storage_bucket,storage_path,'
-          'duration_seconds,file_size,thumbnail_url,created_at,view_count,'
-          'profiles:author_id(id,name,username,avatar_asset,avatar_url)',
-        )
-        .eq('status', 'published')
-        .filter('deleted_at', 'is', null);
-    if (effectiveAuthorId != null && effectiveAuthorId.isNotEmpty) {
-      query = query.eq('author_id', effectiveAuthorId);
-    }
-    final rows = await query
-        .order('created_at', ascending: false)
-        .range(offset, offset + limit - 1);
-    final dropRows = rows.cast<Map<String, dynamic>>();
+    final dropRows = await _restoreFeedRows(
+      limit: limit,
+      offset: offset,
+      authorId: effectiveAuthorId,
+      feedMode: feedMode,
+    );
     if (dropRows.isEmpty) {
       _logPerformance(
         'PERF_DROPS_FETCH_OK count=0 elapsedMs=${stopwatch.elapsedMilliseconds}',
@@ -102,6 +92,156 @@ class SupabaseDropService extends LocalDropService {
       'PERF_DROPS_FETCH_OK count=${drops.length} elapsedMs=${stopwatch.elapsedMilliseconds}',
     );
     return drops;
+  }
+
+  static const _dropSelect =
+      'id,author_id,caption,artist_name,group_name,group_id,artist_id,'
+      'audio,filter,location,video_url,storage_bucket,storage_path,'
+      'duration_seconds,file_size,thumbnail_url,created_at,view_count,'
+      'profiles:author_id(id,name,username,avatar_asset,avatar_url)';
+
+  Future<List<Map<String, dynamic>>> _restoreFeedRows({
+    required int limit,
+    required int offset,
+    required String? authorId,
+    required DropFeedMode feedMode,
+  }) async {
+    if (authorId != null && authorId.isNotEmpty) {
+      return _fetchDropRows(
+        limit: limit,
+        offset: offset,
+        authorId: authorId,
+      );
+    }
+    switch (feedMode) {
+      case DropFeedMode.viral:
+        return _fetchDropRows(
+          limit: limit,
+          offset: offset,
+          orderByViews: true,
+        );
+      case DropFeedMode.following:
+        final response = await _client.rpc(
+          'hallyu_following_drops_v1',
+          params: {'p_limit': limit, 'p_offset': offset},
+        );
+        return response is List
+            ? response.cast<Map<String, dynamic>>()
+            : const <Map<String, dynamic>>[];
+      case DropFeedMode.forYou:
+        return _forYouRows(limit: limit);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchDropRows({
+    required int limit,
+    required int offset,
+    bool orderByViews = false,
+    String? authorId,
+    String? artistId,
+    String? groupId,
+  }) async {
+    var query = _client
+        .from('drops')
+        .select(_dropSelect)
+        .eq('status', 'published')
+        .filter('deleted_at', 'is', null);
+    if (authorId != null && authorId.isNotEmpty) {
+      query = query.eq('author_id', authorId);
+    }
+    if (artistId != null && artistId.isNotEmpty) {
+      query = query.eq('artist_id', artistId);
+    }
+    if (groupId != null && groupId.isNotEmpty) {
+      query = query.eq('group_id', groupId);
+    }
+    final ordered = query
+        .order(orderByViews ? 'view_count' : 'created_at', ascending: false)
+        .order('created_at', ascending: false);
+    final rows = await ordered.range(offset, offset + limit - 1);
+    return rows.cast<Map<String, dynamic>>();
+  }
+
+  Future<Set<String>> _followedProfileIds() async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null || userId.isEmpty) return <String>{};
+    final rows = await _client
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', userId);
+    return rows
+        .cast<Map<String, dynamic>>()
+        .map((row) => row['following_id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet();
+  }
+
+  Future<Set<String>> _followedEntityIds() async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null || userId.isEmpty) return <String>{};
+    final rows = await _client
+        .from('kpop_entity_follows')
+        .select('entity_id')
+        .eq('user_id', userId);
+    return rows
+        .cast<Map<String, dynamic>>()
+        .map((row) => row['entity_id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet();
+  }
+
+  Future<List<Map<String, dynamic>>> _forYouRows({required int limit}) async {
+    final followedProfiles = await _followedProfileIds();
+    final followedEntities = await _followedEntityIds();
+    final rows = <Map<String, dynamic>>[];
+    for (final id in followedEntities) {
+      rows.addAll(await _fetchDropRows(limit: limit, offset: 0, artistId: id));
+      rows.addAll(await _fetchDropRows(limit: limit, offset: 0, groupId: id));
+    }
+    for (final id in followedProfiles) {
+      rows.addAll(await _fetchDropRows(limit: limit, offset: 0, authorId: id));
+    }
+    rows.addAll(await _fetchDropRows(limit: limit, offset: 0));
+    final candidates = _dedupeRows(rows);
+    candidates.sort((a, b) {
+      final score = _forYouScore(b, followedProfiles, followedEntities) -
+          _forYouScore(a, followedProfiles, followedEntities);
+      if (score != 0) return score;
+      final date = _dateOf(b).compareTo(_dateOf(a));
+      if (date != 0) return date;
+      return ((b['view_count'] as num?)?.toInt() ?? 0).compareTo(
+        (a['view_count'] as num?)?.toInt() ?? 0,
+      );
+    });
+    return candidates.skip(0).take(limit).toList(growable: false);
+  }
+
+  static int _forYouScore(
+    Map<String, dynamic> row,
+    Set<String> followedProfiles,
+    Set<String> followedEntities,
+  ) {
+    var score = 0;
+    if (followedProfiles.contains(row['author_id']?.toString())) score += 100;
+    if (followedEntities.contains(row['artist_id']?.toString()) ||
+        followedEntities.contains(row['group_id']?.toString())) {
+      score += 50;
+    }
+    return score;
+  }
+
+  static DateTime _dateOf(Map<String, dynamic> row) =>
+      DateTime.tryParse(row['created_at'] as String? ?? '') ?? DateTime(1970);
+
+  static List<Map<String, dynamic>> _dedupeRows(
+    Iterable<Map<String, dynamic>> rows,
+  ) {
+    final byId = <String, Map<String, dynamic>>{};
+    for (final row in rows) {
+      final id = row['id']?.toString() ?? '';
+      if (id.isNotEmpty) byId.putIfAbsent(id, () => row);
+    }
+    return byId.values.toList(growable: true);
   }
 
   @override
@@ -729,6 +869,11 @@ class SupabaseDropService extends LocalDropService {
           .whereType<KpopEntity>()
           .toList(growable: false),
       createdAt: createdAt,
+      repostedByUserId: row['reposted_by_user_id'] as String? ?? '',
+      repostedByUsername: row['reposted_by_username'] as String? ?? '',
+      repostedAt: DateTime.tryParse(
+        row['reposted_at'] as String? ?? '',
+      ),
       isOwn: isOwn,
     );
   }
