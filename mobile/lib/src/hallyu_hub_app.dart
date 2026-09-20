@@ -16,6 +16,7 @@ import 'screens/messages_inbox_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/public_profile_screen.dart';
 import 'screens/search_screen.dart';
+import 'screens/user_search_screen.dart';
 import 'services/auth_service.dart';
 import 'services/account_deletion_service.dart';
 import 'services/content_moderation_service.dart';
@@ -383,7 +384,26 @@ class _HallyuHubShellState extends State<HallyuHubShell>
     });
   }
 
-  void _openHomeSearch() => _selectTab(1);
+  void _openHomeSearch() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => UserSearchScreen(
+          currentUser: _currentUser,
+          followService: widget.followService,
+          postService: widget.postService,
+          storyService: widget.storyService,
+          dropService: widget.dropService,
+          fancamService: widget.fancamService,
+          chatService: widget.chatService,
+          contentCategoryService: widget.contentCategoryService,
+          userTagService: widget.userTagService,
+          artistTagService: widget.artistTagService,
+          safetyService: widget.safetyService,
+          storeProfileService: widget.storeProfileService,
+        ),
+      ),
+    );
+  }
 
   void _openHomeDiscoverSection(DiscoverSection section) {
     unawaited(

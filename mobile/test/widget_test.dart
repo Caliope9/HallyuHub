@@ -17,6 +17,7 @@ import 'package:hallyuhub/src/services/story_time.dart';
 import 'package:hallyuhub/src/screens/discover_detail_screens.dart';
 import 'package:hallyuhub/src/screens/post_editor_screen.dart';
 import 'package:hallyuhub/src/screens/story_editor_screen.dart';
+import 'package:hallyuhub/src/screens/user_search_screen.dart';
 import 'package:hallyuhub/src/widgets/story_canvas.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -951,6 +952,22 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('eventos activos'), findsOneWidget);
+  });
+
+  testWidgets('home header search opens people search without changing tabs', (
+    tester,
+  ) async {
+    await signIn(tester);
+
+    await tester.tap(find.byKey(const ValueKey('header-search-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(UserSearchScreen), findsOneWidget);
+    expect(find.text('Buscar usuarios'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('discover-people-search')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('stories open a viewer and expose creation sources', (

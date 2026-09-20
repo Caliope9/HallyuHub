@@ -18,7 +18,6 @@ import '../screens/public_profile_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/story_archive_screen.dart';
 import '../screens/story_editor_screen.dart';
-import '../screens/user_search_screen.dart';
 import '../services/local_drop_service.dart';
 import '../services/local_fancam_service.dart';
 import '../services/local_follow_service.dart';
@@ -2357,27 +2356,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _openUserSearch() {
-    Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => UserSearchScreen(
-          currentUser: user,
-          followService: widget.followService,
-          postService: widget.postService,
-          storyService: widget.storyService,
-          dropService: widget.dropService,
-          fancamService: widget.fancamService,
-          chatService: widget.chatService,
-          contentCategoryService: widget.contentCategoryService,
-          userTagService: widget.userTagService,
-          artistTagService: widget.artistTagService,
-          safetyService: widget.safetyService,
-          storeProfileService: widget.storeProfileService,
-        ),
-      ),
-    );
-  }
-
   void _openMessages() {
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
@@ -2628,10 +2606,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       scrollCacheExtent: const ScrollCacheExtent.pixels(900),
       slivers: [
         SliverToBoxAdapter(
-          child: _ProfileTopBar(
-            onSearch: _openUserSearch,
-            onMessages: _openMessages,
-          ),
+          child: _ProfileTopBar(onMessages: _openMessages),
         ),
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -2979,9 +2954,8 @@ class _ProfilePostsFeedScreenState extends State<_ProfilePostsFeedScreen> {
 }
 
 class _ProfileTopBar extends StatelessWidget {
-  const _ProfileTopBar({required this.onSearch, required this.onMessages});
+  const _ProfileTopBar({required this.onMessages});
 
-  final VoidCallback onSearch;
   final VoidCallback onMessages;
 
   @override
@@ -3008,22 +2982,11 @@ class _ProfileTopBar extends StatelessWidget {
             ),
             Align(
               alignment: Alignment.centerRight,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    key: const ValueKey('profile-user-search-open'),
-                    tooltip: 'Buscar usuarios',
-                    onPressed: onSearch,
-                    icon: const Icon(Icons.search_rounded),
-                  ),
-                  IconButton(
-                    key: const ValueKey('profile-messages-open'),
-                    tooltip: 'Mensajes',
-                    onPressed: onMessages,
-                    icon: const Icon(Icons.chat_bubble_outline_rounded),
-                  ),
-                ],
+              child: IconButton(
+                key: const ValueKey('profile-messages-open'),
+                tooltip: 'Mensajes',
+                onPressed: onMessages,
+                icon: const Icon(Icons.chat_bubble_outline_rounded),
               ),
             ),
           ],

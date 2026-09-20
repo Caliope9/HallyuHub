@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hallyuhub/src/models.dart';
-import 'package:hallyuhub/src/screens/user_search_screen.dart';
 import 'package:hallyuhub/src/screens/profile_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  testWidgets('profile search button opens the user search screen', (
+  testWidgets('profile has no people search entry', (
     tester,
   ) async {
     const user = AuthUser(
@@ -32,14 +31,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('profile-user-search-open')));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(UserSearchScreen), findsOneWidget);
-    expect(find.text('Buscar usuarios'), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey('discover-people-search')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('profile-user-search-open')), findsNothing);
+    expect(find.byKey(const ValueKey('profile-messages-open')), findsOneWidget);
   });
 }
