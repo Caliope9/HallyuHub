@@ -101,11 +101,13 @@ class ProfileCategoryRail extends StatelessWidget {
     required this.counts,
     required this.selected,
     required this.onSelected,
+    this.onTopKpop,
   });
 
   final Map<ProfileContentCategory, int> counts;
   final ProfileContentCategory? selected;
   final ValueChanged<ProfileContentCategory?> onSelected;
+  final VoidCallback? onTopKpop;
 
   @override
   Widget build(BuildContext context) {
@@ -122,10 +124,40 @@ class ProfileCategoryRail extends StatelessWidget {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,
-            itemCount: ProfileContentCategory.values.length,
+            itemCount:
+                ProfileContentCategory.values.length +
+                (onTopKpop == null ? 0 : 1),
             separatorBuilder: (_, _) => const SizedBox(width: 10),
             itemBuilder: (context, index) {
-              final category = ProfileContentCategory.values[index];
+              if (onTopKpop != null && index == 0) {
+                return InkWell(
+                  key: const ValueKey('profile-highlight-Top K-pop'),
+                  onTap: onTopKpop,
+                  borderRadius: BorderRadius.circular(24),
+                  child: const SizedBox(
+                    width: 82,
+                    child: Column(
+                      children: [
+                        _TopKpopHighlightIcon(),
+                        SizedBox(height: 7),
+                        Text(
+                          'Top K-pop',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              final categoryIndex = onTopKpop == null ? index : index - 1;
+              final category = ProfileContentCategory.values[categoryIndex];
               final count = counts[category] ?? 0;
               final isSelected = selected == category;
               final label = category == ProfileContentCategory.collection
@@ -227,6 +259,39 @@ class ProfileCategoryRail extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _TopKpopHighlightIcon extends StatelessWidget {
+  const _TopKpopHighlightIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 64,
+      height: 64,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(
+          colors: [AppTheme.cyan, AppTheme.violet],
+        ),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.3),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.cyan.withValues(alpha: 0.22),
+            blurRadius: 14,
+          ),
+        ],
+      ),
+      child: const Icon(
+        Icons.trending_up_rounded,
+        color: Colors.white,
+        size: 28,
+      ),
     );
   }
 }
