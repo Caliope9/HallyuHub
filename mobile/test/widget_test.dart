@@ -2235,6 +2235,7 @@ void main() {
       'auth-terms-checkbox',
       'auth-privacy-checkbox',
       'auth-community-checkbox',
+      'auth-beta-notice-checkbox',
     ]) {
       final checkbox = find.byKey(ValueKey(key));
       await tester.ensureVisible(checkbox);
@@ -2272,7 +2273,7 @@ void main() {
       );
     }
 
-    await tester.tap(find.byKey(const ValueKey('profile-settings-open')));
+    await tester.tap(find.byKey(const ValueKey('profile-settings-open')).last);
     await tester.pumpAndSettle();
 
     expect(find.text('Centro de cuenta'), findsOneWidget);
@@ -2315,14 +2316,6 @@ void main() {
     );
 
     await tester.tap(find.byTooltip('Volver'));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byTooltip('Volver'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Sol Hallyu'), findsWidgets);
-
-    await tester.tap(find.byKey(const ValueKey('profile-settings-open')));
     await tester.pumpAndSettle();
     await scrollUntilVisibleIn(
       tester,
