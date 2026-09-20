@@ -4,6 +4,39 @@ import '../models.dart';
 import '../theme/app_theme.dart';
 import 'premium_profile_visuals.dart';
 
+class _TopKpopHighlightIcon extends StatelessWidget {
+  const _TopKpopHighlightIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 64,
+      height: 64,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(
+          colors: [AppTheme.cyan, AppTheme.violet],
+        ),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.3),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.cyan.withValues(alpha: 0.22),
+            blurRadius: 14,
+          ),
+        ],
+      ),
+      child: const Icon(
+        Icons.trending_up_rounded,
+        color: Colors.white,
+        size: 28,
+      ),
+    );
+  }
+}
+
 class ProfileCategorySelector extends StatelessWidget {
   const ProfileCategorySelector({
     super.key,

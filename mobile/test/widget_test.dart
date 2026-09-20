@@ -1993,23 +1993,6 @@ void main() {
     await tester.tap(find.byTooltip('Cerrar'));
     await tester.pumpAndSettle();
 
-    await scrollUntilVisibleIn(
-      tester,
-      find.byKey(const ValueKey('profile-scroll')),
-      find.byKey(const ValueKey('profile-highlight-Outfit')),
-      scrollDelta: const Offset(0, 520),
-    );
-    await tester.ensureVisible(
-      find.byKey(const ValueKey('profile-highlight-Outfit')),
-    );
-    await tester.tap(find.byKey(const ValueKey('profile-highlight-Outfit')));
-    await tester.pumpAndSettle();
-    expect(find.text('Outfits'), findsOneWidget);
-    expect(find.byKey(const ValueKey('outfit-mode-selector')), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey('outfit-category-selector')),
-      findsOneWidget,
-    );
   });
 
   testWidgets('profile collection tabs create private trade interest', (

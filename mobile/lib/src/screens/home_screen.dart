@@ -1412,7 +1412,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             Padding(
-            Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: _StoriesRail(
                 ownStories: _ownStories,
@@ -2144,6 +2143,7 @@ class _HomeAdvertisingCard extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _LegacyHomeQuickAccessRail extends StatelessWidget {
   const _LegacyHomeQuickAccessRail({
     required this.onViral,

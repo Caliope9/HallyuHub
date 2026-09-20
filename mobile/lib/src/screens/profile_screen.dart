@@ -15,7 +15,6 @@ import '../screens/kpop_entity_profile_screen.dart';
 import '../screens/messages_inbox_screen.dart';
 import '../screens/post_editor_screen.dart';
 import '../screens/outfit_screen.dart';
-import '../screens/top_kpop_screen.dart';
 import '../screens/public_profile_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/story_archive_screen.dart';
@@ -2382,27 +2381,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _openTopKpop() {
-    Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => TopKpopScreen(
-          user: user,
-          artistTagService: widget.artistTagService,
-          postService: widget.postService,
-          storyService: widget.storyService,
-          dropService: widget.dropService,
-          fancamService: widget.fancamService,
-          followService: widget.followService,
-          chatService: widget.chatService,
-          contentCategoryService: widget.contentCategoryService,
-          userTagService: widget.userTagService,
-          safetyService: widget.safetyService,
-          storeProfileService: widget.storeProfileService,
-        ),
-      ),
-    );
-  }
-
   CommunityProfile _communityProfileFromDemo(_DemoProfile profile) {
     return CommunityProfile(
       id: profile.id,
@@ -2560,7 +2538,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _selectedContentCategory = category;
           });
         },
-        onTopKpop: _openTopKpop,
       ),
       const SizedBox(height: 12),
       KeyedSubtree(
