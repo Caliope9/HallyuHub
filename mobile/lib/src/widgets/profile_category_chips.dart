@@ -417,6 +417,12 @@ class _PremiumHighlightCard extends StatelessWidget {
   static const _assets = {
     ProfileContentCategory.concerts:
         'assets/brand/hally_discover_events_v2.jpg',
+    ProfileContentCategory.bias:
+        'assets/brand/hally_profile_bias_editorial_v1.png',
+    ProfileContentCategory.photocards:
+        'assets/brand/hally_profile_photocards_editorial_v1.png',
+    ProfileContentCategory.outfit:
+        'assets/brand/hally_profile_outfit_editorial_v1.png',
     ProfileContentCategory.other:
         'assets/brand/hally_discover_neon_backdrop_v1.jpg',
   };
