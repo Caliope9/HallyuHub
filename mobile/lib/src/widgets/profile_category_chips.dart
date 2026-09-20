@@ -417,13 +417,6 @@ class _PremiumHighlightCard extends StatelessWidget {
   static const _assets = {
     ProfileContentCategory.concerts:
         'assets/brand/hally_discover_events_v2.jpg',
-    ProfileContentCategory.bias: 'assets/demo-posts/post-06.jpg',
-    ProfileContentCategory.photocards: 'assets/demo-posts/post-09.jpg',
-    ProfileContentCategory.outfit: 'assets/demo-posts/post-10.jpg',
-    ProfileContentCategory.collection: 'assets/demo-posts/post-05.jpg',
-    ProfileContentCategory.trades: 'assets/demo-posts/post-08.jpg',
-    ProfileContentCategory.merch: 'assets/demo-posts/post-03.jpg',
-    ProfileContentCategory.fanart: 'assets/demo-posts/post-11.jpg',
     ProfileContentCategory.other:
         'assets/brand/hally_discover_neon_backdrop_v1.jpg',
   };
@@ -445,7 +438,7 @@ class _PremiumHighlightCard extends StatelessWidget {
     final colors = _categoryColors(category);
     final label = displayLabel ?? category.label;
     final subtitle = displaySubtitle ?? _subtitles[category]!;
-    final asset = displayAsset ?? _assets[category]!;
+    final asset = displayAsset ?? _assets[category];
     final icon = displayIcon ?? _categoryIcon(category);
     return Semantics(
       button: true,
@@ -475,7 +468,29 @@ class _PremiumHighlightCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                Image.asset(asset, fit: BoxFit.cover),
+                if (asset != null)
+                  Image.asset(asset, fit: BoxFit.cover)
+                else
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          colors.first.withValues(alpha: .42),
+                          AppTheme.night,
+                          colors.last.withValues(alpha: .22),
+                        ],
+                      ),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        icon,
+                        size: 88,
+                        color: colors.last.withValues(alpha: .18),
+                      ),
+                    ),
+                  ),
                 DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
