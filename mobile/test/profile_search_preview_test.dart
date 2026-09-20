@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  testWidgets('profile has no people search entry', (tester) async {
+  testWidgets('profile has no duplicate internal header', (tester) async {
     const user = AuthUser(
       name: 'Perfil de prueba',
       username: '@profile-search-test',
@@ -33,6 +33,6 @@ void main() {
       find.byKey(const ValueKey('profile-user-search-open')),
       findsNothing,
     );
-    expect(find.byKey(const ValueKey('profile-messages-open')), findsOneWidget);
+    expect(find.byKey(const ValueKey('profile-messages-open')), findsNothing);
   });
 }

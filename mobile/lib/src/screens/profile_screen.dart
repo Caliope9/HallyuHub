@@ -43,7 +43,6 @@ import '../widgets/contextual_permission_sheet.dart';
 import '../widgets/hallyu_post_card.dart';
 import '../widgets/hally_feature_tip.dart';
 import '../widgets/hub_avatar.dart';
-import '../widgets/brand_mark.dart';
 import '../widgets/post_video_player.dart';
 import '../widgets/premium_form_shell.dart';
 import '../widgets/premium_profile_visuals.dart';
@@ -2357,23 +2356,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _openMessages() {
-    Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => MessagesInboxScreen(
-          chatService: widget.chatService,
-          followService: widget.followService,
-          postService: widget.postService,
-          storyService: widget.storyService,
-          dropService: widget.dropService,
-          fancamService: widget.fancamService,
-          safetyService: widget.safetyService,
-          storeProfileService: widget.storeProfileService,
-        ),
-      ),
-    );
-  }
-
   void _openTopKpop() {
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
@@ -2628,7 +2610,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       controller: _scrollController,
       scrollCacheExtent: const ScrollCacheExtent.pixels(900),
       slivers: [
-        SliverToBoxAdapter(child: _ProfileTopBar(onMessages: _openMessages)),
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           sliver: SliverToBoxAdapter(
@@ -2969,49 +2950,6 @@ class _ProfilePostsFeedScreenState extends State<_ProfilePostsFeedScreen> {
                   );
                 },
               ),
-      ),
-    );
-  }
-}
-
-class _ProfileTopBar extends StatelessWidget {
-  const _ProfileTopBar({required this.onMessages});
-
-  final VoidCallback onMessages;
-
-  @override
-  Widget build(BuildContext context) {
-    final canGoBack = Navigator.of(context).canPop();
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
-      child: SizedBox(
-        height: 48,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            HallyuBrandWordmark(fontSize: 23, compact: true),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: canGoBack
-                  ? IconButton(
-                      key: const ValueKey('profile-back'),
-                      tooltip: 'Volver',
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.arrow_back_rounded),
-                    )
-                  : const SizedBox.shrink(),
-            ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: IconButton(
-                key: const ValueKey('profile-messages-open'),
-                tooltip: 'Mensajes',
-                onPressed: onMessages,
-                icon: const Icon(Icons.chat_bubble_outline_rounded),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
