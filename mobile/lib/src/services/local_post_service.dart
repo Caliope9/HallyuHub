@@ -6,6 +6,24 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models.dart';
 import 'media_upload_limits.dart';
 
+enum OutfitFeedMode { forYou, popular, following }
+
+class OutfitFeedItem {
+  const OutfitFeedItem({
+    required this.post,
+    this.categoryKey = 'outfit',
+    this.repostedByUsername = '',
+    this.repostedAt,
+  });
+
+  final HubPost post;
+  final String categoryKey;
+  final String repostedByUsername;
+  final DateTime? repostedAt;
+
+  bool get hasRepostMetadata => repostedByUsername.trim().isNotEmpty;
+}
+
 class LocalPostService {
   const LocalPostService();
 
@@ -60,6 +78,57 @@ class LocalPostService {
     if (ids.isEmpty) return const [];
     final posts = await restorePosts(limit: limit);
     return posts.where((post) => ids.contains(post.id)).toList(growable: false);
+  }
+
+  Future<List<OutfitFeedItem>> restoreOutfitFeed({
+    OutfitFeedMode mode = OutfitFeedMode.forYou,
+    String category = 'all',
+    int limit = 24,
+    int offset = 0,
+  }) async {
+    final posts = await restorePosts(limit: 1000);
+    final outfits = posts.where(_looksLikeLocalOutfit).toList();
+    final filtered = category == 'all'
+        ? outfits
+        : outfits.where((post) => _matchesLocalOutfitCategory(post, category));
+    final sorted = filtered.toList();
+    sorted.sort((a, b) {
+      final date = (b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0))
+          .compareTo(a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0));
+      if (date != 0) return date;
+      return b.id.compareTo(a.id);
+    });
+    return sorted
+        .skip(offset)
+        .take(limit)
+        .map((post) => OutfitFeedItem(
+              post: post,
+              categoryKey: _localOutfitCategory(post),
+            ))
+        .toList(growable: false);
+  }
+
+  String _localOutfitCategory(HubPost post) {
+    final haystack = '${post.caption} ${post.tags.join(' ')}'.toLowerCase();
+    for (final category in const ['stage', 'airport', 'casual']) {
+      if (haystack.contains('#$category') || haystack.contains(category)) {
+        return 'outfit_$category';
+      }
+    }
+    return 'outfit';
+  }
+
+  bool _looksLikeLocalOutfit(HubPost post) {
+    final haystack = '${post.caption} ${post.tags.join(' ')}'.toLowerCase();
+    return haystack.contains('outfit') ||
+        haystack.contains('#stage') ||
+        haystack.contains('#airport') ||
+        haystack.contains('#casual');
+  }
+
+  bool _matchesLocalOutfitCategory(HubPost post, String category) {
+    final haystack = '${post.caption} ${post.tags.join(' ')}'.toLowerCase();
+    return haystack.contains('#$category') || haystack.contains(category);
   }
 
   Future<HubPost> publish({

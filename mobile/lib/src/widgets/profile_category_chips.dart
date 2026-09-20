@@ -48,7 +48,11 @@ class ProfileCategorySelector extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final category in ProfileContentCategory.values)
+              for (final category in ProfileContentCategory.values.where(
+                (category) =>
+                    !_isOutfitSubcategory(category) ||
+                    selected.contains(ProfileContentCategory.outfit),
+              ))
                 _SelectableCategoryChip(
                   category: category,
                   selected: selected.contains(category),
@@ -78,10 +82,18 @@ class ProfileCategorySelector extends StatelessWidget {
         return;
       }
       next.add(category);
+      if (_isOutfitSubcategory(category)) {
+        next.add(ProfileContentCategory.outfit);
+      }
     }
     onChanged(next);
   }
 }
+
+bool _isOutfitSubcategory(ProfileContentCategory category) =>
+    category == ProfileContentCategory.outfitStage ||
+    category == ProfileContentCategory.outfitAirport ||
+    category == ProfileContentCategory.outfitCasual;
 
 class ProfileCategoryRail extends StatelessWidget {
   const ProfileCategoryRail({
@@ -280,6 +292,9 @@ IconData _categoryIcon(ProfileContentCategory category) {
     ProfileContentCategory.bias => Icons.favorite_rounded,
     ProfileContentCategory.photocards => Icons.style_rounded,
     ProfileContentCategory.outfit => Icons.checkroom_outlined,
+    ProfileContentCategory.outfitStage => Icons.theater_comedy_outlined,
+    ProfileContentCategory.outfitAirport => Icons.flight_takeoff_outlined,
+    ProfileContentCategory.outfitCasual => Icons.style_outlined,
     ProfileContentCategory.collection => Icons.collections_bookmark_outlined,
     ProfileContentCategory.trades => Icons.swap_horiz_rounded,
     ProfileContentCategory.merch => Icons.shopping_bag_outlined,
@@ -294,6 +309,9 @@ List<Color> _categoryColors(ProfileContentCategory category) {
     ProfileContentCategory.bias => const [AppTheme.amber, AppTheme.rose],
     ProfileContentCategory.photocards => const [AppTheme.teal, AppTheme.cyan],
     ProfileContentCategory.outfit => const [AppTheme.rose, AppTheme.amber],
+    ProfileContentCategory.outfitStage => const [AppTheme.violet, AppTheme.rose],
+    ProfileContentCategory.outfitAirport => const [AppTheme.cyan, AppTheme.indigo],
+    ProfileContentCategory.outfitCasual => const [AppTheme.teal, AppTheme.cyan],
     ProfileContentCategory.collection => const [AppTheme.cyan, AppTheme.violet],
     ProfileContentCategory.trades => const [AppTheme.amber, AppTheme.cyan],
     ProfileContentCategory.merch => const [AppTheme.indigo, AppTheme.rose],
