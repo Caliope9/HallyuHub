@@ -925,8 +925,9 @@ class _TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isHome = title == 'Tu universo K-pop latino';
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 14, 8),
+      padding: EdgeInsets.fromLTRB(16, isHome ? 12 : 10, 14, 8),
       child: DecoratedBox(
         decoration: BoxDecoration(
           border: Border(
@@ -937,13 +938,16 @@ class _TopBar extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 9),
           child: Row(
             children: [
-              const HallyuBrandIcon(size: 44, radiusFactor: 0.25),
-              const SizedBox(width: 11),
+              HallyuBrandIcon(size: isHome ? 48 : 44, radiusFactor: 0.25),
+              SizedBox(width: isHome ? 12 : 11),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const HallyuBrandWordmark(fontSize: 20, compact: true),
+                    HallyuBrandWordmark(
+                      fontSize: isHome ? 22 : 20,
+                      compact: true,
+                    ),
                     Text(
                       title,
                       maxLines: 1,

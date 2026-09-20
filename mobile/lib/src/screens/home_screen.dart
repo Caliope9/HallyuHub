@@ -1397,7 +1397,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ListView(
           key: const ValueKey('home-feed-scroll'),
           controller: _scrollController,
-          padding: const EdgeInsets.fromLTRB(0, 2, 0, 18),
+          padding: const EdgeInsets.fromLTRB(0, 2, 0, 92),
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 2, 14, 0),
@@ -1428,7 +1428,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: _HomeTrendsSection(
-                posts: feedPosts.take(2).toList(growable: false),
+                posts: feedPosts.take(8).toList(growable: false),
                 onOpenPost: _openProfile,
               ),
             ),
@@ -1683,10 +1683,10 @@ class _NeonAtmosphere extends StatelessWidget {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                const Color(0xFF03050B).withValues(alpha: 0.96),
-                const Color(0xFF050710).withValues(alpha: 0.94),
-                AppTheme.violet.withValues(alpha: 0.035),
-                const Color(0xFF020309).withValues(alpha: 0.98),
+                const Color(0xFF03050B).withValues(alpha: 0.98),
+                const Color(0xFF050710).withValues(alpha: 0.97),
+                AppTheme.violet.withValues(alpha: 0.018),
+                const Color(0xFF020309).withValues(alpha: 0.99),
               ],
               stops: const [0, 0.35, 0.7, 1],
             ),
@@ -1911,6 +1911,7 @@ class _HomeTrendsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final visualPosts = posts
         .where((post) => post.effectiveMediaItems.any((item) => item.hasMedia))
+        .take(2)
         .toList(growable: false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2195,7 +2196,7 @@ class _StoriesRail extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         SizedBox(
-          height: 92,
+          height: storyGroups.isEmpty ? 78 : 92,
           child: ListView.separated(
             key: const ValueKey('home-stories-carousel'),
             scrollDirection: Axis.horizontal,
@@ -2235,7 +2236,7 @@ class _StoriesRail extends StatelessWidget {
               'Seguí a otros fans para ver sus historias.',
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.54),
-                fontSize: 12,
+                fontSize: 10,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -2275,8 +2276,8 @@ class _OwnStoryCard extends StatelessWidget {
               clipBehavior: Clip.none,
               children: [
                 Container(
-                  width: 54,
-                  height: 54,
+                  width: 52,
+                  height: 52,
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
@@ -2315,7 +2316,7 @@ class _OwnStoryCard extends StatelessWidget {
                     child: ClipOval(
                       child: latestStory == null
                           ? const Icon(Icons.add, color: Colors.white, size: 25)
-                          : HubAvatar(asset: avatarAsset, size: 48),
+                          : HubAvatar(asset: avatarAsset, size: 46),
                     ),
                   ),
                 ),
@@ -2402,8 +2403,8 @@ class _StoryCard extends StatelessWidget {
               key: ValueKey(
                 'story-ring-${story.authorId}-${viewed ? 'viewed' : 'unviewed'}',
               ),
-              width: 56,
-              height: 56,
+              width: 54,
+              height: 54,
               padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
@@ -2425,7 +2426,7 @@ class _StoryCard extends StatelessWidget {
                       )
                     : null,
               ),
-              child: HubAvatar(asset: story.avatarAsset, size: 50),
+              child: HubAvatar(asset: story.avatarAsset, size: 48),
             ),
             const SizedBox(height: 2),
             Text(
@@ -2474,11 +2475,16 @@ class _SuggestedProfilesRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final visibleProfiles = profiles.isEmpty && !realMode
+    final sourceProfiles = profiles.isEmpty && !realMode
         ? _rankedSuggestedProfiles
-        : profiles
-              .where((profile) => !followedProfiles.contains(profile.id))
-              .toList(growable: false);
+        : profiles;
+    final visibleProfiles = sourceProfiles
+        .where(
+          (profile) =>
+              !followedProfiles.contains(profile.id) &&
+              (!realMode || !_looksLikeTestProfile(profile)),
+        )
+        .toList(growable: false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2672,7 +2678,7 @@ class _SuggestedProfileCard extends StatelessWidget {
                           if (username.isNotEmpty) ...[
                             const SizedBox(height: 1),
                             Text(
-                              reason,
+                              _suggestionSubtext(profile, reason),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -2727,6 +2733,24 @@ class _SuggestedProfileCard extends StatelessWidget {
       ),
     );
   }
+}
+
+bool _looksLikeTestProfile(CommunityProfile profile) {
+  final value = '${profile.name} ${profile.username} ${profile.id}'
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
+      .trim();
+  return RegExp(
+    r'(^| )(test|tester|testing|qa|placeholder|sample|demo)( |$)',
+  ).hasMatch(value);
+}
+
+String _suggestionSubtext(CommunityProfile profile, String fallback) {
+  final group = profile.favoriteGroup.trim();
+  if (group.isNotEmpty) return group;
+  final fandom = profile.fandom.trim();
+  if (fandom.isNotEmpty) return fandom;
+  return fallback;
 }
 
 List<CommunityProfile> get _rankedSuggestedProfiles {
