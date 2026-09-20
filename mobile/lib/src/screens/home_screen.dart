@@ -1521,6 +1521,8 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (_) => FancamsScreen(
           user: widget.user,
           title: 'Fancams · Más virales',
+          initialMode: FancamFeedMode.viral,
+          showBackButton: true,
           fancamService: widget.fancamService,
           followService: widget.followService,
           postService: widget.postService,
@@ -1542,6 +1544,8 @@ class _HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute<void>(
         builder: (_) => DropsScreen(
           user: widget.user,
+          initialMode: DropFeedMode.viral,
+          showBackButton: true,
           dropService: widget.dropService,
           followService: widget.followService,
           postService: widget.postService,

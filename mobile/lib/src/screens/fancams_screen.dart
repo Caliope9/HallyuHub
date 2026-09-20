@@ -59,6 +59,7 @@ class FancamsScreen extends StatefulWidget {
     this.storeProfileService = const LocalStoreProfileService(),
     this.resetSignal = 0,
     this.initialFancamId = '',
+    this.initialMode,
     this.showBackButton = false,
     this.isActive = true,
   });
@@ -80,6 +81,7 @@ class FancamsScreen extends StatefulWidget {
   final StoreProfileService storeProfileService;
   final int resetSignal;
   final String initialFancamId;
+  final FancamFeedMode? initialMode;
   final bool showBackButton;
   final bool isActive;
 
@@ -113,6 +115,7 @@ class _FancamsScreenState extends State<FancamsScreen> {
   @override
   void initState() {
     super.initState();
+    _feedMode = widget.initialMode ?? FancamFeedMode.forYou;
     _repostService = widget.fancamService.usesRealFancams
         ? SupabaseRepostService()
         : LocalRepostService();
@@ -953,7 +956,7 @@ class _FancamsScreenState extends State<FancamsScreen> {
                 top: 18,
                 child: FloatingActionButton.small(
                   heroTag: 'fancams-profile-back-button',
-                  onPressed: () => Navigator.of(context).maybePop(),
+                  onPressed: () => Navigator.of(context).pop(),
                   tooltip: 'Volver',
                   backgroundColor: Colors.black.withValues(alpha: 0.52),
                   foregroundColor: Colors.white,

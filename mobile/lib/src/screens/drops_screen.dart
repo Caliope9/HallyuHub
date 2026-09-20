@@ -66,6 +66,7 @@ class DropsScreen extends StatefulWidget {
     this.storeProfileService = const LocalStoreProfileService(),
     this.resetSignal = 0,
     this.initialDropId = '',
+    this.initialMode,
     this.showBackButton = false,
     this.isActive = true,
   });
@@ -84,6 +85,7 @@ class DropsScreen extends StatefulWidget {
   final StoreProfileService storeProfileService;
   final int resetSignal;
   final String initialDropId;
+  final DropFeedMode? initialMode;
   final bool showBackButton;
   final bool isActive;
 
@@ -117,6 +119,7 @@ class _DropsScreenState extends State<DropsScreen> {
   @override
   void initState() {
     super.initState();
+    _feedMode = widget.initialMode ?? DropFeedMode.forYou;
     if (!widget.dropService.usesRealDrops) {
       _repostService = LocalRepostService();
     } else {
@@ -963,7 +966,7 @@ class _DropsScreenState extends State<DropsScreen> {
                 top: 18,
                 child: FloatingActionButton.small(
                   heroTag: 'drops-profile-back-button',
-                  onPressed: () => Navigator.of(context).maybePop(),
+                  onPressed: () => Navigator.of(context).pop(),
                   tooltip: 'Volver',
                   backgroundColor: Colors.black.withValues(alpha: 0.52),
                   foregroundColor: Colors.white,
