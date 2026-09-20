@@ -28,6 +28,15 @@ class SupabaseSafetyService extends LocalSafetyService {
       throw const SafetyServiceException('No podés reportar tu propio perfil.');
     }
     try {
+      final reportMetadata = <String, Object?>{
+        ...metadata,
+        if (reason == 'child_safety') ...{
+          'safety_category': 'child_safety',
+          'severity': 'critical',
+          'priority': 'urgent',
+          'requires_immediate_review': true,
+        },
+      };
       await _client.from('content_reports').insert({
         'reporter_id': reporterId,
         'reported_user_id': _uuidOrNull(reportedUserId),
@@ -36,7 +45,7 @@ class SupabaseSafetyService extends LocalSafetyService {
         'reason': reason,
         'details': details.trim(),
         'status': 'pending',
-        'metadata': metadata,
+        'metadata': reportMetadata,
       });
       debugPrint(
         'SAFETY_REPORT_OK type=$contentType content=$contentId reported=$reportedUserId',

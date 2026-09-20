@@ -22,6 +22,10 @@ class SafetyReportReason {
 const safetyReportReasons = <SafetyReportReason>[
   SafetyReportReason('spam', 'Spam'),
   SafetyReportReason('harassment', 'Acoso o bullying'),
+  SafetyReportReason(
+    'child_safety',
+    'Explotación o abuso sexual infantil',
+  ),
   SafetyReportReason('sexual_content', 'Contenido sexual'),
   SafetyReportReason('violence_threats', 'Violencia o amenazas'),
   SafetyReportReason('hate_discrimination', 'Odio o discriminación'),
@@ -55,6 +59,15 @@ class LocalSafetyService {
         : (jsonDecode(stored) as List<dynamic>)
               .cast<Map<String, dynamic>>()
               .toList();
+    final reportMetadata = <String, Object?>{
+      ...metadata,
+      if (reason == 'child_safety') ...{
+        'safety_category': 'child_safety',
+        'severity': 'critical',
+        'priority': 'urgent',
+        'requires_immediate_review': true,
+      },
+    };
     reports.add({
       'id': 'local-report-${DateTime.now().microsecondsSinceEpoch}',
       'content_type': contentType,
@@ -62,7 +75,7 @@ class LocalSafetyService {
       'reported_user_id': reportedUserId,
       'reason': reason,
       'details': details,
-      'metadata': metadata,
+      'metadata': reportMetadata,
       'created_at': DateTime.now().toUtc().toIso8601String(),
     });
     await preferences.setString(_reportsKey, jsonEncode(reports));

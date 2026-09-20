@@ -16,6 +16,7 @@ class ContentReport {
     required this.reviewerId,
     required this.resolutionAction,
     required this.resolutionNote,
+    this.metadata = const {},
   });
 
   final String id;
@@ -31,6 +32,10 @@ class ContentReport {
   final String reviewerId;
   final String resolutionAction;
   final String resolutionNote;
+  final Map<String, dynamic> metadata;
+
+  bool get isChildSafety =>
+      reason == 'child_safety' || metadata['safety_category'] == 'child_safety';
 }
 
 abstract class ContentModerationService {
@@ -171,7 +176,7 @@ class SupabaseContentModerationService implements ContentModerationService {
   static const _select =
       'id,content_type,content_id,reported_user_id,reporter_id,reason,'
       'details,status,created_at,reviewed_at,reviewer_id,resolution_action,'
-      'resolution_note';
+      'resolution_note,metadata';
 
   @override
   Future<List<ContentReport>> listReports({String status = 'all'}) async {
@@ -425,6 +430,9 @@ class SupabaseContentModerationService implements ContentModerationService {
       reviewerId: _text(row['reviewer_id']),
       resolutionAction: _text(row['resolution_action']),
       resolutionNote: _text(row['resolution_note']),
+      metadata: row['metadata'] is Map
+          ? Map<String, dynamic>.from(row['metadata'] as Map)
+          : const {},
     );
   }
 

@@ -528,6 +528,14 @@ class _ReportCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (report.isChildSafety)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 8),
+                    child: Chip(
+                      label: Text('CRÍTICO'),
+                      avatar: Icon(Icons.priority_high_rounded, size: 16),
+                    ),
+                  ),
                 _StatusPill(_reportStatusLabel(report.status)),
               ],
             ),
