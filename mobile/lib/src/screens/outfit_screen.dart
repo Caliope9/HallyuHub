@@ -20,12 +20,14 @@ class OutfitScreen extends StatefulWidget {
     this.user,
     this.repostService,
     this.safetyService = const LocalSafetyService(),
+    this.onCreateOutfit,
   });
 
   final LocalPostService postService;
   final AuthUser? user;
   final RepostService? repostService;
   final LocalSafetyService safetyService;
+  final Future<void> Function()? onCreateOutfit;
 
   @override
   State<OutfitScreen> createState() => _OutfitScreenState();
@@ -121,12 +123,18 @@ class _OutfitScreenState extends State<OutfitScreen> {
         backgroundColor: AppTheme.night,
         title: const Text('Outfits'),
         centerTitle: false,
+        titleTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 22,
+          fontWeight: FontWeight.w900,
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final width = constraints.maxWidth.clamp(0.0, 980.0);
-          final columns = width >= 720 ? 3 : 2;
-          final spacing = width >= 720 ? 14.0 : 10.0;
+          final width = constraints.maxWidth.clamp(0.0, 560.0);
+          const columns = 2;
+          const spacing = 10.0;
           return Center(
             child: SizedBox(
               width: width,
@@ -159,10 +167,15 @@ class _OutfitScreenState extends State<OutfitScreen> {
                           ),
                         )
                       else if (_items.isEmpty)
-                        const SliverFillRemaining(
+                        SliverFillRemaining(
                           hasScrollBody: false,
-                          child: Center(
-                            child: Text('Todavía no hay Outfits para mostrar.'),
+                          child: _EmptyOutfitState(
+                            onCreate: widget.onCreateOutfit == null
+                                ? null
+                                : () async {
+                                    Navigator.of(context).pop();
+                                    await widget.onCreateOutfit!.call();
+                                  },
                           ),
                         )
                       else
@@ -193,14 +206,15 @@ class _OutfitScreenState extends State<OutfitScreen> {
                                   ),
                                 );
                               },
-                              childCount: _items.length + (_loadingMore ? 1 : 0),
+                              childCount:
+                                  _items.length + (_loadingMore ? 1 : 0),
                             ),
                             gridDelegate:
                                 SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: columns,
                                   crossAxisSpacing: spacing,
                                   mainAxisSpacing: spacing,
-                                  childAspectRatio: width >= 720 ? 0.82 : 0.68,
+                                  childAspectRatio: 0.70,
                                 ),
                           ),
                         ),
@@ -256,8 +270,9 @@ class _SelectorRow<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isCategory = semanticPrefix == 'Categoría de Outfit';
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 6, 14, 4),
+      padding: EdgeInsets.fromLTRB(14, isCategory ? 2 : 5, 14, 3),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
@@ -269,19 +284,41 @@ class _SelectorRow<T> extends StatelessWidget {
                 button: true,
                 selected: active,
                 label: '$semanticPrefix ${entry.value}',
-                child: ChoiceChip(
-                  key: ValueKey('$semanticPrefix-${entry.key}'),
-                  label: Text(entry.value),
-                  selected: active,
-                  onSelected: (_) => onSelected(entry.key),
-                  labelStyle: TextStyle(
-                    color: active ? Colors.white : Colors.white70,
-                    fontWeight: FontWeight.w800,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: active
+                        ? const LinearGradient(
+                            colors: [AppTheme.violet, AppTheme.rose],
+                          )
+                        : null,
+                    color: active
+                        ? null
+                        : AppTheme.panel.withValues(alpha: 0.72),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: active
+                          ? AppTheme.cyan.withValues(alpha: 0.65)
+                          : AppTheme.stroke.withValues(alpha: 0.7),
+                    ),
                   ),
-                  selectedColor: AppTheme.violet,
-                  backgroundColor: AppTheme.panel,
-                  side: BorderSide(
-                    color: active ? AppTheme.cyan : AppTheme.stroke,
+                  child: InkWell(
+                    key: ValueKey('$semanticPrefix-${entry.key}'),
+                    borderRadius: BorderRadius.circular(999),
+                    onTap: () => onSelected(entry.key),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isCategory ? 11 : 14,
+                        vertical: isCategory ? 6 : 8,
+                      ),
+                      child: Text(
+                        entry.value,
+                        style: TextStyle(
+                          color: active ? Colors.white : Colors.white70,
+                          fontSize: isCategory ? 12 : 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -322,7 +359,9 @@ class _OutfitCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: _OutfitMedia(post: post, media: media)),
+              Expanded(
+                child: _OutfitMedia(post: post, media: media),
+              ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
                 child: Column(
@@ -363,19 +402,34 @@ class _OutfitCard extends StatelessWidget {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        const Icon(Icons.star_border_rounded,
-                            size: 15, color: Colors.white70),
+                        const Icon(
+                          Icons.star_border_rounded,
+                          size: 15,
+                          color: Colors.white70,
+                        ),
                         const SizedBox(width: 3),
-                        Text(post.likes, style: const TextStyle(color: Colors.white70)),
+                        Text(
+                          post.likes,
+                          style: const TextStyle(color: Colors.white70),
+                        ),
                         const SizedBox(width: 9),
-                        const Icon(Icons.bookmark_border_rounded,
-                            size: 15, color: Colors.white70),
+                        const Icon(
+                          Icons.bookmark_border_rounded,
+                          size: 15,
+                          color: Colors.white70,
+                        ),
                         const SizedBox(width: 3),
-                        Text(post.saves, style: const TextStyle(color: Colors.white70)),
+                        Text(
+                          post.saves,
+                          style: const TextStyle(color: Colors.white70),
+                        ),
                         if (item.hasRepostMetadata) ...[
                           const Spacer(),
-                          const Icon(Icons.repeat_rounded,
-                              size: 15, color: AppTheme.rose),
+                          const Icon(
+                            Icons.repeat_rounded,
+                            size: 15,
+                            color: AppTheme.rose,
+                          ),
                         ],
                       ],
                     ),
@@ -384,7 +438,10 @@ class _OutfitCard extends StatelessWidget {
                         'Reposteado por ${item.repostedByUsername}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: AppTheme.rose, fontSize: 10),
+                        style: const TextStyle(
+                          color: AppTheme.rose,
+                          fontSize: 10,
+                        ),
                       ),
                   ],
                 ),
@@ -395,6 +452,80 @@ class _OutfitCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _EmptyOutfitState extends StatelessWidget {
+  const _EmptyOutfitState({required this.onCreate});
+
+  final Future<void> Function()? onCreate;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppTheme.panel.withValues(alpha: 0.82),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppTheme.violet.withValues(alpha: 0.45)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    colors: [AppTheme.violet, AppTheme.rose],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.violet.withValues(alpha: 0.28),
+                      blurRadius: 22,
+                    ),
+                  ],
+                ),
+                child: const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Icon(
+                    Icons.checkroom_rounded,
+                    color: Colors.white,
+                    size: 34,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'Todavía no hay outfits para mostrar',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Sé de los primeros en compartir un look',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+              if (onCreate != null) ...[
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                  onPressed: onCreate,
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Crear Outfit'),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _OutfitMedia extends StatelessWidget {
@@ -436,21 +567,24 @@ class _SmallPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-        decoration: BoxDecoration(
-          color: AppTheme.violet.withValues(alpha: 0.24),
-          borderRadius: BorderRadius.circular(99),
-        ),
-        child: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 10)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+    decoration: BoxDecoration(
+      color: AppTheme.violet.withValues(alpha: 0.24),
+      borderRadius: BorderRadius.circular(99),
+    ),
+    child: Text(
+      label,
+      style: const TextStyle(color: Colors.white70, fontSize: 10),
+    ),
+  );
 }
 
 String _categoryLabel(String key) => switch (key) {
-      'outfit_stage' => 'Stage',
-      'outfit_airport' => 'Airport',
-      'outfit_casual' => 'Casual',
-      _ => 'Outfit',
-    };
+  'outfit_stage' => 'Stage',
+  'outfit_airport' => 'Airport',
+  'outfit_casual' => 'Casual',
+  _ => 'Outfit',
+};
 
 class _ErrorState extends StatelessWidget {
   const _ErrorState({required this.message, required this.onRetry});
@@ -459,13 +593,13 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(message),
-          const SizedBox(height: 12),
-          FilledButton(onPressed: onRetry, child: const Text('Reintentar')),
-        ],
-      );
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      Text(message),
+      const SizedBox(height: 12),
+      FilledButton(onPressed: onRetry, child: const Text('Reintentar')),
+    ],
+  );
 }
 
 class _OutfitPostDetailScreen extends StatefulWidget {
@@ -484,7 +618,8 @@ class _OutfitPostDetailScreen extends StatefulWidget {
   final LocalSafetyService safetyService;
 
   @override
-  State<_OutfitPostDetailScreen> createState() => _OutfitPostDetailScreenState();
+  State<_OutfitPostDetailScreen> createState() =>
+      _OutfitPostDetailScreenState();
 }
 
 class _OutfitPostDetailScreenState extends State<_OutfitPostDetailScreen> {
@@ -582,9 +717,9 @@ class _OutfitPostDetailScreenState extends State<_OutfitPostDetailScreen> {
         recipients: const [],
         onSelected: (message) {
           Navigator.of(context).pop();
-          ScaffoldMessenger.of(this.context).showSnackBar(
-            SnackBar(content: Text(message)),
-          );
+          ScaffoldMessenger.of(
+            this.context,
+          ).showSnackBar(SnackBar(content: Text(message)));
         },
       ),
     );

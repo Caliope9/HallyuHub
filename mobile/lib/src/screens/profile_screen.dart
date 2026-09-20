@@ -2444,6 +2444,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   user: widget.user,
                   repostService: widget.repostService,
                   safetyService: widget.safetyService,
+                  onCreateOutfit: () => _openPostEditor(
+                    context,
+                    initialDraft: const PostDraft(
+                      tags: ['#Outfit'],
+                      profileCategories: [ProfileContentCategory.outfit],
+                    ),
+                  ),
                 ),
               ),
             );
