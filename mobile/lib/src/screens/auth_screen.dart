@@ -36,6 +36,7 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _termsAccepted = false;
   bool _privacyAccepted = false;
   bool _communityGuidelinesAccepted = false;
+  bool _betaNoticeAccepted = false;
   DateTime? _birthDate;
   bool _hidePassword = true;
   bool _hideConfirmPassword = true;
@@ -61,6 +62,7 @@ class _AuthScreenState extends State<AuthScreen> {
         _termsAccepted = false;
         _privacyAccepted = false;
         _communityGuidelinesAccepted = false;
+        _betaNoticeAccepted = false;
       }
       _formKey.currentState?.reset();
     });
@@ -72,10 +74,9 @@ class _AuthScreenState extends State<AuthScreen> {
     if (_isRegister &&
         (!_termsAccepted ||
             !_privacyAccepted ||
-            !_communityGuidelinesAccepted)) {
-      _showMessage(
-        'Aceptá Terms, Privacy y las Normas de comunidad para crear tu cuenta.',
-      );
+            !_communityGuidelinesAccepted ||
+            !_betaNoticeAccepted)) {
+      _showMessage('Aceptá los 4 documentos legales para crear tu cuenta.');
       return;
     }
     if (_isRegister &&
@@ -99,6 +100,7 @@ class _AuthScreenState extends State<AuthScreen> {
               termsAccepted: _termsAccepted,
               privacyAccepted: _privacyAccepted,
               communityGuidelinesAccepted: _communityGuidelinesAccepted,
+              betaNoticeAccepted: _betaNoticeAccepted,
               birthDate: _birthDate,
             )
           : await widget.authService.signIn(
@@ -149,6 +151,7 @@ class _AuthScreenState extends State<AuthScreen> {
       '/terms' => legalTermsDocument,
       '/privacy' => legalPrivacyDocument,
       '/community-guidelines' => legalCommunityGuidelinesDocument,
+      '/beta-notice' => legalBetaNoticeDocument,
       _ => null,
     };
     if (document == null) return;
@@ -246,6 +249,7 @@ class _AuthScreenState extends State<AuthScreen> {
                           privacyAccepted: _privacyAccepted,
                           communityGuidelinesAccepted:
                               _communityGuidelinesAccepted,
+                          betaNoticeAccepted: _betaNoticeAccepted,
                           birthDate: _birthDate,
                           onBirthDateChanged: (value) =>
                               setState(() => _birthDate = value),
@@ -267,6 +271,8 @@ class _AuthScreenState extends State<AuthScreen> {
                           onCommunityGuidelinesChanged: (value) => setState(
                             () => _communityGuidelinesAccepted = value,
                           ),
+                          onBetaNoticeChanged: (value) =>
+                              setState(() => _betaNoticeAccepted = value),
                           onOpenLegalDocument: _openLegalDocument,
                           onPasswordVisibilityChanged: () =>
                               setState(() => _hidePassword = !_hidePassword),
@@ -480,6 +486,7 @@ class _AuthPanel extends StatelessWidget {
     required this.termsAccepted,
     required this.privacyAccepted,
     required this.communityGuidelinesAccepted,
+    required this.betaNoticeAccepted,
     required this.birthDate,
     required this.onBirthDateChanged,
     required this.hidePassword,
@@ -495,6 +502,7 @@ class _AuthPanel extends StatelessWidget {
     required this.onTermsChanged,
     required this.onPrivacyChanged,
     required this.onCommunityGuidelinesChanged,
+    required this.onBetaNoticeChanged,
     required this.onOpenLegalDocument,
     required this.onPasswordVisibilityChanged,
     required this.onConfirmPasswordVisibilityChanged,
@@ -513,6 +521,7 @@ class _AuthPanel extends StatelessWidget {
   final bool termsAccepted;
   final bool privacyAccepted;
   final bool communityGuidelinesAccepted;
+  final bool betaNoticeAccepted;
   final DateTime? birthDate;
   final ValueChanged<DateTime?> onBirthDateChanged;
   final bool hidePassword;
@@ -528,6 +537,7 @@ class _AuthPanel extends StatelessWidget {
   final ValueChanged<bool> onTermsChanged;
   final ValueChanged<bool> onPrivacyChanged;
   final ValueChanged<bool> onCommunityGuidelinesChanged;
+  final ValueChanged<bool> onBetaNoticeChanged;
   final ValueChanged<String> onOpenLegalDocument;
   final VoidCallback onPasswordVisibilityChanged;
   final VoidCallback onConfirmPasswordVisibilityChanged;
@@ -724,6 +734,17 @@ class _AuthPanel extends StatelessWidget {
                     onOpenLink: () =>
                         onOpenLegalDocument('/community-guidelines'),
                     errorText: 'Aceptá las Normas de comunidad para continuar.',
+                  ),
+                  _TermsCheck(
+                    checkboxKey: const ValueKey('auth-beta-notice-checkbox'),
+                    value: betaNoticeAccepted,
+                    onChanged: onBetaNoticeChanged,
+                    prefixText: 'Acepto el ',
+                    linkText: 'Aviso de acceso anticipado',
+                    suffixText: ' de HallyuHub.',
+                    onOpenLink: () => onOpenLegalDocument('/beta-notice'),
+                    errorText:
+                        'Aceptá el Aviso de acceso anticipado para continuar.',
                   ),
                 ],
               )
@@ -1242,8 +1263,8 @@ class _RecoverySheet extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 6),
-                Text(
-                  'La recuperación automática aún no está disponible. Para recuperar tu cuenta, escribí a soporte@hallyuhub.net desde el email asociado.',
+              Text(
+                'La recuperación automática aún no está disponible. Para recuperar tu cuenta, escribí a soporte@hallyuhub.net desde el email asociado.',
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.68),
                   height: 1.35,

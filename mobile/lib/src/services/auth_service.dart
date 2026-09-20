@@ -71,6 +71,7 @@ abstract class AuthService {
     bool termsAccepted = false,
     bool privacyAccepted = false,
     bool communityGuidelinesAccepted = false,
+    bool betaNoticeAccepted = false,
     DateTime? birthDate,
   });
 
@@ -156,6 +157,7 @@ class LocalAuthService implements AuthService {
     bool termsAccepted = false,
     bool privacyAccepted = false,
     bool communityGuidelinesAccepted = false,
+    bool betaNoticeAccepted = false,
     DateTime? birthDate,
   }) async {
     _validateBirthDate(birthDate);
@@ -173,7 +175,10 @@ class LocalAuthService implements AuthService {
     }
 
     final acceptedAt =
-        termsAccepted && privacyAccepted && communityGuidelinesAccepted
+        termsAccepted &&
+            privacyAccepted &&
+            communityGuidelinesAccepted &&
+            betaNoticeAccepted
         ? DateTime.now().toUtc()
         : null;
     final user = AuthUser(
@@ -190,6 +195,7 @@ class LocalAuthService implements AuthService {
       termsAcceptedAt: acceptedAt,
       privacyAcceptedAt: acceptedAt,
       communityGuidelinesAcceptedAt: acceptedAt,
+      betaNoticeAcceptedAt: acceptedAt,
       legalVersion: acceptedAt == null ? '' : hallyuHubLegalVersion,
       birthDate: birthDate,
       privateProfile: AgePolicy.isTeen(birthDate) ? true : false,
@@ -439,6 +445,7 @@ class SupabaseAuthService implements AuthService {
     bool termsAccepted = false,
     bool privacyAccepted = false,
     bool communityGuidelinesAccepted = false,
+    bool betaNoticeAccepted = false,
     DateTime? birthDate,
   }) async {
     _validateBirthDate(birthDate);
@@ -454,6 +461,17 @@ class SupabaseAuthService implements AuthService {
         data: {
           'name': _titleCase(name.trim()),
           'username': normalizedUsername,
+          'legal_terms_accepted': termsAccepted,
+          'legal_privacy_accepted': privacyAccepted,
+          'legal_community_guidelines_accepted': communityGuidelinesAccepted,
+          'legal_beta_notice_accepted': betaNoticeAccepted,
+          if (termsAccepted &&
+              privacyAccepted &&
+              communityGuidelinesAccepted &&
+              betaNoticeAccepted) ...{
+            'legal_accepted_at': DateTime.now().toUtc().toIso8601String(),
+            'legal_version': hallyuHubLegalVersion,
+          },
           if (birthDate != null)
             'birth_date': birthDateMetadataValue(birthDate),
         },
@@ -465,7 +483,10 @@ class SupabaseAuthService implements AuthService {
         );
       }
       final acceptedAt =
-          termsAccepted && privacyAccepted && communityGuidelinesAccepted
+          termsAccepted &&
+              privacyAccepted &&
+              communityGuidelinesAccepted &&
+              betaNoticeAccepted
           ? DateTime.now().toUtc()
           : null;
       final user = AuthUser(
@@ -482,6 +503,7 @@ class SupabaseAuthService implements AuthService {
         termsAcceptedAt: acceptedAt,
         privacyAcceptedAt: acceptedAt,
         communityGuidelinesAcceptedAt: acceptedAt,
+        betaNoticeAcceptedAt: acceptedAt,
         legalVersion: acceptedAt == null ? '' : hallyuHubLegalVersion,
         birthDate: birthDate,
         privateProfile: AgePolicy.isTeen(birthDate),
@@ -501,6 +523,12 @@ class SupabaseAuthService implements AuthService {
       } catch (_) {
         // The database trigger creates the profile. A transient profile upsert
         // should not turn a successful signup into a false failure.
+      }
+      try {
+        await saveLegalAcceptance(user);
+      } catch (error) {
+        debugPrint('LEGAL_ACCEPTANCE_REGISTER_ERROR error=$error');
+        return user.copyWith(legalVersion: '');
       }
       return _profileForWithRetry(authUser, fallback: user);
     } on AuthException {
@@ -532,6 +560,12 @@ class SupabaseAuthService implements AuthService {
       } catch (_) {
         // The trigger may already have created the profile, and older schemas
         // can be completed by the Supabase migration without failing signup.
+      }
+      try {
+        await saveLegalAcceptance(fallback);
+      } catch (error) {
+        debugPrint('LEGAL_ACCEPTANCE_REGISTER_ERROR error=$error');
+        return fallback.copyWith(legalVersion: '');
       }
       return _profileForWithRetry(signedInUser, fallback: fallback);
     } on supabase.AuthException catch (error) {
@@ -933,7 +967,12 @@ class SupabaseAuthService implements AuthService {
       profile: profile,
       authEmail: user.email,
     );
-    return _userFromProfile(confirmedProfile, user.email ?? '');
+    final legalProfile = await _syncLegalAcceptanceFromAuthMetadata(
+      userId: user.id,
+      profile: confirmedProfile,
+      authUser: user,
+    );
+    return _userFromProfile(legalProfile, user.email ?? '');
   }
 
   Future<Map<String, dynamic>> _syncConfirmedEmail({
@@ -961,6 +1000,47 @@ class SupabaseAuthService implements AuthService {
     }
   }
 
+  Future<Map<String, dynamic>> _syncLegalAcceptanceFromAuthMetadata({
+    required String userId,
+    required Map<String, dynamic> profile,
+    required supabase.User authUser,
+  }) async {
+    final metadata = authUser.userMetadata ?? const <String, dynamic>{};
+    final complete =
+        metadata['legal_terms_accepted'] == true &&
+        metadata['legal_privacy_accepted'] == true &&
+        metadata['legal_community_guidelines_accepted'] == true &&
+        metadata['legal_beta_notice_accepted'] == true;
+    final acceptedAt = metadata['legal_accepted_at'];
+    final version = metadata['legal_version'];
+    if (!complete ||
+        acceptedAt is! String ||
+        version != hallyuHubLegalVersion) {
+      return profile;
+    }
+    final payload = <String, dynamic>{
+      'terms_accepted_at': acceptedAt,
+      'privacy_accepted_at': acceptedAt,
+      'community_guidelines_accepted_at': acceptedAt,
+      'beta_notice_accepted_at': acceptedAt,
+      'legal_version': hallyuHubLegalVersion,
+    };
+    final profileComplete =
+        profile['terms_accepted_at'] != null &&
+        profile['privacy_accepted_at'] != null &&
+        profile['community_guidelines_accepted_at'] != null &&
+        profile['beta_notice_accepted_at'] != null &&
+        profile['legal_version'] == hallyuHubLegalVersion;
+    if (profileComplete) return profile;
+    try {
+      await _client.from('profiles').update(payload).eq('id', userId);
+      return {...profile, ...payload};
+    } catch (error) {
+      debugPrint('LEGAL_ACCEPTANCE_METADATA_SYNC_ERROR error=$error');
+      return profile;
+    }
+  }
+
   Future<AuthUser> _profileForWithRetry(
     supabase.User user, {
     required AuthUser fallback,
@@ -968,7 +1048,14 @@ class SupabaseAuthService implements AuthService {
     for (var attempt = 0; attempt < 5; attempt += 1) {
       try {
         final profile = await _profileRow(user.id);
-        if (profile != null) return _userFromProfile(profile, user.email ?? '');
+        if (profile != null) {
+          final legalProfile = await _syncLegalAcceptanceFromAuthMetadata(
+            userId: user.id,
+            profile: profile,
+            authUser: user,
+          );
+          return _userFromProfile(legalProfile, user.email ?? '');
+        }
       } catch (_) {
         // Keep retrying briefly; the trigger may still be settling.
       }
@@ -1657,6 +1744,9 @@ class SupabaseAuthService implements AuthService {
 
   AuthUser _userFromAuth(supabase.User user) {
     final metadata = user.userMetadata ?? const <String, dynamic>{};
+    final acceptedAt = DateTime.tryParse(
+      _string(metadata, 'legal_accepted_at', ''),
+    );
     return AuthUser(
       name: _string(metadata, 'name', 'Hallyu Fan'),
       username: _normalizeUsername(
@@ -1670,6 +1760,11 @@ class SupabaseAuthService implements AuthService {
       favoriteGroup: _string(metadata, 'favorite_group', ''),
       bias: _string(metadata, 'bias', ''),
       contentRegion: _string(metadata, 'content_region', ''),
+      termsAcceptedAt: acceptedAt,
+      privacyAcceptedAt: acceptedAt,
+      communityGuidelinesAcceptedAt: acceptedAt,
+      betaNoticeAcceptedAt: acceptedAt,
+      legalVersion: _string(metadata, 'legal_version', ''),
     );
   }
 
