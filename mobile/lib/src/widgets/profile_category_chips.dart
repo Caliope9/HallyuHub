@@ -219,6 +219,213 @@ class ProfileCategoryRail extends StatelessWidget {
   }
 }
 
+class PremiumProfileHighlights extends StatelessWidget {
+  const PremiumProfileHighlights({
+    super.key,
+    required this.counts,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final Map<ProfileContentCategory, int> counts;
+  final ProfileContentCategory? selected;
+  final ValueChanged<ProfileContentCategory?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const ProfileVisualSectionHeader(
+          title: 'Destacados',
+          icon: Icons.auto_awesome_rounded,
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 156,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
+            itemCount: ProfileContentCategory.values.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (context, index) {
+              final category = ProfileContentCategory.values[index];
+              return _PremiumHighlightCard(
+                key: ValueKey('profile-highlight-${category.label}'),
+                category: category,
+                count: counts[category] ?? 0,
+                selected: selected == category,
+                onTap: () => onSelected(selected == category ? null : category),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PremiumHighlightCard extends StatelessWidget {
+  const _PremiumHighlightCard({
+    super.key,
+    required this.category,
+    required this.count,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final ProfileContentCategory category;
+  final int count;
+  final bool selected;
+  final VoidCallback onTap;
+
+  static const _assets = {
+    ProfileContentCategory.concerts:
+        'assets/brand/hally_discover_events_v2.jpg',
+    ProfileContentCategory.bias: 'assets/demo-posts/post-06.jpg',
+    ProfileContentCategory.photocards: 'assets/demo-posts/post-09.jpg',
+    ProfileContentCategory.outfit: 'assets/demo-posts/post-10.jpg',
+    ProfileContentCategory.collection: 'assets/demo-posts/post-05.jpg',
+    ProfileContentCategory.trades: 'assets/demo-posts/post-08.jpg',
+    ProfileContentCategory.merch: 'assets/demo-posts/post-03.jpg',
+    ProfileContentCategory.fanart: 'assets/demo-posts/post-11.jpg',
+    ProfileContentCategory.other:
+        'assets/brand/hally_discover_neon_backdrop_v1.jpg',
+  };
+
+  static const _subtitles = {
+    ProfileContentCategory.concerts: 'Momentos guardados',
+    ProfileContentCategory.bias: 'Tus favoritos',
+    ProfileContentCategory.photocards: 'Colección visual',
+    ProfileContentCategory.outfit: 'Looks compartidos',
+    ProfileContentCategory.collection: 'Tu colección',
+    ProfileContentCategory.trades: 'Para intercambiar',
+    ProfileContentCategory.merch: 'Objetos de fan',
+    ProfileContentCategory.fanart: 'Arte de la comunidad',
+    ProfileContentCategory.other: 'Más historias',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = _categoryColors(category);
+    return Semantics(
+      button: true,
+      label: category.label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Ink(
+          width: 142,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected
+                  ? Colors.white
+                  : colors.last.withValues(alpha: .7),
+              width: selected ? 2 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: colors.first.withValues(alpha: .18),
+                blurRadius: 16,
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(19),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.asset(_assets[category]!, fit: BoxFit.cover),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: .08),
+                        Colors.black.withValues(alpha: .34),
+                        Colors.black.withValues(alpha: .9),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(11, 10, 9, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: colors.first.withValues(alpha: .78),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(7),
+                          child: Icon(
+                            _categoryIcon(category),
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 22),
+                        child: Text(
+                          category == ProfileContentCategory.collection
+                              ? 'Colección'
+                              : category.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        _subtitles[category]!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: .76),
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (count > 0)
+                        Text(
+                          '$count',
+                          style: TextStyle(
+                            color: colors.last,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const Positioned(
+                  right: 9,
+                  bottom: 10,
+                  child: Icon(
+                    Icons.arrow_forward_rounded,
+                    color: Colors.white,
+                    size: 17,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SelectableCategoryChip extends StatelessWidget {
   const _SelectableCategoryChip({
     required this.category,

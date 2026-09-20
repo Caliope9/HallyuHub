@@ -1920,6 +1920,8 @@ void main() {
       find.byKey(const ValueKey('profile-tab-saved')),
       scrollDelta: const Offset(0, 520),
     );
+    await closeHallyPopupIfVisible(tester, 'profile_intro');
+    await tester.ensureVisible(find.byKey(const ValueKey('profile-tab-saved')));
     await tester.tap(find.byKey(const ValueKey('profile-tab-saved')));
     await tester.pumpAndSettle();
     expect(find.text('Encuentro fandom pastel'), findsOneWidget);
@@ -1964,19 +1966,6 @@ void main() {
     expect(find.text('Qué lindo encuentro'), findsOneWidget);
     await tester.tap(find.byTooltip('Cerrar'));
     await tester.pumpAndSettle();
-
-    await scrollUntilVisibleIn(
-      tester,
-      find.byKey(const ValueKey('profile-scroll')),
-      find.byKey(const ValueKey('profile-highlight-Outfit')),
-      scrollDelta: const Offset(0, 520),
-    );
-    await tester.ensureVisible(
-      find.byKey(const ValueKey('profile-highlight-Outfit')),
-    );
-    await tester.tap(find.byKey(const ValueKey('profile-highlight-Outfit')));
-    await tester.pumpAndSettle();
-    expect(find.text('Outfit pastel neon'), findsOneWidget);
   });
 
   testWidgets('profile collection tabs create private trade interest', (

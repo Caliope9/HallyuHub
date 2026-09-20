@@ -22,6 +22,8 @@ class DiscoverPeopleScreen extends StatefulWidget {
   const DiscoverPeopleScreen({
     super.key,
     this.currentUser,
+    this.title = 'Descubrir personas',
+    this.searchHint = 'Buscar por nombre o @usuario',
     this.followService = const LocalFollowService(),
     this.postService = const LocalPostService(),
     this.storyService = const LocalStoryService(),
@@ -36,6 +38,8 @@ class DiscoverPeopleScreen extends StatefulWidget {
   });
 
   final AuthUser? currentUser;
+  final String title;
+  final String searchHint;
   final LocalFollowService followService;
   final LocalPostService postService;
   final LocalStoryService storyService;
@@ -209,7 +213,7 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF03050B),
       appBar: AppBar(
-        title: const Text('Descubrir personas'),
+        title: Text(widget.title),
         backgroundColor: const Color(0xFF03050B),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -231,7 +235,7 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
                     textInputAction: TextInputAction.search,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      hintText: 'Buscar por nombre o @usuario',
+                      hintText: widget.searchHint,
                       hintStyle: TextStyle(
                         color: Colors.white.withValues(alpha: 0.52),
                       ),

@@ -18,6 +18,7 @@ import '../screens/public_profile_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/story_archive_screen.dart';
 import '../screens/story_editor_screen.dart';
+import '../screens/user_search_screen.dart';
 import '../services/local_drop_service.dart';
 import '../services/local_fancam_service.dart';
 import '../services/local_follow_service.dart';
@@ -42,6 +43,7 @@ import '../widgets/contextual_permission_sheet.dart';
 import '../widgets/hallyu_post_card.dart';
 import '../widgets/hally_feature_tip.dart';
 import '../widgets/hub_avatar.dart';
+import '../widgets/brand_mark.dart';
 import '../widgets/post_video_player.dart';
 import '../widgets/premium_form_shell.dart';
 import '../widgets/premium_profile_visuals.dart';
@@ -2355,6 +2357,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _openUserSearch() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => UserSearchScreen(
+          currentUser: user,
+          followService: widget.followService,
+          postService: widget.postService,
+          storyService: widget.storyService,
+          dropService: widget.dropService,
+          fancamService: widget.fancamService,
+          chatService: widget.chatService,
+          contentCategoryService: widget.contentCategoryService,
+          userTagService: widget.userTagService,
+          artistTagService: widget.artistTagService,
+          safetyService: widget.safetyService,
+          storeProfileService: widget.storeProfileService,
+        ),
+      ),
+    );
+  }
+
+  void _openMessages() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => MessagesInboxScreen(
+          chatService: widget.chatService,
+          followService: widget.followService,
+          postService: widget.postService,
+          storyService: widget.storyService,
+          dropService: widget.dropService,
+          fancamService: widget.fancamService,
+          safetyService: widget.safetyService,
+          storeProfileService: widget.storeProfileService,
+        ),
+      ),
+    );
+  }
+
   CommunityProfile _communityProfileFromDemo(_DemoProfile profile) {
     return CommunityProfile(
       id: profile.id,
@@ -2492,7 +2532,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ],
       const SizedBox(height: 18),
-      ProfileCategoryRail(
+      PremiumProfileHighlights(
         counts: _profileCategoryCounts,
         selected: selectedCategory,
         onSelected: (category) {
@@ -2587,6 +2627,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       controller: _scrollController,
       scrollCacheExtent: const ScrollCacheExtent.pixels(900),
       slivers: [
+        SliverToBoxAdapter(
+          child: _ProfileTopBar(
+            onSearch: _openUserSearch,
+            onMessages: _openMessages,
+          ),
+        ),
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           sliver: SliverToBoxAdapter(
@@ -2927,6 +2973,61 @@ class _ProfilePostsFeedScreenState extends State<_ProfilePostsFeedScreen> {
                   );
                 },
               ),
+      ),
+    );
+  }
+}
+
+class _ProfileTopBar extends StatelessWidget {
+  const _ProfileTopBar({required this.onSearch, required this.onMessages});
+
+  final VoidCallback onSearch;
+  final VoidCallback onMessages;
+
+  @override
+  Widget build(BuildContext context) {
+    final canGoBack = Navigator.of(context).canPop();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+      child: SizedBox(
+        height: 48,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            HallyuBrandWordmark(fontSize: 23, compact: true),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: canGoBack
+                  ? IconButton(
+                      key: const ValueKey('profile-back'),
+                      tooltip: 'Volver',
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.arrow_back_rounded),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    key: const ValueKey('profile-user-search-open'),
+                    tooltip: 'Buscar usuarios',
+                    onPressed: onSearch,
+                    icon: const Icon(Icons.search_rounded),
+                  ),
+                  IconButton(
+                    key: const ValueKey('profile-messages-open'),
+                    tooltip: 'Mensajes',
+                    onPressed: onMessages,
+                    icon: const Icon(Icons.chat_bubble_outline_rounded),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
