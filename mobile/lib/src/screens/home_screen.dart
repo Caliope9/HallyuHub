@@ -1758,10 +1758,30 @@ class _HomeQuickAccessRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const items = [
-      (label: 'Fancams', detail: 'Más virales', icon: Icons.videocam_rounded),
-      (label: 'Drops', detail: 'Más virales', icon: Icons.play_circle_fill),
-      (label: 'Outfits', detail: 'K-style', icon: Icons.checkroom_rounded),
-      (label: 'Top K-pop', detail: 'Más seguidos', icon: Icons.star_rounded),
+      (
+        label: 'Fancams',
+        detail: 'Más virales',
+        icon: Icons.videocam_rounded,
+        asset: 'assets/brand/hally_discover_communities_v2.jpg',
+      ),
+      (
+        label: 'Drops',
+        detail: 'Más virales',
+        icon: Icons.play_circle_fill,
+        asset: 'assets/brand/hally_discover_events_v2.jpg',
+      ),
+      (
+        label: 'Outfits',
+        detail: 'K-style',
+        icon: Icons.checkroom_rounded,
+        asset: 'assets/brand/hally_discover_groups_stage_v2.jpg',
+      ),
+      (
+        label: 'Top K-pop',
+        detail: 'Más seguidos',
+        icon: Icons.star_rounded,
+        asset: 'assets/brand/hally_discover_news_globe_v2.jpg',
+      ),
     ];
     final actions = [onFancams, onDrops, onOutfits, onTopKpop];
     return SizedBox(
@@ -1775,6 +1795,7 @@ class _HomeQuickAccessRail extends StatelessWidget {
                 label: items[index].label,
                 detail: items[index].detail,
                 icon: items[index].icon,
+                asset: items[index].asset,
                 onTap: actions[index],
               ),
             ),
@@ -1792,12 +1813,14 @@ class _HomeQuickAccessCard extends StatelessWidget {
     required this.label,
     required this.detail,
     required this.icon,
+    required this.asset,
     required this.onTap,
   });
 
   final String label;
   final String detail;
   final IconData icon;
+  final String asset;
   final VoidCallback onTap;
 
   @override
@@ -1817,47 +1840,60 @@ class _HomeQuickAccessCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                accent.withValues(alpha: 0.30),
-                AppTheme.panelRaised.withValues(alpha: 0.93),
-              ],
+            image: DecorationImage(
+              image: AssetImage(asset),
+              fit: BoxFit.cover,
+              colorFilter: ColorFilter.mode(
+                AppTheme.night.withValues(alpha: 0.48),
+                BlendMode.darken,
+              ),
             ),
             border: Border.all(color: accent.withValues(alpha: 0.72)),
             boxShadow: [
               BoxShadow(color: accent.withValues(alpha: 0.10), blurRadius: 10),
             ],
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: Colors.white, size: 21),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                ),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  AppTheme.night.withValues(alpha: 0.88),
+                ],
               ),
-              Text(
-                detail,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.68),
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Icon(icon, color: Colors.white, size: 18),
+                const SizedBox(height: 1),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
-              ),
-            ],
+                Text(
+                  detail,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.76),
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1873,12 +1909,15 @@ class _HomeTrendsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final visualPosts = posts
+        .where((post) => post.effectiveMediaItems.any((item) => item.hasMedia))
+        .toList(growable: false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _HomeSectionHeader(title: 'Tendencias'),
         const SizedBox(height: 8),
-        if (posts.isEmpty)
+        if (visualPosts.isEmpty)
           const _EmptyInlinePanel(
             key: ValueKey('home-trends-empty'),
             text: 'Todavía no hay tendencias para mostrar.',
@@ -1893,7 +1932,7 @@ class _HomeTrendsSection extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  for (final post in posts)
+                  for (final post in visualPosts)
                     SizedBox(
                       width: width,
                       child: _HomeTrendCard(
@@ -1925,56 +1964,124 @@ class _HomeTrendCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         child: Ink(
           height: 116,
-          padding: const EdgeInsets.all(11),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            gradient: LinearGradient(
-              colors: [
-                AppTheme.violet.withValues(alpha: 0.34),
-                AppTheme.panelRaised.withValues(alpha: 0.94),
-              ],
-            ),
             border: Border.all(color: AppTheme.violet.withValues(alpha: 0.55)),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'TENDENCIA',
-                style: TextStyle(
-                  color: AppTheme.cyan,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(17),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _HomePostBackdrop(post: post),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        AppTheme.night.withValues(alpha: 0.12),
+                        AppTheme.night.withValues(alpha: 0.9),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-              const Spacer(),
-              Text(
-                post.artist.trim().isEmpty ? post.author : post.artist,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
-                  height: 1.08,
+                Padding(
+                  padding: const EdgeInsets.all(11),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: AppTheme.rose.withValues(alpha: 0.92),
+                          borderRadius: BorderRadius.circular(7),
+                        ),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 3,
+                          ),
+                          child: Text(
+                            'TENDENCIA',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        post.artist.trim().isEmpty
+                            ? (post.tags.isEmpty
+                                  ? 'Contenido destacado'
+                                  : post.tags.first)
+                            : post.artist,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                          height: 1.08,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        post.tags.isEmpty
+                            ? 'Descubrí más en HallyuHub'
+                            : post.tags.take(2).join(' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.76),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                post.username,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.62),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+}
+
+class _HomePostBackdrop extends StatelessWidget {
+  const _HomePostBackdrop({required this.post});
+
+  final HubPost post;
+
+  @override
+  Widget build(BuildContext context) {
+    final media = post.effectiveMediaItems.firstOrNull;
+    if (media == null) return const SizedBox.shrink();
+    if (media.imageBytes != null) {
+      return Image.memory(media.imageBytes!, fit: BoxFit.cover);
+    }
+    final source = media.imageAsset.trim().isNotEmpty
+        ? media.imageAsset.trim()
+        : media.mediaPath.trim();
+    if (source.startsWith('http://') || source.startsWith('https://')) {
+      return Image.network(
+        source,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => const SizedBox.shrink(),
+      );
+    }
+    if (source.isNotEmpty && !source.contains('/')) {
+      return Image.asset(
+        source,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => const SizedBox.shrink(),
+      );
+    }
+    return const SizedBox.shrink();
   }
 }
 
@@ -1985,15 +2092,26 @@ class _HomeAdvertisingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        color: AppTheme.cyan.withValues(alpha: 0.08),
-        border: Border.all(color: AppTheme.cyan.withValues(alpha: 0.28)),
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.cyan.withValues(alpha: 0.18),
+            AppTheme.violet.withValues(alpha: 0.2),
+          ],
+        ),
+        border: Border.all(color: AppTheme.cyan.withValues(alpha: 0.38)),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.cyan.withValues(alpha: 0.08),
+            blurRadius: 16,
+          ),
+        ],
       ),
       child: const Row(
         children: [
-          Icon(Icons.auto_awesome_rounded, color: AppTheme.cyan, size: 22),
+          Icon(Icons.campaign_rounded, color: AppTheme.cyan, size: 22),
           SizedBox(width: 10),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2077,7 +2195,7 @@ class _StoriesRail extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         SizedBox(
-          height: 104,
+          height: 92,
           child: ListView.separated(
             key: const ValueKey('home-stories-carousel'),
             scrollDirection: Axis.horizontal,
@@ -2112,7 +2230,7 @@ class _StoriesRail extends StatelessWidget {
         ),
         if (storyGroups.isEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 4),
+            padding: const EdgeInsets.only(top: 2),
             child: Text(
               'Seguí a otros fans para ver sus historias.',
               style: TextStyle(
@@ -2157,8 +2275,8 @@ class _OwnStoryCard extends StatelessWidget {
               clipBehavior: Clip.none,
               children: [
                 Container(
-                  width: 64,
-                  height: 64,
+                  width: 54,
+                  height: 54,
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
@@ -2196,8 +2314,8 @@ class _OwnStoryCard extends StatelessWidget {
                     ),
                     child: ClipOval(
                       child: latestStory == null
-                          ? const Icon(Icons.add, color: Colors.white, size: 28)
-                          : HubAvatar(asset: avatarAsset, size: 58),
+                          ? const Icon(Icons.add, color: Colors.white, size: 25)
+                          : HubAvatar(asset: avatarAsset, size: 48),
                     ),
                   ),
                 ),
@@ -2227,14 +2345,14 @@ class _OwnStoryCard extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 7),
+            const SizedBox(height: 2),
             const Text(
               'Mi historia',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 11,
+                fontSize: 9,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -2248,7 +2366,7 @@ class _OwnStoryCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.48),
-                fontSize: 10,
+                fontSize: 8,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -2284,8 +2402,8 @@ class _StoryCard extends StatelessWidget {
               key: ValueKey(
                 'story-ring-${story.authorId}-${viewed ? 'viewed' : 'unviewed'}',
               ),
-              width: 68,
-              height: 68,
+              width: 56,
+              height: 56,
               padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
@@ -2307,16 +2425,16 @@ class _StoryCard extends StatelessWidget {
                       )
                     : null,
               ),
-              child: HubAvatar(asset: story.avatarAsset, size: 62),
+              child: HubAvatar(asset: story.avatarAsset, size: 50),
             ),
-            const SizedBox(height: 7),
+            const SizedBox(height: 2),
             Text(
               story.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 11,
+                fontSize: 9,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -2326,7 +2444,7 @@ class _StoryCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.5),
-                fontSize: 10,
+                fontSize: 8,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -2376,7 +2494,7 @@ class _SuggestedProfilesRail extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.58),
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -2389,7 +2507,7 @@ class _SuggestedProfilesRail extends StatelessWidget {
           )
         else
           SizedBox(
-            height: 150,
+            height: 104,
             child: ListView.separated(
               key: const ValueKey('home-suggested-profiles'),
               scrollDirection: Axis.horizontal,
@@ -2468,19 +2586,19 @@ class _SuggestedProfileCard extends StatelessWidget {
         : const [AppTheme.rose, AppTheme.violet, AppTheme.cyan];
 
     return SizedBox(
-      width: 270,
-      height: 148,
+      width: 116,
+      height: 104,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           key: ValueKey('home-suggestion-open-${profile.id}'),
           onTap: onOpen,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(18),
           child: Ink(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: AppTheme.panelRaised.withValues(alpha: 0.84),
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(
                 color: AppTheme.violet.withValues(alpha: 0.34),
               ),
@@ -2495,8 +2613,8 @@ class _SuggestedProfileCard extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  width: 68,
-                  height: 68,
+                  width: 38,
+                  height: 38,
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
@@ -2510,7 +2628,7 @@ class _SuggestedProfileCard extends StatelessWidget {
                   ),
                   child: HubAvatar(
                     asset: profile.avatarAsset,
-                    size: 64,
+                    size: 34,
                     isLive: profile.online,
                     fallbackLabel: profile.name,
                     fallbackColors: [
@@ -2520,11 +2638,11 @@ class _SuggestedProfileCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 6),
 
                 Expanded(
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Column(
@@ -2536,38 +2654,39 @@ class _SuggestedProfileCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 17,
+                              fontSize: 12,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
-                          const SizedBox(height: 3),
+                          const SizedBox(height: 1),
                           Text(
                             visibleUsername,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.56),
-                              fontSize: 13,
+                              fontSize: 10,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                           if (username.isNotEmpty) ...[
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 1),
                             Text(
                               reason,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.42),
-                                fontSize: 11,
+                                fontSize: 9,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
                           ],
                         ],
                       ),
+                      const Spacer(),
                       SizedBox(
-                        height: 40,
+                        height: 29,
                         child: OutlinedButton(
                           key: ValueKey('home-suggestion-follow-${profile.id}'),
                           onPressed: onFollow,
@@ -2581,8 +2700,8 @@ class _SuggestedProfileCard extends StatelessWidget {
                                   ? AppTheme.cyan.withValues(alpha: 0.72)
                                   : AppTheme.violet.withValues(alpha: 0.74),
                             ),
-                            minimumSize: const Size(88, 40),
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            minimumSize: const Size(0, 29),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             visualDensity: VisualDensity.compact,
                             shape: RoundedRectangleBorder(
@@ -2592,7 +2711,7 @@ class _SuggestedProfileCard extends StatelessWidget {
                           child: Text(
                             following ? 'Siguiendo' : 'Seguir',
                             style: const TextStyle(
-                              fontSize: 13,
+                              fontSize: 10,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
