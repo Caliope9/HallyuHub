@@ -235,37 +235,48 @@ class PremiumProfileHighlights extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cards = <Widget>[
+      if (onTopKpop != null) _PremiumTopKpopHighlight(onTap: onTopKpop!),
+      for (final category in const [
+        ProfileContentCategory.concerts,
+        ProfileContentCategory.bias,
+        ProfileContentCategory.photocards,
+        ProfileContentCategory.outfit,
+      ])
+        _PremiumHighlightCard(
+          category: category,
+          count: counts[category] ?? 0,
+          selected: selected == category,
+          onTap: () => onSelected(selected == category ? null : category),
+        ),
+      _PremiumHighlightCard(
+        category: ProfileContentCategory.other,
+        displayLabel: 'Stage',
+        displaySubtitle: 'Momentos inolvidables',
+        displayAsset: 'assets/brand/hally_discover_groups_stage_v2.jpg',
+        displayIcon: Icons.theater_comedy_rounded,
+        count: 0,
+        selected: false,
+        onTap: () => onSelected(ProfileContentCategory.other),
+      ),
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const ProfileVisualSectionHeader(
           title: 'Destacados',
           icon: Icons.auto_awesome_rounded,
+          subtitle: 'Explora mis temáticas favoritas',
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         SizedBox(
-          height: 156,
+          height: 190,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,
-            itemCount:
-                ProfileContentCategory.values.length +
-                (onTopKpop == null ? 0 : 1),
+            itemCount: cards.length,
             separatorBuilder: (_, _) => const SizedBox(width: 10),
-            itemBuilder: (context, index) {
-              if (onTopKpop != null && index == 0) {
-                return _PremiumTopKpopHighlight(onTap: onTopKpop!);
-              }
-              final categoryIndex = onTopKpop == null ? index : index - 1;
-              final category = ProfileContentCategory.values[categoryIndex];
-              return _PremiumHighlightCard(
-                key: ValueKey('profile-highlight-${category.label}'),
-                category: category,
-                count: counts[category] ?? 0,
-                selected: selected == category,
-                onTap: () => onSelected(selected == category ? null : category),
-              );
-            },
+            itemBuilder: (_, index) => cards[index],
           ),
         ),
       ],
@@ -288,7 +299,7 @@ class _PremiumTopKpopHighlight extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Ink(
-          width: 142,
+          width: 154,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: AppTheme.cyan.withValues(alpha: .75)),
@@ -352,8 +363,8 @@ class _PremiumTopKpopHighlight extends StatelessWidget {
                       ),
                       SizedBox(height: 3),
                       Text(
-                        'Más seguidos',
-                        maxLines: 1,
+                        'Tendencias del momento',
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: Colors.white70,
@@ -384,17 +395,24 @@ class _PremiumTopKpopHighlight extends StatelessWidget {
 
 class _PremiumHighlightCard extends StatelessWidget {
   const _PremiumHighlightCard({
-    super.key,
     required this.category,
     required this.count,
     required this.selected,
     required this.onTap,
+    this.displayLabel,
+    this.displaySubtitle,
+    this.displayAsset,
+    this.displayIcon,
   });
 
   final ProfileContentCategory category;
   final int count;
   final bool selected;
   final VoidCallback onTap;
+  final String? displayLabel;
+  final String? displaySubtitle;
+  final String? displayAsset;
+  final IconData? displayIcon;
 
   static const _assets = {
     ProfileContentCategory.concerts:
@@ -411,10 +429,10 @@ class _PremiumHighlightCard extends StatelessWidget {
   };
 
   static const _subtitles = {
-    ProfileContentCategory.concerts: 'Momentos guardados',
-    ProfileContentCategory.bias: 'Tus favoritos',
-    ProfileContentCategory.photocards: 'Colección visual',
-    ProfileContentCategory.outfit: 'Looks compartidos',
+    ProfileContentCategory.concerts: 'Fechas, giras y más',
+    ProfileContentCategory.bias: 'Tus favoritos siempre aquí',
+    ProfileContentCategory.photocards: 'Colecciona la magia',
+    ProfileContentCategory.outfit: 'Estilo K-pop sin límites',
     ProfileContentCategory.collection: 'Tu colección',
     ProfileContentCategory.trades: 'Para intercambiar',
     ProfileContentCategory.merch: 'Objetos de fan',
@@ -425,14 +443,18 @@ class _PremiumHighlightCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = _categoryColors(category);
+    final label = displayLabel ?? category.label;
+    final subtitle = displaySubtitle ?? _subtitles[category]!;
+    final asset = displayAsset ?? _assets[category]!;
+    final icon = displayIcon ?? _categoryIcon(category);
     return Semantics(
       button: true,
-      label: category.label,
+      label: label,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Ink(
-          width: 142,
+          width: 154,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
@@ -453,7 +475,7 @@ class _PremiumHighlightCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                Image.asset(_assets[category]!, fit: BoxFit.cover),
+                Image.asset(asset, fit: BoxFit.cover),
                 DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -479,20 +501,14 @@ class _PremiumHighlightCard extends StatelessWidget {
                         ),
                         child: Padding(
                           padding: const EdgeInsets.all(7),
-                          child: Icon(
-                            _categoryIcon(category),
-                            color: Colors.white,
-                            size: 18,
-                          ),
+                          child: Icon(icon, color: Colors.white, size: 18),
                         ),
                       ),
                       const Spacer(),
                       Padding(
                         padding: const EdgeInsets.only(right: 22),
                         child: Text(
-                          category == ProfileContentCategory.collection
-                              ? 'Colección'
-                              : category.label,
+                          label,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -504,8 +520,8 @@ class _PremiumHighlightCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        _subtitles[category]!,
-                        maxLines: 1,
+                        subtitle,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: .76),

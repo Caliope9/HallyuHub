@@ -2490,15 +2490,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _activitiesForProfileCategory(ProfileContentCategory.photocards),
             ),
           ),
-          ProfileFeatureItem(
-            id: 'collection',
-            title: 'Mi colección',
-            value: _ownCollectionItems.length.toString(),
-            detail: 'items',
-            icon: Icons.collections_bookmark_rounded,
-            colors: const [AppTheme.indigo, AppTheme.rose],
-            onTap: () => _focusProfileTab(_ProfileTab.collection),
-          ),
         ],
       ),
       if (_storeProfile != null) ...[
@@ -2533,6 +2524,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             return ProfileVisualSectionHeader(
               title: activityTitle,
               icon: Icons.grid_view_rounded,
+              subtitle: selectedCategory == null
+                  ? 'Mis momentos, en una sola historia'
+                  : null,
             );
           },
         ),
