@@ -2513,7 +2513,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           onSettings: () => _openSettings(initialPanel: 'storeProfile'),
         ),
       ],
-      const SizedBox(height: 18),
+      const SizedBox(height: 14),
       PremiumProfileHighlights(
         counts: _profileCategoryCounts,
         selected: selectedCategory,
@@ -2524,7 +2524,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           });
         },
       ),
-      const SizedBox(height: 16),
+      const SizedBox(height: 12),
       KeyedSubtree(
         key: _profileContentKey,
         child: Builder(
@@ -2537,7 +2537,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           },
         ),
       ),
-      if (selectedCategory == null) const SizedBox(height: 12),
+      if (selectedCategory == null) const SizedBox(height: 8),
       if (selectedCategory != null)
         _ProfileCategorySection(
           category: selectedCategory,
@@ -2611,7 +2611,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       scrollCacheExtent: const ScrollCacheExtent.pixels(900),
       slivers: [
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
           sliver: SliverToBoxAdapter(
             child: Center(
               child: ConstrainedBox(
@@ -2643,7 +2643,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 22),
           sliver: SliverList(delegate: SliverChildListDelegate(content)),
         ),
       ],
@@ -2982,7 +2982,6 @@ class _PremiumProfileHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = _profileBackgroundColors(user.profileBackground);
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 420;
@@ -2995,28 +2994,7 @@ class _PremiumProfileHero extends StatelessWidget {
             compact ? 14 : 18,
             compact ? 14 : 18,
           ),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                const Color(0xFF070B18),
-                colors.first.withValues(alpha: .08),
-                const Color(0xFF060914),
-                colors.last.withValues(alpha: .05),
-              ],
-              stops: const [0, .34, .76, 1],
-            ),
-            border: Border.all(color: AppTheme.violet.withValues(alpha: .34)),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.violet.withValues(alpha: .10),
-                blurRadius: 22,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
           child: Stack(
             children: [
               Positioned(
@@ -3026,7 +3004,7 @@ class _PremiumProfileHero extends StatelessWidget {
                 height: compact ? 92 : 108,
                 child: ClipRRect(
                   borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(20),
+                    top: Radius.circular(16),
                   ),
                   child: Stack(
                     fit: StackFit.expand,
@@ -4026,53 +4004,41 @@ class _ProfileTabs extends StatelessWidget {
       _ProfileTab.archive: 'Archivo',
     };
 
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0D111C).withValues(alpha: 0.96),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: items.entries.map((entry) {
-            final isSelected = selected == entry.key;
-            return InkWell(
-              key: ValueKey('profile-tab-${entry.key.name}'),
-              onTap: () => onChanged(entry.key),
-              borderRadius: BorderRadius.circular(12),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 17,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: items.entries.map((entry) {
+          final isSelected = selected == entry.key;
+          return InkWell(
+            key: ValueKey('profile-tab-${entry.key.name}'),
+            onTap: () => onChanged(entry.key),
+            borderRadius: BorderRadius.circular(12),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: isSelected
+                    ? AppTheme.violet.withValues(alpha: 0.2)
+                    : Colors.transparent,
+                border: isSelected
+                    ? Border.all(color: AppTheme.violet.withValues(alpha: 0.48))
+                    : null,
+              ),
+              child: Text(
+                entry.value,
+                style: TextStyle(
                   color: isSelected
-                      ? AppTheme.violet.withValues(alpha: 0.2)
-                      : Colors.transparent,
-                  border: isSelected
-                      ? Border.all(
-                          color: AppTheme.violet.withValues(alpha: 0.48),
-                        )
-                      : null,
-                ),
-                child: Text(
-                  entry.value,
-                  style: TextStyle(
-                    color: isSelected
-                        ? Colors.white
-                        : Colors.white.withValues(alpha: 0.68),
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w900,
-                  ),
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.68),
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
-            );
-          }).toList(),
-        ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -4084,10 +4050,10 @@ class _ProfileTabsHeaderDelegate extends SliverPersistentHeaderDelegate {
   final Widget child;
 
   @override
-  double get minExtent => 64;
+  double get minExtent => 56;
 
   @override
-  double get maxExtent => 64;
+  double get maxExtent => 56;
 
   @override
   Widget build(
@@ -4097,20 +4063,25 @@ class _ProfileTabsHeaderDelegate extends SliverPersistentHeaderDelegate {
   ) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFF05070D).withValues(alpha: 0.97),
+        color: const Color(0xFF05070D).withValues(alpha: 0.9),
+        border: Border(
+          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+        ),
         boxShadow: overlapsContent
             ? [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.32),
-                  blurRadius: 14,
-                  offset: const Offset(0, 8),
+                  color: Colors.black.withValues(alpha: 0.18),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
                 ),
               ]
             : const [],
       ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 9, 16, 7),
-        child: child,
+      child: SizedBox.expand(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+          child: child,
+        ),
       ),
     );
   }
