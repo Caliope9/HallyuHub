@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'models.dart';
 import 'data/discover_data.dart';
 import 'screens/auth_screen.dart';
-import 'screens/beta_access_screen.dart';
 import 'screens/beta_signup_screen.dart';
 import 'screens/drops_screen.dart';
 import 'screens/fancams_screen.dart';
@@ -91,9 +90,6 @@ class _HallyuHubAppState extends State<HallyuHubApp> {
   final _navigatorKey = GlobalKey<NavigatorState>();
   final _messengerKey = GlobalKey<ScaffoldMessengerState>();
   AuthUser? _currentUser;
-  BetaAccessState? _betaAccess;
-  bool _isCheckingBetaAccess = false;
-  String? _betaAccessError;
 
   @override
   void initState() {
@@ -117,33 +113,8 @@ class _HallyuHubAppState extends State<HallyuHubApp> {
   }
 
   Future<void> _activateAuthenticatedUser(AuthUser user) async {
-    setState(() {
-      _currentUser = user;
-      _betaAccess = null;
-      _betaAccessError = null;
-      _isCheckingBetaAccess = true;
-    });
-    try {
-      final access = await widget.authService.ensureBetaAccess(user);
-      if (!mounted) return;
-      debugPrint(
-        'APP_ROUTE_AFTER_AUTH user=${user.email} '
-        'beta_status=${access.status.name} legal=${user.hasAcceptedCurrentLegal}',
-      );
-      setState(() {
-        _betaAccess = access;
-        _isCheckingBetaAccess = false;
-      });
-    } catch (error) {
-      if (!mounted) return;
-      debugPrint('APP_ROUTE_BETA_ERROR user=${user.email} error=$error');
-      setState(() {
-        _betaAccessError = error is AuthException
-            ? error.message
-            : 'No pudimos validar tu acceso anticipado.';
-        _isCheckingBetaAccess = false;
-      });
-    }
+    if (!mounted) return;
+    setState(() => _currentUser = user);
   }
 
   Future<void> _handleSignOut() async {
@@ -151,9 +122,6 @@ class _HallyuHubAppState extends State<HallyuHubApp> {
     if (!mounted) return;
     setState(() {
       _currentUser = null;
-      _betaAccess = null;
-      _betaAccessError = null;
-      _isCheckingBetaAccess = false;
     });
   }
 
@@ -205,18 +173,6 @@ class _HallyuHubAppState extends State<HallyuHubApp> {
                       key: const ValueKey('auth-screen'),
                       authService: widget.authService,
                       onAuthenticated: _handleAuthenticated,
-                    )
-                  : _isCheckingBetaAccess
-                  ? const BetaAccessLoadingScreen(
-                      key: ValueKey('beta-access-loading-screen'),
-                    )
-                  : _betaAccessError != null ||
-                        !(_betaAccess?.isApproved ?? false)
-                  ? BetaAccessGateScreen(
-                      key: const ValueKey('beta-access-gate-screen'),
-                      access: _betaAccess,
-                      errorMessage: _betaAccessError,
-                      onSignOut: _handleSignOut,
                     )
                   : !_currentUser!.hasAcceptedCurrentLegal
                   ? LegalAcceptanceScreen(

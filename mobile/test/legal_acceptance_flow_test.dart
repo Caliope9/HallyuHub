@@ -25,6 +25,104 @@ Future<AuthUser> _register({
   return user.copyWith(legalVersion: legalVersion);
 }
 
+class _AuthServiceWithBetaStatus implements AuthService {
+  _AuthServiceWithBetaStatus(this.status);
+
+  final String status;
+  final LocalAuthService delegate = const LocalAuthService();
+
+  @override
+  Future<AuthUser?> restoreSession() => delegate.restoreSession();
+
+  @override
+  Future<AuthUser> signIn({
+    required String login,
+    required String password,
+    required bool rememberDevice,
+  }) => delegate.signIn(
+    login: login,
+    password: password,
+    rememberDevice: rememberDevice,
+  );
+
+  @override
+  Future<AuthUser> register({
+    required String name,
+    required String username,
+    required String email,
+    required String password,
+    bool termsAccepted = false,
+    bool privacyAccepted = false,
+    bool communityGuidelinesAccepted = false,
+    bool betaNoticeAccepted = false,
+    DateTime? birthDate,
+  }) => delegate.register(
+    name: name,
+    username: username,
+    email: email,
+    password: password,
+    termsAccepted: termsAccepted,
+    privacyAccepted: privacyAccepted,
+    communityGuidelinesAccepted: communityGuidelinesAccepted,
+    betaNoticeAccepted: betaNoticeAccepted,
+    birthDate: birthDate,
+  );
+
+  @override
+  Future<void> saveUser(AuthUser user) => delegate.saveUser(user);
+
+  @override
+  Future<void> savePrivateProfile(bool privateProfile) =>
+      delegate.savePrivateProfile(privateProfile);
+
+  @override
+  Future<void> saveLegalAcceptance(AuthUser user) =>
+      delegate.saveLegalAcceptance(user);
+
+  @override
+  Future<void> changePassword({required String newPassword}) =>
+      delegate.changePassword(newPassword: newPassword);
+
+  @override
+  Future<void> requestEmailChange({required String newEmail}) =>
+      delegate.requestEmailChange(newEmail: newEmail);
+
+  @override
+  Future<BetaAccessState> ensureBetaAccess(AuthUser user) async =>
+      BetaAccessState.fromJson({
+        'status': status,
+        'user_limit': 100,
+        'approved_count': 0,
+        'position': status == 'waitlist' ? 1 : null,
+      });
+
+  @override
+  Future<void> signOut() => delegate.signOut();
+}
+
+Future<void> _assertBetaStatusDoesNotGate(
+  WidgetTester tester,
+  String status,
+) async {
+  final auth = _AuthServiceWithBetaStatus(status);
+  await auth.register(
+    name: 'Beta Gate Test',
+    username: 'beta-gate-${DateTime.now().microsecondsSinceEpoch}',
+    email: 'beta-gate-${DateTime.now().microsecondsSinceEpoch}@example.test',
+    password: 'beta-password',
+    termsAccepted: true,
+    privacyAccepted: true,
+    communityGuidelinesAccepted: true,
+    betaNoticeAccepted: true,
+    birthDate: DateTime(1995, 1, 1),
+  );
+  await tester.pumpWidget(HallyuHubApp(authService: auth));
+  await tester.pumpAndSettle();
+
+  expect(find.byKey(const ValueKey('hallyuhub-shell')), findsOneWidget);
+  expect(find.byKey(const ValueKey('beta-access-gate-screen')), findsNothing);
+}
+
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
@@ -48,6 +146,14 @@ void main() {
 
     expect(find.byKey(const ValueKey('hallyuhub-shell')), findsOneWidget);
     expect(find.byKey(const ValueKey('legal-acceptance-screen')), findsNothing);
+  });
+
+  testWidgets('un estado beta pending no bloquea el acceso', (tester) async {
+    await _assertBetaStatusDoesNotGate(tester, 'pending');
+  });
+
+  testWidgets('un estado beta waitlisted no bloquea el acceso', (tester) async {
+    await _assertBetaStatusDoesNotGate(tester, 'waitlist');
   });
 
   testWidgets('una cuenta antigua sin Beta Notice abre la pantalla legal', (
