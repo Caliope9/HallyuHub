@@ -48,7 +48,11 @@ class ProfileCategorySelector extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final category in ProfileContentCategory.values)
+              for (final category in ProfileContentCategory.values.where(
+                (category) =>
+                    !_isOutfitSubcategory(category) ||
+                    selected.contains(ProfileContentCategory.outfit),
+              ))
                 _SelectableCategoryChip(
                   category: category,
                   selected: selected.contains(category),
@@ -78,10 +82,18 @@ class ProfileCategorySelector extends StatelessWidget {
         return;
       }
       next.add(category);
+      if (_isOutfitSubcategory(category)) {
+        next.add(ProfileContentCategory.outfit);
+      }
     }
     onChanged(next);
   }
 }
+
+bool _isOutfitSubcategory(ProfileContentCategory category) =>
+    category == ProfileContentCategory.outfitStage ||
+    category == ProfileContentCategory.outfitAirport ||
+    category == ProfileContentCategory.outfitCasual;
 
 class ProfileCategoryRail extends StatelessWidget {
   const ProfileCategoryRail({
@@ -89,11 +101,13 @@ class ProfileCategoryRail extends StatelessWidget {
     required this.counts,
     required this.selected,
     required this.onSelected,
+    this.onTopKpop,
   });
 
   final Map<ProfileContentCategory, int> counts;
   final ProfileContentCategory? selected;
   final ValueChanged<ProfileContentCategory?> onSelected;
+  final VoidCallback? onTopKpop;
 
   @override
   Widget build(BuildContext context) {
@@ -110,10 +124,40 @@ class ProfileCategoryRail extends StatelessWidget {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,
-            itemCount: ProfileContentCategory.values.length,
+            itemCount:
+                ProfileContentCategory.values.length +
+                (onTopKpop == null ? 0 : 1),
             separatorBuilder: (_, _) => const SizedBox(width: 10),
             itemBuilder: (context, index) {
-              final category = ProfileContentCategory.values[index];
+              if (onTopKpop != null && index == 0) {
+                return InkWell(
+                  key: const ValueKey('profile-highlight-Top K-pop'),
+                  onTap: onTopKpop,
+                  borderRadius: BorderRadius.circular(24),
+                  child: const SizedBox(
+                    width: 82,
+                    child: Column(
+                      children: [
+                        _TopKpopHighlightIcon(),
+                        SizedBox(height: 7),
+                        Text(
+                          'Top K-pop',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              final categoryIndex = onTopKpop == null ? index : index - 1;
+              final category = ProfileContentCategory.values[categoryIndex];
               final count = counts[category] ?? 0;
               final isSelected = selected == category;
               final label = category == ProfileContentCategory.collection
@@ -641,6 +685,9 @@ IconData _categoryIcon(ProfileContentCategory category) {
     ProfileContentCategory.bias => Icons.favorite_rounded,
     ProfileContentCategory.photocards => Icons.style_rounded,
     ProfileContentCategory.outfit => Icons.checkroom_outlined,
+    ProfileContentCategory.outfitStage => Icons.theater_comedy_outlined,
+    ProfileContentCategory.outfitAirport => Icons.flight_takeoff_outlined,
+    ProfileContentCategory.outfitCasual => Icons.style_outlined,
     ProfileContentCategory.collection => Icons.collections_bookmark_outlined,
     ProfileContentCategory.trades => Icons.swap_horiz_rounded,
     ProfileContentCategory.merch => Icons.shopping_bag_outlined,
@@ -655,6 +702,9 @@ List<Color> _categoryColors(ProfileContentCategory category) {
     ProfileContentCategory.bias => const [AppTheme.amber, AppTheme.rose],
     ProfileContentCategory.photocards => const [AppTheme.teal, AppTheme.cyan],
     ProfileContentCategory.outfit => const [AppTheme.rose, AppTheme.amber],
+    ProfileContentCategory.outfitStage => const [AppTheme.violet, AppTheme.rose],
+    ProfileContentCategory.outfitAirport => const [AppTheme.cyan, AppTheme.indigo],
+    ProfileContentCategory.outfitCasual => const [AppTheme.teal, AppTheme.cyan],
     ProfileContentCategory.collection => const [AppTheme.cyan, AppTheme.violet],
     ProfileContentCategory.trades => const [AppTheme.amber, AppTheme.cyan],
     ProfileContentCategory.merch => const [AppTheme.indigo, AppTheme.rose],

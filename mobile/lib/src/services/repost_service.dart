@@ -41,6 +41,11 @@ abstract class RepostService {
     required RepostContentType contentType,
     required String contentId,
   });
+
+  Future<bool> hasReposted({
+    required RepostContentType contentType,
+    required String contentId,
+  });
 }
 
 class LocalRepostService implements RepostService {
@@ -69,6 +74,12 @@ class LocalRepostService implements RepostService {
     _records.remove('${contentType.name}:$contentId');
   }
 
+  @override
+  Future<bool> hasReposted({
+    required RepostContentType contentType,
+    required String contentId,
+  }) async => contains(contentType, contentId);
+
   bool contains(RepostContentType contentType, String contentId) =>
       _records.containsKey('${contentType.name}:$contentId');
 }
@@ -90,10 +101,7 @@ class SupabaseRepostService implements RepostService {
     try {
       final row = await _client.rpc(
         'hallyu_create_repost_v1',
-        params: {
-          'p_content_type': contentType.name,
-          'p_content_id': contentId,
-        },
+        params: {'p_content_type': contentType.name, 'p_content_id': contentId},
       );
       final data = (row as Map).cast<String, dynamic>();
       return _fromRow(data);
@@ -115,13 +123,27 @@ class SupabaseRepostService implements RepostService {
     try {
       await _client.rpc(
         'hallyu_remove_repost_v1',
-        params: {
-          'p_content_type': contentType.name,
-          'p_content_id': contentId,
-        },
+        params: {'p_content_type': contentType.name, 'p_content_id': contentId},
       );
     } catch (_) {
       throw const RepostServiceException('No se pudo quitar el repost.');
+    }
+  }
+
+  @override
+  Future<bool> hasReposted({
+    required RepostContentType contentType,
+    required String contentId,
+  }) async {
+    if (_client.auth.currentUser == null) return false;
+    try {
+      final result = await _client.rpc(
+        'hallyu_has_reposted_v1',
+        params: {'p_content_type': contentType.name, 'p_content_id': contentId},
+      );
+      return result == true;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -133,7 +155,8 @@ class SupabaseRepostService implements RepostService {
         row['content_type'] as String? ?? RepostContentType.post.name,
       ),
       contentId: row['content_id'] as String? ?? '',
-      createdAt: DateTime.tryParse(row['created_at'] as String? ?? '') ??
+      createdAt:
+          DateTime.tryParse(row['created_at'] as String? ?? '') ??
           DateTime.now(),
     );
   }

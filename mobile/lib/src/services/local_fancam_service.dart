@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models.dart';
 import 'media_upload_limits.dart';
 
+enum FancamFeedMode { forYou, viral, following }
+
 class LocalFancamService {
   const LocalFancamService();
 
@@ -24,11 +26,17 @@ class LocalFancamService {
 
   bool get usesRealFancams => false;
 
+  Future<void> recordView({
+    required String fancamId,
+    required String playbackSessionId,
+  }) async {}
+
   Future<List<Fancam>> restoreFancams({
     int limit = _maxFancams,
     int offset = 0,
     String? authorId,
     bool onlyCurrentUser = false,
+    FancamFeedMode feedMode = FancamFeedMode.forYou,
   }) async {
     final preferences = await SharedPreferences.getInstance();
     final stored = preferences.getString(_fancamsKey);
@@ -215,9 +223,15 @@ class LocalFancamService {
       comments: json['comments'] as String? ?? '0',
       saves: json['saves'] as String? ?? '0',
       shares: json['shares'] as String? ?? '0',
+      viewCount: (json['viewCount'] as num?)?.toInt() ?? 0,
       createdAt: json['createdAt'] == null
           ? null
           : DateTime.tryParse(json['createdAt'] as String),
+      repostedByUserId: json['repostedByUserId'] as String? ?? '',
+      repostedByUsername: json['repostedByUsername'] as String? ?? '',
+      repostedAt: json['repostedAt'] == null
+          ? null
+          : DateTime.tryParse(json['repostedAt'] as String),
       isOwn: json['isOwn'] as bool? ?? true,
     );
   }
@@ -244,8 +258,13 @@ class LocalFancamService {
       'comments': fancam.comments,
       'saves': fancam.saves,
       'shares': fancam.shares,
+      'viewCount': fancam.viewCount,
       if (fancam.createdAt != null)
         'createdAt': fancam.createdAt!.toIso8601String(),
+      'repostedByUserId': fancam.repostedByUserId,
+      'repostedByUsername': fancam.repostedByUsername,
+      if (fancam.repostedAt != null)
+        'repostedAt': fancam.repostedAt!.toIso8601String(),
       'isOwn': fancam.isOwn,
     };
   }

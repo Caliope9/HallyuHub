@@ -928,11 +928,23 @@ void main() {
 
     expect(find.text('HallyuHub'), findsOneWidget);
     expect(find.text('Historias'), findsOneWidget);
-    expect(find.byKey(const ValueKey('home-quick-viral')), findsOneWidget);
-    expect(find.byKey(const ValueKey('home-quick-outfit')), findsOneWidget);
-    expect(find.byKey(const ValueKey('home-quick-events')), findsOneWidget);
-    expect(find.byKey(const ValueKey('home-quick-idols')), findsOneWidget);
-    expect(find.byKey(const ValueKey('home-auto-reminder')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('home-quick-access-Fancams')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('home-quick-access-Drops')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('home-quick-access-Outfits')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('home-quick-access-Top K-pop')),
+      findsOneWidget,
+    );
+    expect(find.text('Viral'), findsNothing);
 
     await tester.drag(
       find.byKey(const ValueKey('home-feed-scroll')),
@@ -1169,10 +1181,7 @@ void main() {
     expect(find.byKey(const ValueKey('home-stories-carousel')), findsOneWidget);
 
     final mainSwipeArea = find.byKey(const ValueKey('main-tab-swipe-area'));
-    await tester.drag(
-      find.byKey(const ValueKey('home-auto-reminder')),
-      const Offset(-220, 0),
-    );
+    await tester.drag(mainSwipeArea, const Offset(-220, 0));
     await tester.pumpAndSettle();
     expect(find.text('Descubre fandoms'), findsOneWidget);
 
@@ -1523,7 +1532,7 @@ void main() {
   ) async {
     await signIn(tester);
 
-    expect(find.text('Fancams'), findsOneWidget);
+    expect(find.text('Fancams'), findsWidgets);
     expect(
       find.byKey(const ValueKey('header-messages-button')),
       findsOneWidget,
@@ -1538,7 +1547,7 @@ void main() {
 
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Fancams'));
+    await tester.tap(find.text('Fancams').last);
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('fancams-reels-feed')), findsOneWidget);
 
@@ -1983,6 +1992,24 @@ void main() {
     expect(find.text('Qué lindo encuentro'), findsOneWidget);
     await tester.tap(find.byTooltip('Cerrar'));
     await tester.pumpAndSettle();
+
+    await scrollUntilVisibleIn(
+      tester,
+      find.byKey(const ValueKey('profile-scroll')),
+      find.byKey(const ValueKey('profile-highlight-Outfit')),
+      scrollDelta: const Offset(0, 520),
+    );
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('profile-highlight-Outfit')),
+    );
+    await tester.tap(find.byKey(const ValueKey('profile-highlight-Outfit')));
+    await tester.pumpAndSettle();
+    expect(find.text('Outfits'), findsOneWidget);
+    expect(find.byKey(const ValueKey('outfit-mode-selector')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('outfit-category-selector')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('profile collection tabs create private trade interest', (

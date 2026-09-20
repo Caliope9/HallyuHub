@@ -1190,6 +1190,9 @@ enum ProfileContentCategory {
   bias('bias', 'Bias'),
   photocards('photocards', 'Photocards'),
   outfit('outfit', 'Outfit'),
+  outfitStage('outfit_stage', 'Stage'),
+  outfitAirport('outfit_airport', 'Airport'),
+  outfitCasual('outfit_casual', 'Casual'),
   collection('collection', 'Colección'),
   trades('trades', 'Trades/Ventas'),
   merch('merch', 'Merch'),
@@ -1981,6 +1984,7 @@ class DropClip {
     required this.imageAsset,
     required this.views,
     required this.likes,
+    this.viewCount = 0,
     this.creatorId = '',
     this.creatorName = '',
     this.creatorAvatarAsset = '',
@@ -1999,6 +2003,9 @@ class DropClip {
     this.taggedUserIds = const [],
     this.taggedEntities = const [],
     this.createdAt,
+    this.repostedByUserId = '',
+    this.repostedByUsername = '',
+    this.repostedAt,
     this.isOwn = false,
   });
 
@@ -2010,6 +2017,7 @@ class DropClip {
   final String imageAsset;
   final String views;
   final String likes;
+  final int viewCount;
   final String creatorId;
   final String creatorName;
   final String creatorAvatarAsset;
@@ -2028,6 +2036,9 @@ class DropClip {
   final List<String> taggedUserIds;
   final List<KpopEntity> taggedEntities;
   final DateTime? createdAt;
+  final String repostedByUserId;
+  final String repostedByUsername;
+  final DateTime? repostedAt;
   final bool isOwn;
 
   bool get hasVideo => videoPath.isNotEmpty;
@@ -2055,10 +2066,14 @@ class Fancam {
     this.comments = '0',
     this.saves = '0',
     this.shares = '0',
+    this.viewCount = 0,
     this.taggedPeople = const [],
     this.taggedUserIds = const [],
     this.taggedEntities = const [],
     this.createdAt,
+    this.repostedByUserId = '',
+    this.repostedByUsername = '',
+    this.repostedAt,
     this.isOwn = false,
   });
 
@@ -2082,10 +2097,14 @@ class Fancam {
   final String comments;
   final String saves;
   final String shares;
+  final int viewCount;
   final List<String> taggedPeople;
   final List<String> taggedUserIds;
   final List<KpopEntity> taggedEntities;
   final DateTime? createdAt;
+  final String repostedByUserId;
+  final String repostedByUsername;
+  final DateTime? repostedAt;
   final bool isOwn;
 
   bool get hasVideo => videoPath.isNotEmpty;

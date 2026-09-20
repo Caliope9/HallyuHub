@@ -116,6 +116,49 @@ class SupabasePostService extends LocalPostService {
     return _restorePostsFromRows(rows);
   }
 
+  @override
+  Future<List<OutfitFeedItem>> restoreOutfitFeed({
+    OutfitFeedMode mode = OutfitFeedMode.forYou,
+    String category = 'all',
+    int limit = 24,
+    int offset = 0,
+  }) async {
+    final response = await _client.rpc(
+      'hallyu_outfit_feed_v1',
+      params: {
+        'p_mode': switch (mode) {
+          OutfitFeedMode.forYou => 'for_you',
+          OutfitFeedMode.popular => 'popular',
+          OutfitFeedMode.following => 'following',
+        },
+        'p_category': category,
+        'p_limit': limit,
+        'p_offset': offset,
+      },
+    );
+    final rows = response is List
+        ? response.cast<Map<String, dynamic>>()
+        : const <Map<String, dynamic>>[];
+    if (rows.isEmpty) return const [];
+    final posts = await _restorePostsFromRows(rows);
+    final postsById = {for (final post in posts) post.id: post};
+    return rows
+        .map((row) {
+          final post = postsById[row['id'] as String? ?? ''];
+          if (post == null) return null;
+          return OutfitFeedItem(
+            post: post,
+            categoryKey: row['category_key'] as String? ?? 'outfit',
+            repostedByUsername: row['reposted_by_username'] as String? ?? '',
+            repostedAt: DateTime.tryParse(
+              row['reposted_at'] as String? ?? '',
+            ),
+          );
+        })
+        .whereType<OutfitFeedItem>()
+        .toList(growable: false);
+  }
+
   Future<List<HubPost>> _restorePostsFromRows(
     List<Map<String, dynamic>> postRows,
   ) async {

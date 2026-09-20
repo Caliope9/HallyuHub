@@ -7,12 +7,15 @@ import '../data/discover_data.dart';
 import '../models.dart';
 import '../screens/camera_capture_screen.dart';
 import '../screens/discover_people_screen.dart';
+import '../screens/drops_screen.dart';
+import '../screens/fancams_screen.dart';
 import '../screens/kpop_entity_profile_screen.dart';
+import '../screens/outfit_screen.dart';
 import '../screens/post_editor_screen.dart';
 import '../screens/public_profile_screen.dart';
 import '../screens/story_editor_screen.dart';
 import '../screens/story_viewer_screen.dart';
-import '../screens/home_feature_placeholder_screen.dart';
+import '../screens/top_kpop_screen.dart';
 import '../services/local_artist_tag_service.dart';
 import '../services/local_chat_service.dart';
 import '../services/local_content_category_service.dart';
@@ -23,6 +26,7 @@ import '../services/local_safety_service.dart';
 import '../services/local_story_service.dart';
 import '../services/local_user_tag_service.dart';
 import '../services/media_permission_service.dart';
+import '../services/repost_service.dart';
 import '../services/share_links.dart';
 import '../services/story_time.dart';
 import '../services/store_profile_service.dart';
@@ -724,22 +728,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _openHomeFeature(String title, String detail) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _FeatureSheet(title: title, detail: detail),
-    );
-  }
-
-  void _openPlaceholder(HomeFeature feature) {
-    Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => HomeFeaturePlaceholderScreen(feature: feature),
-      ),
-    );
-  }
-
   void _openStory(Story story) {
     final orderedStories = _orderedFollowingStories;
     final firstPending = orderedStories.indexWhere(
@@ -1405,9 +1393,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final activeReminder = widget.followService.usesRealProfiles
-        ? null
-        : _activeHomeReminder;
     final feedPosts = _visibleFeedPosts;
     return Stack(
       children: [
@@ -1415,31 +1400,18 @@ class _HomeScreenState extends State<HomeScreen> {
         ListView(
           key: const ValueKey('home-feed-scroll'),
           controller: _scrollController,
-          padding: const EdgeInsets.fromLTRB(0, 2, 0, 32),
+          padding: const EdgeInsets.fromLTRB(0, 2, 0, 92),
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: const EdgeInsets.fromLTRB(14, 2, 14, 0),
               child: _HomeQuickAccessRail(
-                onViral: () => _openPlaceholder(HomeFeature.viral),
-                onOutfit: () => _openPlaceholder(HomeFeature.outfit),
-                onEvents: widget.onOpenDiscoverSection == null
-                    ? () => _openHomeFeature(
-                        'Eventos',
-                        'Encontrá eventos desde Buscar > Eventos.',
-                      )
-                    : () => widget.onOpenDiscoverSection!.call(
-                        DiscoverSection.events,
-                      ),
-                onIdols: widget.onOpenDiscoverSection == null
-                    ? () => _openHomeFeature(
-                        'Idols',
-                        'Descubrí grupos y artistas desde Buscar > Idols.',
-                      )
-                    : () => widget.onOpenDiscoverSection!.call(
-                        DiscoverSection.idols,
-                      ),
+                onFancams: _openFancams,
+                onDrops: _openDrops,
+                onOutfits: _openOutfit,
+                onTopKpop: _openTopKpop,
               ),
             ),
+            Padding(
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: _StoriesRail(
@@ -1456,19 +1428,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     : () => _openStory(_orderedFollowingStories.first),
               ),
             ),
-            if (activeReminder != null) ...[
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: _HomeReminderCard(
-                  reminder: activeReminder,
-                  onTap: () => _openHomeFeature(
-                    activeReminder.label,
-                    activeReminder.title,
-                  ),
-                ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: _HomeTrendsSection(
+                posts: feedPosts.take(8).toList(growable: false),
+                onOpenPost: _openProfile,
               ),
-            ],
+            ),
+            const SizedBox(height: 14),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 14),
+              child: _HomeAdvertisingCard(),
+            ),
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -1546,6 +1518,96 @@ class _HomeScreenState extends State<HomeScreen> {
       ],
     );
   }
+
+  void _openFancams() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => FancamsScreen(
+          user: widget.user,
+          title: 'Fancams · Más virales',
+          initialMode: FancamFeedMode.viral,
+          showBackButton: true,
+          fancamService: widget.fancamService,
+          followService: widget.followService,
+          postService: widget.postService,
+          chatService: widget.chatService,
+          storyService: widget.storyService,
+          dropService: widget.dropService,
+          contentCategoryService: widget.contentCategoryService,
+          userTagService: widget.userTagService,
+          artistTagService: widget.artistTagService,
+          safetyService: widget.safetyService,
+          storeProfileService: widget.storeProfileService,
+        ),
+      ),
+    );
+  }
+
+  void _openDrops() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => DropsScreen(
+          user: widget.user,
+          initialMode: DropFeedMode.viral,
+          showBackButton: true,
+          dropService: widget.dropService,
+          followService: widget.followService,
+          postService: widget.postService,
+          chatService: widget.chatService,
+          storyService: widget.storyService,
+          fancamService: widget.fancamService,
+          contentCategoryService: widget.contentCategoryService,
+          userTagService: widget.userTagService,
+          artistTagService: widget.artistTagService,
+          safetyService: widget.safetyService,
+          storeProfileService: widget.storeProfileService,
+        ),
+      ),
+    );
+  }
+
+  void _openOutfit() {
+    final repostService = widget.postService.usesRealPosts
+        ? SupabaseRepostService()
+        : LocalRepostService();
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => OutfitScreen(
+          postService: widget.postService,
+          user: widget.user,
+          repostService: repostService,
+          safetyService: widget.safetyService,
+          onCreateOutfit: _openPostEditor,
+        ),
+      ),
+    );
+  }
+
+  void _openTopKpop() {
+    final user = widget.user;
+    if (user == null) {
+      _showSnack('Iniciá sesión para ver el ranking K-pop.');
+      return;
+    }
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => TopKpopScreen(
+          user: user,
+          artistTagService: widget.artistTagService,
+          postService: widget.postService,
+          storyService: widget.storyService,
+          dropService: widget.dropService,
+          fancamService: widget.fancamService,
+          followService: widget.followService,
+          chatService: widget.chatService,
+          contentCategoryService: widget.contentCategoryService,
+          userTagService: widget.userTagService,
+          safetyService: widget.safetyService,
+          storeProfileService: widget.storeProfileService,
+        ),
+      ),
+    );
+  }
 }
 
 final _shareRecipients = demoProfiles
@@ -1559,19 +1621,6 @@ final _shareRecipients = demoProfiles
       ),
     )
     .toList(growable: false);
-
-_HomeReminder? get _activeHomeReminder {
-  if (!_userHasUpcomingActivity) return null;
-  return const _HomeReminder(
-    label: 'Hoy 19:00',
-    title: 'Random Play Dance',
-    detail: 'Te anotaste al evento de Santiago. Empieza en 2 hs.',
-    icon: Icons.event_available_outlined,
-    color: AppTheme.cyan,
-  );
-}
-
-bool get _userHasUpcomingActivity => true;
 
 const _fallbackPostAuthor = AuthUser(
   name: 'HallyuHub',
@@ -1642,10 +1691,10 @@ class _NeonAtmosphere extends StatelessWidget {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                const Color(0xFF03050B).withValues(alpha: 0.96),
-                const Color(0xFF050710).withValues(alpha: 0.94),
-                AppTheme.violet.withValues(alpha: 0.022),
-                const Color(0xFF020309).withValues(alpha: 0.98),
+                const Color(0xFF03050B).withValues(alpha: 0.98),
+                const Color(0xFF050710).withValues(alpha: 0.97),
+                AppTheme.violet.withValues(alpha: 0.018),
+                const Color(0xFF020309).withValues(alpha: 0.99),
               ],
               stops: const [0, 0.35, 0.7, 1],
             ),
@@ -1701,110 +1750,402 @@ class _HomeSectionHeader extends StatelessWidget {
   }
 }
 
-class _HomeReminder {
-  const _HomeReminder({
+class _HomeQuickAccessRail extends StatelessWidget {
+  const _HomeQuickAccessRail({
+    required this.onFancams,
+    required this.onDrops,
+    required this.onOutfits,
+    required this.onTopKpop,
+  });
+
+  final VoidCallback onFancams;
+  final VoidCallback onDrops;
+  final VoidCallback onOutfits;
+  final VoidCallback onTopKpop;
+
+  @override
+  Widget build(BuildContext context) {
+    const items = [
+      (
+        label: 'Fancams',
+        detail: 'Más virales',
+        icon: Icons.videocam_rounded,
+        asset: 'assets/brand/hally_discover_communities_v2.jpg',
+      ),
+      (
+        label: 'Drops',
+        detail: 'Más virales',
+        icon: Icons.play_circle_fill,
+        asset: 'assets/brand/hally_discover_events_v2.jpg',
+      ),
+      (
+        label: 'Outfits',
+        detail: 'K-style',
+        icon: Icons.checkroom_rounded,
+        asset: 'assets/brand/hally_discover_groups_stage_v2.jpg',
+      ),
+      (
+        label: 'Top K-pop',
+        detail: 'Más seguidos',
+        icon: Icons.star_rounded,
+        asset: 'assets/brand/hally_discover_news_globe_v2.jpg',
+      ),
+    ];
+    final actions = [onFancams, onDrops, onOutfits, onTopKpop];
+    return SizedBox(
+      height: 84,
+      child: Row(
+        children: [
+          for (var index = 0; index < items.length; index++) ...[
+            Expanded(
+              child: _HomeQuickAccessCard(
+                key: ValueKey('home-quick-access-${items[index].label}'),
+                label: items[index].label,
+                detail: items[index].detail,
+                icon: items[index].icon,
+                asset: items[index].asset,
+                onTap: actions[index],
+              ),
+            ),
+            if (index != items.length - 1) const SizedBox(width: 7),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeQuickAccessCard extends StatelessWidget {
+  const _HomeQuickAccessCard({
+    super.key,
     required this.label,
-    required this.title,
     required this.detail,
     required this.icon,
-    required this.color,
+    required this.asset,
+    required this.onTap,
   });
 
   final String label;
-  final String title;
   final String detail;
   final IconData icon;
-  final Color color;
-}
-
-class _HomeReminderCard extends StatelessWidget {
-  const _HomeReminderCard({required this.reminder, required this.onTap});
-
-  final _HomeReminder reminder;
+  final String asset;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      key: const ValueKey('home-auto-reminder'),
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: Ink(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.075),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: reminder.color.withValues(alpha: 0.22)),
-          boxShadow: [
-            BoxShadow(
-              color: reminder.color.withValues(alpha: 0.09),
-              blurRadius: 22,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: reminder.color.withValues(alpha: 0.16),
-                borderRadius: BorderRadius.circular(14),
+    final accent = switch (label) {
+      'Fancams' => AppTheme.cyan,
+      'Drops' => AppTheme.rose,
+      'Outfits' => AppTheme.cyan,
+      _ => AppTheme.violet,
+    };
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            image: DecorationImage(
+              image: AssetImage(asset),
+              fit: BoxFit.cover,
+              colorFilter: ColorFilter.mode(
+                AppTheme.night.withValues(alpha: 0.48),
+                BlendMode.darken,
               ),
-              child: Icon(reminder.icon, color: reminder.color),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    reminder.label.toUpperCase(),
-                    style: TextStyle(
-                      color: reminder.color,
-                      fontSize: 11,
-                      letterSpacing: 0,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    reminder.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  Text(
-                    reminder.detail,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.58),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
+            border: Border.all(color: accent.withValues(alpha: 0.72)),
+            boxShadow: [
+              BoxShadow(color: accent.withValues(alpha: 0.10), blurRadius: 10),
+            ],
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  AppTheme.night.withValues(alpha: 0.88),
                 ],
               ),
             ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: Colors.white.withValues(alpha: 0.54),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Icon(icon, color: Colors.white, size: 18),
+                const SizedBox(height: 1),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(
+                  detail,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.76),
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _HomeQuickAccessRail extends StatelessWidget {
-  const _HomeQuickAccessRail({
+class _HomeTrendsSection extends StatelessWidget {
+  const _HomeTrendsSection({required this.posts, required this.onOpenPost});
+
+  final List<HubPost> posts;
+  final ValueChanged<HubPost> onOpenPost;
+
+  @override
+  Widget build(BuildContext context) {
+    final visualPosts = posts
+        .where((post) => post.effectiveMediaItems.any((item) => item.hasMedia))
+        .take(2)
+        .toList(growable: false);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _HomeSectionHeader(title: 'Tendencias'),
+        const SizedBox(height: 8),
+        if (visualPosts.isEmpty)
+          const _EmptyInlinePanel(
+            key: ValueKey('home-trends-empty'),
+            text: 'Todavía no hay tendencias para mostrar.',
+          )
+        else
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth >= 340
+                  ? (constraints.maxWidth - 8) / 2
+                  : constraints.maxWidth;
+              return Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final post in visualPosts)
+                    SizedBox(
+                      width: width,
+                      child: _HomeTrendCard(
+                        post: post,
+                        onTap: () => onOpenPost(post),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+      ],
+    );
+  }
+}
+
+class _HomeTrendCard extends StatelessWidget {
+  const _HomeTrendCard({required this.post, required this.onTap});
+
+  final HubPost post;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Ink(
+          height: 116,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppTheme.violet.withValues(alpha: 0.55)),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(17),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _HomePostBackdrop(post: post),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        AppTheme.night.withValues(alpha: 0.12),
+                        AppTheme.night.withValues(alpha: 0.9),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(11),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: AppTheme.rose.withValues(alpha: 0.92),
+                          borderRadius: BorderRadius.circular(7),
+                        ),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 3,
+                          ),
+                          child: Text(
+                            'TENDENCIA',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        post.artist.trim().isEmpty
+                            ? (post.tags.isEmpty
+                                  ? 'Contenido destacado'
+                                  : post.tags.first)
+                            : post.artist,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                          height: 1.08,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        post.tags.isEmpty
+                            ? 'Descubrí más en HallyuHub'
+                            : post.tags.take(2).join(' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.76),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomePostBackdrop extends StatelessWidget {
+  const _HomePostBackdrop({required this.post});
+
+  final HubPost post;
+
+  @override
+  Widget build(BuildContext context) {
+    final media = post.effectiveMediaItems.firstOrNull;
+    if (media == null) return const SizedBox.shrink();
+    if (media.imageBytes != null) {
+      return Image.memory(media.imageBytes!, fit: BoxFit.cover);
+    }
+    final source = media.imageAsset.trim().isNotEmpty
+        ? media.imageAsset.trim()
+        : media.mediaPath.trim();
+    if (source.startsWith('http://') || source.startsWith('https://')) {
+      return Image.network(
+        source,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => const SizedBox.shrink(),
+      );
+    }
+    if (source.isNotEmpty && !source.contains('/')) {
+      return Image.asset(
+        source,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => const SizedBox.shrink(),
+      );
+    }
+    return const SizedBox.shrink();
+  }
+}
+
+class _HomeAdvertisingCard extends StatelessWidget {
+  const _HomeAdvertisingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.cyan.withValues(alpha: 0.18),
+            AppTheme.violet.withValues(alpha: 0.2),
+          ],
+        ),
+        border: Border.all(color: AppTheme.cyan.withValues(alpha: 0.38)),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.cyan.withValues(alpha: 0.08),
+            blurRadius: 16,
+          ),
+        ],
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.campaign_rounded, color: AppTheme.cyan, size: 22),
+          SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Publicidad',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              Text(
+                'Muy pronto en HallyuHub',
+                style: TextStyle(color: Colors.white70, fontSize: 11),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LegacyHomeQuickAccessRail extends StatelessWidget {
+  const _LegacyHomeQuickAccessRail({
     required this.onViral,
     required this.onOutfit,
     required this.onEvents,
@@ -1857,7 +2198,7 @@ class _HomeQuickAccessRail extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final item = items[index];
-          return _HomeQuickAccessCard(
+          return _LegacyHomeQuickAccessCard(
             key: item.$5,
             label: item.$1,
             glyph: item.$2,
@@ -1870,8 +2211,8 @@ class _HomeQuickAccessRail extends StatelessWidget {
   }
 }
 
-class _HomeQuickAccessCard extends StatelessWidget {
-  const _HomeQuickAccessCard({
+class _LegacyHomeQuickAccessCard extends StatelessWidget {
+  const _LegacyHomeQuickAccessCard({
     super.key,
     required this.label,
     required this.glyph,
@@ -2011,7 +2352,7 @@ class _StoriesRail extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         SizedBox(
-          height: 104,
+          height: storyGroups.isEmpty ? 78 : 92,
           child: ListView.separated(
             key: const ValueKey('home-stories-carousel'),
             scrollDirection: Axis.horizontal,
@@ -2046,12 +2387,12 @@ class _StoriesRail extends StatelessWidget {
         ),
         if (storyGroups.isEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 4),
+            padding: const EdgeInsets.only(top: 2),
             child: Text(
               'Seguí a otros fans para ver sus historias.',
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.54),
-                fontSize: 12,
+                fontSize: 10,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -2091,8 +2432,8 @@ class _OwnStoryCard extends StatelessWidget {
               clipBehavior: Clip.none,
               children: [
                 Container(
-                  width: 64,
-                  height: 64,
+                  width: 52,
+                  height: 52,
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
@@ -2130,8 +2471,8 @@ class _OwnStoryCard extends StatelessWidget {
                     ),
                     child: ClipOval(
                       child: latestStory == null
-                          ? const Icon(Icons.add, color: Colors.white, size: 28)
-                          : HubAvatar(asset: avatarAsset, size: 58),
+                          ? const Icon(Icons.add, color: Colors.white, size: 25)
+                          : HubAvatar(asset: avatarAsset, size: 46),
                     ),
                   ),
                 ),
@@ -2161,14 +2502,14 @@ class _OwnStoryCard extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 7),
+            const SizedBox(height: 2),
             const Text(
               'Mi historia',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 11,
+                fontSize: 9,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -2182,7 +2523,7 @@ class _OwnStoryCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.48),
-                fontSize: 10,
+                fontSize: 8,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -2218,8 +2559,8 @@ class _StoryCard extends StatelessWidget {
               key: ValueKey(
                 'story-ring-${story.authorId}-${viewed ? 'viewed' : 'unviewed'}',
               ),
-              width: 68,
-              height: 68,
+              width: 54,
+              height: 54,
               padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
@@ -2241,16 +2582,16 @@ class _StoryCard extends StatelessWidget {
                       )
                     : null,
               ),
-              child: HubAvatar(asset: story.avatarAsset, size: 62),
+              child: HubAvatar(asset: story.avatarAsset, size: 48),
             ),
-            const SizedBox(height: 7),
+            const SizedBox(height: 2),
             Text(
               story.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 11,
+                fontSize: 9,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -2260,7 +2601,7 @@ class _StoryCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.5),
-                fontSize: 10,
+                fontSize: 8,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -2290,11 +2631,16 @@ class _SuggestedProfilesRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final visibleProfiles = profiles.isEmpty && !realMode
+    final sourceProfiles = profiles.isEmpty && !realMode
         ? _rankedSuggestedProfiles
-        : profiles
-              .where((profile) => !followedProfiles.contains(profile.id))
-              .toList(growable: false);
+        : profiles;
+    final visibleProfiles = sourceProfiles
+        .where(
+          (profile) =>
+              !followedProfiles.contains(profile.id) &&
+              (!realMode || !_looksLikeTestProfile(profile)),
+        )
+        .toList(growable: false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2310,7 +2656,7 @@ class _SuggestedProfilesRail extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.58),
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -2323,7 +2669,7 @@ class _SuggestedProfilesRail extends StatelessWidget {
           )
         else
           SizedBox(
-            height: 122,
+            height: 104,
             child: ListView.separated(
               key: const ValueKey('home-suggested-profiles'),
               scrollDirection: Axis.horizontal,
@@ -2402,19 +2748,19 @@ class _SuggestedProfileCard extends StatelessWidget {
         : const [AppTheme.rose, AppTheme.violet, AppTheme.cyan];
 
     return SizedBox(
-      width: 250,
-      height: 120,
+      width: 116,
+      height: 104,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           key: ValueKey('home-suggestion-open-${profile.id}'),
           onTap: onOpen,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(18),
           child: Ink(
-            padding: const EdgeInsets.all(9),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: AppTheme.panelRaised.withValues(alpha: 0.84),
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(
                 color: AppTheme.violet.withValues(alpha: 0.34),
               ),
@@ -2429,8 +2775,8 @@ class _SuggestedProfileCard extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  width: 52,
-                  height: 52,
+                  width: 38,
+                  height: 38,
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
@@ -2444,7 +2790,7 @@ class _SuggestedProfileCard extends StatelessWidget {
                   ),
                   child: HubAvatar(
                     asset: profile.avatarAsset,
-                    size: 48,
+                    size: 34,
                     isLive: profile.online,
                     fallbackLabel: profile.name,
                     fallbackColors: [
@@ -2454,11 +2800,11 @@ class _SuggestedProfileCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 6),
 
                 Expanded(
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Column(
@@ -2470,38 +2816,39 @@ class _SuggestedProfileCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 16,
+                              fontSize: 12,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
-                          const SizedBox(height: 3),
+                          const SizedBox(height: 1),
                           Text(
                             visibleUsername,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.56),
-                              fontSize: 12.5,
+                              fontSize: 10,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                           if (username.isNotEmpty) ...[
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 1),
                             Text(
-                              reason,
+                              _suggestionSubtext(profile, reason),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.42),
-                                fontSize: 10.5,
+                                fontSize: 9,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
                           ],
                         ],
                       ),
+                      const Spacer(),
                       SizedBox(
-                        height: 34,
+                        height: 29,
                         child: OutlinedButton(
                           key: ValueKey('home-suggestion-follow-${profile.id}'),
                           onPressed: onFollow,
@@ -2515,8 +2862,8 @@ class _SuggestedProfileCard extends StatelessWidget {
                                   ? AppTheme.cyan.withValues(alpha: 0.72)
                                   : AppTheme.violet.withValues(alpha: 0.74),
                             ),
-                            minimumSize: const Size(82, 34),
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            minimumSize: const Size(0, 29),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             visualDensity: VisualDensity.compact,
                             shape: RoundedRectangleBorder(
@@ -2526,7 +2873,7 @@ class _SuggestedProfileCard extends StatelessWidget {
                           child: Text(
                             following ? 'Siguiendo' : 'Seguir',
                             style: const TextStyle(
-                              fontSize: 13,
+                              fontSize: 10,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
@@ -2542,6 +2889,24 @@ class _SuggestedProfileCard extends StatelessWidget {
       ),
     );
   }
+}
+
+bool _looksLikeTestProfile(CommunityProfile profile) {
+  final value = '${profile.name} ${profile.username} ${profile.id}'
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
+      .trim();
+  return RegExp(
+    r'(^| )(test|tester|testing|qa|placeholder|sample|demo)( |$)',
+  ).hasMatch(value);
+}
+
+String _suggestionSubtext(CommunityProfile profile, String fallback) {
+  final group = profile.favoriteGroup.trim();
+  if (group.isNotEmpty) return group;
+  final fandom = profile.fandom.trim();
+  if (fandom.isNotEmpty) return fandom;
+  return fallback;
 }
 
 List<CommunityProfile> get _rankedSuggestedProfiles {
@@ -2646,47 +3011,6 @@ class _SuggestedProfileSheet extends StatelessWidget {
                   tooltip: 'Enviar mensaje',
                 ),
               ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FeatureSheet extends StatelessWidget {
-  const _FeatureSheet({required this.title, required this.detail});
-
-  final String title;
-  final String detail;
-
-  @override
-  Widget build(BuildContext context) {
-    return _SheetFrame(
-      title: title,
-      subtitle: 'HallyuHub',
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              detail,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.82),
-                height: 1.35,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: () => Navigator.of(context).maybePop(),
-                icon: const Icon(Icons.check_rounded),
-                label: const Text('Listo'),
-              ),
             ),
           ],
         ),

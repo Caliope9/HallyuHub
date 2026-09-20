@@ -29,6 +29,7 @@ import 'services/local_fancam_service.dart';
 import 'services/local_follow_service.dart';
 import 'services/local_notification_service.dart';
 import 'services/local_post_service.dart';
+import 'services/repost_service.dart';
 import 'services/local_safety_service.dart';
 import 'services/local_story_service.dart';
 import 'services/local_user_tag_service.dart';
@@ -55,6 +56,7 @@ class HallyuHubApp extends StatefulWidget {
     this.dropService = const LocalDropService(),
     this.fancamService = const LocalFancamService(),
     this.notificationService = const LocalNotificationService(),
+    this.repostService,
     this.safetyService = const LocalSafetyService(),
     this.betaSignupService = const LocalBetaSignupService(),
     this.feedbackReportService = const LocalFeedbackReportService(),
@@ -74,6 +76,7 @@ class HallyuHubApp extends StatefulWidget {
   final LocalDropService dropService;
   final LocalFancamService fancamService;
   final LocalNotificationService notificationService;
+  final RepostService? repostService;
   final LocalSafetyService safetyService;
   final BetaSignupService betaSignupService;
   final FeedbackReportService feedbackReportService;
@@ -235,6 +238,7 @@ class _HallyuHubAppState extends State<HallyuHubApp> {
                       dropService: widget.dropService,
                       fancamService: widget.fancamService,
                       notificationService: widget.notificationService,
+                      repostService: widget.repostService,
                       safetyService: widget.safetyService,
                       betaSignupService: widget.betaSignupService,
                       feedbackReportService: widget.feedbackReportService,
@@ -264,6 +268,7 @@ class HallyuHubShell extends StatefulWidget {
     required this.dropService,
     required this.fancamService,
     required this.notificationService,
+    this.repostService,
     required this.safetyService,
     required this.betaSignupService,
     required this.feedbackReportService,
@@ -286,6 +291,7 @@ class HallyuHubShell extends StatefulWidget {
   final LocalDropService dropService;
   final LocalFancamService fancamService;
   final LocalNotificationService notificationService;
+  final RepostService? repostService;
   final LocalSafetyService safetyService;
   final BetaSignupService betaSignupService;
   final FeedbackReportService feedbackReportService;
@@ -694,6 +700,7 @@ class _HallyuHubShellState extends State<HallyuHubShell>
         artistTagService: widget.artistTagService,
         dropService: widget.dropService,
         fancamService: widget.fancamService,
+        repostService: widget.repostService,
         safetyService: widget.safetyService,
         feedbackReportService: widget.feedbackReportService,
         onUserChanged: widget.onUserChanged,
@@ -967,8 +974,9 @@ class _TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isHome = title == 'Tu universo K-pop latino';
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 14, 8),
+      padding: EdgeInsets.fromLTRB(16, isHome ? 12 : 10, 14, 8),
       child: DecoratedBox(
         decoration: BoxDecoration(
           border: Border(
@@ -979,13 +987,16 @@ class _TopBar extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 9),
           child: Row(
             children: [
-              const HallyuBrandIcon(size: 44, radiusFactor: 0.25),
-              const SizedBox(width: 11),
+              HallyuBrandIcon(size: isHome ? 48 : 44, radiusFactor: 0.25),
+              SizedBox(width: isHome ? 12 : 11),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const HallyuBrandWordmark(fontSize: 20, compact: true),
+                    HallyuBrandWordmark(
+                      fontSize: isHome ? 22 : 20,
+                      compact: true,
+                    ),
                     Text(
                       title,
                       maxLines: 1,

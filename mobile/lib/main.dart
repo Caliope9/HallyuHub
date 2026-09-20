@@ -31,6 +31,7 @@ import 'src/services/supabase_safety_service.dart';
 import 'src/services/supabase_story_service.dart';
 import 'src/services/supabase_user_tag_service.dart';
 import 'src/services/supabase_artist_tag_service.dart';
+import 'src/services/repost_service.dart';
 import 'src/services/store_profile_service.dart';
 import 'src/services/public_access_links.dart';
 
@@ -113,6 +114,9 @@ Future<void> main() async {
       notificationService: supabaseReady
           ? SupabaseNotificationService()
           : const LocalNotificationService(),
+      repostService: supabaseReady
+          ? SupabaseRepostService()
+          : LocalRepostService(),
       safetyService: supabaseReady
           ? SupabaseSafetyService()
           : const LocalSafetyService(),

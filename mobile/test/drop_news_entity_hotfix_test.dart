@@ -85,6 +85,7 @@ class _TaggedDropService extends LocalDropService {
     int offset = 0,
     String? authorId,
     bool onlyCurrentUser = false,
+    DropFeedMode feedMode = DropFeedMode.forYou,
   }) async => const [
     DropClip(
       id: 'drop-bang-chan',
@@ -123,6 +124,7 @@ class _LegacyLeeKnowDropService extends LocalDropService {
     int offset = 0,
     String? authorId,
     bool onlyCurrentUser = false,
+    DropFeedMode feedMode = DropFeedMode.forYou,
   }) async => const [
     DropClip(
       id: 'drop-lee-know-legacy',
@@ -160,6 +162,7 @@ class _MixedStrayKidsDropService extends LocalDropService {
     int offset = 0,
     String? authorId,
     bool onlyCurrentUser = false,
+    DropFeedMode feedMode = DropFeedMode.forYou,
   }) async => const [
     DropClip(
       id: 'drop-lee-know-only',
