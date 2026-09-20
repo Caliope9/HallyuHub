@@ -388,7 +388,7 @@ class _HallyuHubShellState extends State<HallyuHubShell>
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => UserSearchScreen(
-          currentUser: _currentUser,
+          currentUser: widget.user,
           followService: widget.followService,
           postService: widget.postService,
           storyService: widget.storyService,

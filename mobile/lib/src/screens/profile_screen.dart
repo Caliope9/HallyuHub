@@ -18,6 +18,7 @@ import '../screens/public_profile_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/story_archive_screen.dart';
 import '../screens/story_editor_screen.dart';
+import '../screens/top_kpop_screen.dart';
 import '../services/local_drop_service.dart';
 import '../services/local_fancam_service.dart';
 import '../services/local_follow_service.dart';
@@ -2373,6 +2374,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _openTopKpop() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => TopKpopScreen(
+          user: user,
+          artistTagService: widget.artistTagService,
+          postService: widget.postService,
+          storyService: widget.storyService,
+          dropService: widget.dropService,
+          fancamService: widget.fancamService,
+          followService: widget.followService,
+          chatService: widget.chatService,
+          contentCategoryService: widget.contentCategoryService,
+          userTagService: widget.userTagService,
+          safetyService: widget.safetyService,
+          storeProfileService: widget.storeProfileService,
+        ),
+      ),
+    );
+  }
+
   CommunityProfile _communityProfileFromDemo(_DemoProfile profile) {
     return CommunityProfile(
       id: profile.id,
@@ -2513,6 +2535,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       PremiumProfileHighlights(
         counts: _profileCategoryCounts,
         selected: selectedCategory,
+        onTopKpop: _openTopKpop,
         onSelected: (category) {
           setState(() {
             _selectedContentCategory = category;
@@ -2605,9 +2628,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       controller: _scrollController,
       scrollCacheExtent: const ScrollCacheExtent.pixels(900),
       slivers: [
-        SliverToBoxAdapter(
-          child: _ProfileTopBar(onMessages: _openMessages),
-        ),
+        SliverToBoxAdapter(child: _ProfileTopBar(onMessages: _openMessages)),
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           sliver: SliverToBoxAdapter(
@@ -3030,17 +3051,22 @@ class _PremiumProfileHero extends StatelessWidget {
         final avatarSize = compact ? 88.0 : 104.0;
         return Container(
           clipBehavior: Clip.antiAlias,
-          padding: EdgeInsets.all(compact ? 14 : 18),
+          padding: EdgeInsets.fromLTRB(
+            compact ? 14 : 18,
+            0,
+            compact ? 14 : 18,
+            compact ? 14 : 18,
+          ),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(20),
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                const Color(0xFF0A0D1B),
-                colors.first.withValues(alpha: .13),
-                const Color(0xFF070A14),
-                colors.last.withValues(alpha: .08),
+                const Color(0xFF070B18),
+                colors.first.withValues(alpha: .08),
+                const Color(0xFF060914),
+                colors.last.withValues(alpha: .05),
               ],
               stops: const [0, .34, .76, 1],
             ),
@@ -3055,6 +3081,38 @@ class _PremiumProfileHero extends StatelessWidget {
           ),
           child: Stack(
             children: [
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: compact ? 92 : 108,
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.asset(
+                        'assets/brand/hally_discover_neon_backdrop_v1.jpg',
+                        fit: BoxFit.cover,
+                      ),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: .18),
+                              const Color(0xFF070B18).withValues(alpha: .92),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               Positioned.fill(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
@@ -3094,6 +3152,7 @@ class _PremiumProfileHero extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  SizedBox(height: compact ? 44 : 54),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

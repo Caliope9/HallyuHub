@@ -225,11 +225,13 @@ class PremiumProfileHighlights extends StatelessWidget {
     required this.counts,
     required this.selected,
     required this.onSelected,
+    this.onTopKpop,
   });
 
   final Map<ProfileContentCategory, int> counts;
   final ProfileContentCategory? selected;
   final ValueChanged<ProfileContentCategory?> onSelected;
+  final VoidCallback? onTopKpop;
 
   @override
   Widget build(BuildContext context) {
@@ -246,10 +248,16 @@ class PremiumProfileHighlights extends StatelessWidget {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,
-            itemCount: ProfileContentCategory.values.length,
+            itemCount:
+                ProfileContentCategory.values.length +
+                (onTopKpop == null ? 0 : 1),
             separatorBuilder: (_, _) => const SizedBox(width: 10),
             itemBuilder: (context, index) {
-              final category = ProfileContentCategory.values[index];
+              if (onTopKpop != null && index == 0) {
+                return _PremiumTopKpopHighlight(onTap: onTopKpop!);
+              }
+              final categoryIndex = onTopKpop == null ? index : index - 1;
+              final category = ProfileContentCategory.values[categoryIndex];
               return _PremiumHighlightCard(
                 key: ValueKey('profile-highlight-${category.label}'),
                 category: category,
@@ -261,6 +269,115 @@ class PremiumProfileHighlights extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _PremiumTopKpopHighlight extends StatelessWidget {
+  const _PremiumTopKpopHighlight({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Top K-pop',
+      child: InkWell(
+        key: const ValueKey('profile-highlight-Top K-pop'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Ink(
+          width: 142,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppTheme.cyan.withValues(alpha: .75)),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.cyan.withValues(alpha: .18),
+                blurRadius: 16,
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(19),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.asset(
+                  'assets/brand/hally_explore_kpop101_card_v1.png',
+                  fit: BoxFit.cover,
+                ),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: .08),
+                        Colors.black.withValues(alpha: .88),
+                      ],
+                    ),
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(11, 10, 9, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: AppTheme.violet,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(7),
+                          child: Icon(
+                            Icons.trending_up_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                      Spacer(),
+                      Text(
+                        'Top K-pop',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 14,
+                        ),
+                      ),
+                      SizedBox(height: 3),
+                      Text(
+                        'Más seguidos',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Positioned(
+                  right: 9,
+                  bottom: 10,
+                  child: Icon(
+                    Icons.arrow_forward_rounded,
+                    color: Colors.white,
+                    size: 17,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
