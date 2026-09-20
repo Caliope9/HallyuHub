@@ -3001,7 +3001,7 @@ class _PremiumProfileHero extends StatelessWidget {
                 top: 0,
                 left: 0,
                 right: 0,
-                height: compact ? 92 : 108,
+                height: compact ? 100 : 120,
                 child: ClipRRect(
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(16),
@@ -3068,7 +3068,7 @@ class _PremiumProfileHero extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  SizedBox(height: compact ? 44 : 54),
+                  SizedBox(height: compact ? 50 : 60),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

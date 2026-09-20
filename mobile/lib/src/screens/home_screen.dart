@@ -1644,7 +1644,7 @@ class _NeonAtmosphere extends StatelessWidget {
               colors: [
                 const Color(0xFF03050B).withValues(alpha: 0.96),
                 const Color(0xFF050710).withValues(alpha: 0.94),
-                AppTheme.violet.withValues(alpha: 0.035),
+                AppTheme.violet.withValues(alpha: 0.022),
                 const Color(0xFF020309).withValues(alpha: 0.98),
               ],
               stops: const [0, 0.35, 0.7, 1],
@@ -1849,7 +1849,7 @@ class _HomeQuickAccessRail extends StatelessWidget {
       ),
     ];
     return SizedBox(
-      height: 78,
+      height: 84,
       child: ListView.separated(
         key: const ValueKey('home-quick-access'),
         scrollDirection: Axis.horizontal,
@@ -1887,24 +1887,31 @@ class _HomeQuickAccessCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 106,
+      width: 112,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(18),
           child: Ink(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
             decoration: BoxDecoration(
-              color: AppTheme.panelRaised.withValues(alpha: 0.72),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppTheme.panelRaised.withValues(alpha: 0.9),
+                  color.withValues(alpha: 0.12),
+                ],
+              ),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: color.withValues(alpha: 0.34)),
+              border: Border.all(color: color.withValues(alpha: 0.52)),
               boxShadow: [
-                BoxShadow(color: color.withValues(alpha: 0.08), blurRadius: 12),
+                BoxShadow(color: color.withValues(alpha: 0.1), blurRadius: 16),
               ],
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(glyph, style: const TextStyle(fontSize: 19)),
@@ -2300,7 +2307,7 @@ class _SuggestedProfilesRail extends StatelessWidget {
           )
         else
           SizedBox(
-            height: 150,
+            height: 138,
             child: ListView.separated(
               key: const ValueKey('home-suggested-profiles'),
               scrollDirection: Axis.horizontal,
@@ -2380,7 +2387,7 @@ class _SuggestedProfileCard extends StatelessWidget {
 
     return SizedBox(
       width: 270,
-      height: 148,
+      height: 136,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -2388,7 +2395,7 @@ class _SuggestedProfileCard extends StatelessWidget {
           onTap: onOpen,
           borderRadius: BorderRadius.circular(22),
           child: Ink(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: AppTheme.panelRaised.withValues(alpha: 0.84),
               borderRadius: BorderRadius.circular(22),
@@ -2406,8 +2413,8 @@ class _SuggestedProfileCard extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  width: 68,
-                  height: 68,
+                  width: 60,
+                  height: 60,
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
@@ -2421,7 +2428,7 @@ class _SuggestedProfileCard extends StatelessWidget {
                   ),
                   child: HubAvatar(
                     asset: profile.avatarAsset,
-                    size: 64,
+                    size: 56,
                     isLive: profile.online,
                     fallbackLabel: profile.name,
                     fallbackColors: [
@@ -2447,7 +2454,7 @@ class _SuggestedProfileCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 17,
+                              fontSize: 16,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
@@ -2458,7 +2465,7 @@ class _SuggestedProfileCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.56),
-                              fontSize: 13,
+                              fontSize: 12.5,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -2470,7 +2477,7 @@ class _SuggestedProfileCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.42),
-                                fontSize: 11,
+                                fontSize: 10.5,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
