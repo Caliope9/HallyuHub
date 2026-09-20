@@ -4010,15 +4010,18 @@ class _ProfileTabs extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 color: isSelected
-                    ? AppTheme.violet.withValues(alpha: 0.2)
+                    ? AppTheme.violet.withValues(alpha: 0.14)
                     : Colors.transparent,
-                border: isSelected
-                    ? Border.all(color: AppTheme.violet.withValues(alpha: 0.48))
-                    : null,
+                border: Border(
+                  bottom: BorderSide(
+                    color: isSelected ? AppTheme.rose : Colors.transparent,
+                    width: 2,
+                  ),
+                ),
               ),
               child: Text(
                 entry.value,
@@ -4044,10 +4047,10 @@ class _ProfileTabsHeaderDelegate extends SliverPersistentHeaderDelegate {
   final Widget child;
 
   @override
-  double get minExtent => 56;
+  double get minExtent => 48;
 
   @override
-  double get maxExtent => 56;
+  double get maxExtent => 48;
 
   @override
   Widget build(
@@ -4057,9 +4060,9 @@ class _ProfileTabsHeaderDelegate extends SliverPersistentHeaderDelegate {
   ) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFF05070D).withValues(alpha: 0.9),
+        color: const Color(0xFF05070D).withValues(alpha: 0.72),
         border: Border(
-          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.07)),
         ),
         boxShadow: overlapsContent
             ? [
@@ -4073,7 +4076,7 @@ class _ProfileTabsHeaderDelegate extends SliverPersistentHeaderDelegate {
       ),
       child: SizedBox.expand(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+          padding: const EdgeInsets.fromLTRB(12, 2, 12, 2),
           child: child,
         ),
       ),

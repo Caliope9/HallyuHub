@@ -268,9 +268,9 @@ class PremiumProfileHighlights extends StatelessWidget {
           icon: Icons.auto_awesome_rounded,
           subtitle: 'Explora mis temáticas favoritas',
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 18),
         SizedBox(
-          height: 190,
+          height: 208,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,

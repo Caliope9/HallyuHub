@@ -49,7 +49,7 @@ class PremiumProfileFeatureDeck extends StatelessWidget {
                   .clamp(142.0, 178.0)
                   .toDouble();
               return SizedBox(
-                height: 164,
+                height: 174,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
@@ -166,8 +166,8 @@ class _ProfileFeatureCard extends StatelessWidget {
         onTap: item.onTap,
         borderRadius: BorderRadius.circular(16),
         child: Ink(
-          height: 164,
-          padding: const EdgeInsets.all(12),
+          height: 174,
+          padding: const EdgeInsets.all(11),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             gradient: LinearGradient(
@@ -213,8 +213,8 @@ class _ProfileFeatureCard extends StatelessWidget {
                   Row(
                     children: [
                       Container(
-                        width: 38,
-                        height: 38,
+                        width: 36,
+                        height: 36,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: LinearGradient(colors: item.colors),
@@ -225,11 +225,11 @@ class _ProfileFeatureCard extends StatelessWidget {
                             ),
                           ],
                         ),
-                        child: Icon(item.icon, color: Colors.white, size: 20),
+                        child: Icon(item.icon, color: Colors.white, size: 19),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 11),
+                  const SizedBox(height: 9),
                   Text(
                     item.title,
                     maxLines: 2,
@@ -237,7 +237,7 @@ class _ProfileFeatureCard extends StatelessWidget {
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w900,
-                      fontSize: 13,
+                      fontSize: 12.5,
                       height: 1.08,
                     ),
                   ),
@@ -250,7 +250,7 @@ class _ProfileFeatureCard extends StatelessWidget {
                           style: TextStyle(
                             color: item.colors.last,
                             fontWeight: FontWeight.w900,
-                            fontSize: 18,
+                            fontSize: 14,
                           ),
                         ),
                         TextSpan(
@@ -258,7 +258,7 @@ class _ProfileFeatureCard extends StatelessWidget {
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.5),
                             fontWeight: FontWeight.w700,
-                            fontSize: 9.5,
+                            fontSize: 9,
                           ),
                         ),
                       ],
@@ -269,7 +269,7 @@ class _ProfileFeatureCard extends StatelessWidget {
                   const Spacer(),
                   if (item.previews.isNotEmpty)
                     SizedBox(
-                      height: 34,
+                      height: 48,
                       child: Row(
                         children: [
                           for (
@@ -295,7 +295,7 @@ class _ProfileFeatureCard extends StatelessWidget {
                     )
                   else
                     Container(
-                      height: 34,
+                      height: 48,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(6),
                         gradient: LinearGradient(
