@@ -1415,7 +1415,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ListView(
           key: const ValueKey('home-feed-scroll'),
           controller: _scrollController,
-          padding: const EdgeInsets.fromLTRB(0, 2, 0, 18),
+          padding: const EdgeInsets.fromLTRB(0, 2, 0, 32),
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -1849,7 +1849,7 @@ class _HomeQuickAccessRail extends StatelessWidget {
       ),
     ];
     return SizedBox(
-      height: 84,
+      height: 112,
       child: ListView.separated(
         key: const ValueKey('home-quick-access'),
         scrollDirection: Axis.horizontal,
@@ -1887,14 +1887,14 @@ class _HomeQuickAccessCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 112,
+      width: 106,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(18),
           child: Ink(
-            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -1914,7 +1914,23 @@ class _HomeQuickAccessCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(glyph, style: const TextStyle(fontSize: 19)),
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: color.withValues(alpha: 0.2),
+                    border: Border.all(color: color.withValues(alpha: 0.52)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.18),
+                        blurRadius: 12,
+                      ),
+                    ],
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(glyph, style: const TextStyle(fontSize: 18)),
+                ),
                 const SizedBox(height: 3),
                 Text(
                   label,
@@ -1922,7 +1938,7 @@ class _HomeQuickAccessCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 12,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -2307,7 +2323,7 @@ class _SuggestedProfilesRail extends StatelessWidget {
           )
         else
           SizedBox(
-            height: 138,
+            height: 122,
             child: ListView.separated(
               key: const ValueKey('home-suggested-profiles'),
               scrollDirection: Axis.horizontal,
@@ -2386,8 +2402,8 @@ class _SuggestedProfileCard extends StatelessWidget {
         : const [AppTheme.rose, AppTheme.violet, AppTheme.cyan];
 
     return SizedBox(
-      width: 270,
-      height: 136,
+      width: 250,
+      height: 120,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -2395,7 +2411,7 @@ class _SuggestedProfileCard extends StatelessWidget {
           onTap: onOpen,
           borderRadius: BorderRadius.circular(22),
           child: Ink(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(9),
             decoration: BoxDecoration(
               color: AppTheme.panelRaised.withValues(alpha: 0.84),
               borderRadius: BorderRadius.circular(22),
@@ -2413,8 +2429,8 @@ class _SuggestedProfileCard extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  width: 60,
-                  height: 60,
+                  width: 52,
+                  height: 52,
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
@@ -2428,7 +2444,7 @@ class _SuggestedProfileCard extends StatelessWidget {
                   ),
                   child: HubAvatar(
                     asset: profile.avatarAsset,
-                    size: 56,
+                    size: 48,
                     isLive: profile.online,
                     fallbackLabel: profile.name,
                     fallbackColors: [
@@ -2438,7 +2454,7 @@ class _SuggestedProfileCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
 
                 Expanded(
                   child: Column(
@@ -2485,7 +2501,7 @@ class _SuggestedProfileCard extends StatelessWidget {
                         ],
                       ),
                       SizedBox(
-                        height: 40,
+                        height: 34,
                         child: OutlinedButton(
                           key: ValueKey('home-suggestion-follow-${profile.id}'),
                           onPressed: onFollow,
@@ -2499,7 +2515,7 @@ class _SuggestedProfileCard extends StatelessWidget {
                                   ? AppTheme.cyan.withValues(alpha: 0.72)
                                   : AppTheme.violet.withValues(alpha: 0.74),
                             ),
-                            minimumSize: const Size(88, 40),
+                            minimumSize: const Size(82, 34),
                             padding: const EdgeInsets.symmetric(horizontal: 14),
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             visualDensity: VisualDensity.compact,
