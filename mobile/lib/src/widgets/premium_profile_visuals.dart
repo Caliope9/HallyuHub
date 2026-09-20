@@ -207,6 +207,30 @@ class _ProfileFeatureCard extends StatelessWidget {
                   ),
                 ),
               ),
+              Positioned(
+                left: -12,
+                right: -12,
+                bottom: -12,
+                height: 78,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        item.colors.first.withValues(alpha: 0.12),
+                        item.colors.last.withValues(alpha: 0.34),
+                        AppTheme.night.withValues(alpha: 0.96),
+                      ],
+                    ),
+                    border: Border(
+                      top: BorderSide(
+                        color: item.colors.last.withValues(alpha: 0.4),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
