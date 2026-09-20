@@ -315,7 +315,9 @@ class _HallyuHubShellState extends State<HallyuHubShell>
   bool _notificationsLoading = false;
 
   static const _minimumTabSwipeDistance = 86.0;
-  static const _horizontalRailGuardHeight = 150.0;
+  // Home now places the compact shortcut rail above Stories. Keep both
+  // horizontal rails out of the shell's tab-swipe gesture arena.
+  static const _horizontalRailGuardHeight = 230.0;
 
   static const titles = [
     'Tu universo K-pop latino',
@@ -916,10 +918,7 @@ class _HallyuBottomNavItem extends StatelessWidget {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({
-    required this.title,
-    required this.onMessages,
-  });
+  const _TopBar({required this.title, required this.onMessages});
 
   final String title;
   final VoidCallback onMessages;

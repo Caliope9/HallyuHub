@@ -928,7 +928,6 @@ void main() {
     expect(find.text('HallyuHub'), findsOneWidget);
     expect(find.text('Historias'), findsOneWidget);
     expect(find.text('Viral'), findsNothing);
-    expect(find.byKey(const ValueKey('home-auto-reminder')), findsOneWidget);
 
     await tester.drag(
       find.byKey(const ValueKey('home-feed-scroll')),
@@ -1149,10 +1148,7 @@ void main() {
     expect(find.byKey(const ValueKey('home-stories-carousel')), findsOneWidget);
 
     final mainSwipeArea = find.byKey(const ValueKey('main-tab-swipe-area'));
-    await tester.drag(
-      find.byKey(const ValueKey('home-auto-reminder')),
-      const Offset(-220, 0),
-    );
+    await tester.drag(mainSwipeArea, const Offset(-220, 0));
     await tester.pumpAndSettle();
     expect(find.text('Descubre fandoms'), findsOneWidget);
 
@@ -1503,7 +1499,7 @@ void main() {
   ) async {
     await signIn(tester);
 
-    expect(find.text('Fancams'), findsOneWidget);
+    expect(find.text('Fancams'), findsWidgets);
     expect(
       find.byKey(const ValueKey('header-messages-button')),
       findsOneWidget,
@@ -1518,7 +1514,7 @@ void main() {
 
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Fancams'));
+    await tester.tap(find.text('Fancams').last);
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('fancams-reels-feed')), findsOneWidget);
 
