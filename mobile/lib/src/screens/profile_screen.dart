@@ -14,6 +14,7 @@ import '../screens/fancams_screen.dart';
 import '../screens/kpop_entity_profile_screen.dart';
 import '../screens/messages_inbox_screen.dart';
 import '../screens/post_editor_screen.dart';
+import '../screens/outfit_screen.dart';
 import '../screens/public_profile_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/story_archive_screen.dart';
@@ -23,6 +24,7 @@ import '../services/local_fancam_service.dart';
 import '../services/local_follow_service.dart';
 import '../services/local_post_service.dart';
 import '../services/local_safety_service.dart';
+import '../services/repost_service.dart';
 import '../services/feedback_report_service.dart';
 import '../services/local_chat_service.dart';
 import '../services/local_content_category_service.dart';
@@ -140,6 +142,7 @@ class ProfileScreen extends StatefulWidget {
     this.accountDeletionService = const LocalAccountDeletionService(),
     this.betaSignupService = const LocalBetaSignupService(),
     this.contentModerationService = const UnavailableContentModerationService(),
+    this.repostService,
     this.resetSignal = 0,
   });
 
@@ -162,6 +165,7 @@ class ProfileScreen extends StatefulWidget {
   final AccountDeletionService accountDeletionService;
   final BetaSignupService betaSignupService;
   final ContentModerationService contentModerationService;
+  final RepostService? repostService;
   final int resetSignal;
 
   @override
@@ -2427,6 +2431,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
         message: 'Personalizá tu perfil y elegí qué compartir.',
         mascotAsset: 'assets/brand/hally_mascot_wave_transparent.png',
       ),
+      const SizedBox(height: 10),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: OutlinedButton.icon(
+          key: const ValueKey('temporary-outfit-preview-entry'),
+          onPressed: () {
+            Navigator.of(context).push<void>(
+              MaterialPageRoute<void>(
+                builder: (_) => OutfitScreen(
+                  postService: widget.postService,
+                  user: widget.user,
+                  repostService: widget.repostService,
+                  safetyService: widget.safetyService,
+                ),
+              ),
+            );
+          },
+          icon: const Icon(Icons.checkroom_rounded),
+          label: const Text('Abrir Outfit'),
+        ),
+      ),
+      const SizedBox(height: 8),
       PremiumProfileFeatureDeck(
         items: [
           ProfileFeatureItem(

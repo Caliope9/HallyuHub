@@ -27,6 +27,7 @@ import 'services/local_fancam_service.dart';
 import 'services/local_follow_service.dart';
 import 'services/local_notification_service.dart';
 import 'services/local_post_service.dart';
+import 'services/repost_service.dart';
 import 'services/local_safety_service.dart';
 import 'services/local_story_service.dart';
 import 'services/local_user_tag_service.dart';
@@ -53,6 +54,7 @@ class HallyuHubApp extends StatefulWidget {
     this.dropService = const LocalDropService(),
     this.fancamService = const LocalFancamService(),
     this.notificationService = const LocalNotificationService(),
+    this.repostService,
     this.safetyService = const LocalSafetyService(),
     this.betaSignupService = const LocalBetaSignupService(),
     this.feedbackReportService = const LocalFeedbackReportService(),
@@ -72,6 +74,7 @@ class HallyuHubApp extends StatefulWidget {
   final LocalDropService dropService;
   final LocalFancamService fancamService;
   final LocalNotificationService notificationService;
+  final RepostService? repostService;
   final LocalSafetyService safetyService;
   final BetaSignupService betaSignupService;
   final FeedbackReportService feedbackReportService;
@@ -233,6 +236,7 @@ class _HallyuHubAppState extends State<HallyuHubApp> {
                       dropService: widget.dropService,
                       fancamService: widget.fancamService,
                       notificationService: widget.notificationService,
+                      repostService: widget.repostService,
                       safetyService: widget.safetyService,
                       betaSignupService: widget.betaSignupService,
                       feedbackReportService: widget.feedbackReportService,
@@ -262,6 +266,7 @@ class HallyuHubShell extends StatefulWidget {
     required this.dropService,
     required this.fancamService,
     required this.notificationService,
+    this.repostService,
     required this.safetyService,
     required this.betaSignupService,
     required this.feedbackReportService,
@@ -284,6 +289,7 @@ class HallyuHubShell extends StatefulWidget {
   final LocalDropService dropService;
   final LocalFancamService fancamService;
   final LocalNotificationService notificationService;
+  final RepostService? repostService;
   final LocalSafetyService safetyService;
   final BetaSignupService betaSignupService;
   final FeedbackReportService feedbackReportService;
@@ -652,6 +658,7 @@ class _HallyuHubShellState extends State<HallyuHubShell>
         artistTagService: widget.artistTagService,
         dropService: widget.dropService,
         fancamService: widget.fancamService,
+        repostService: widget.repostService,
         safetyService: widget.safetyService,
         feedbackReportService: widget.feedbackReportService,
         onUserChanged: widget.onUserChanged,
