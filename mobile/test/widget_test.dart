@@ -1973,7 +1973,12 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('profile-highlight-Outfit')));
     await tester.pumpAndSettle();
-    expect(find.text('Outfit pastel neon'), findsOneWidget);
+    expect(find.text('Outfits'), findsOneWidget);
+    expect(find.byKey(const ValueKey('outfit-mode-selector')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('outfit-category-selector')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('profile collection tabs create private trade interest', (

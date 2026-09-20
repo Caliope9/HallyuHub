@@ -2431,35 +2431,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         message: 'Personalizá tu perfil y elegí qué compartir.',
         mascotAsset: 'assets/brand/hally_mascot_wave_transparent.png',
       ),
-      const SizedBox(height: 10),
-      Align(
-        alignment: Alignment.centerLeft,
-        child: OutlinedButton.icon(
-          key: const ValueKey('temporary-outfit-preview-entry'),
-          onPressed: () {
-            Navigator.of(context).push<void>(
-              MaterialPageRoute<void>(
-                builder: (_) => OutfitScreen(
-                  postService: widget.postService,
-                  user: widget.user,
-                  repostService: widget.repostService,
-                  safetyService: widget.safetyService,
-                  onCreateOutfit: () => _openPostEditor(
-                    context,
-                    initialDraft: const PostDraft(
-                      tags: ['#Outfit'],
-                      profileCategories: [ProfileContentCategory.outfit],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-          icon: const Icon(Icons.checkroom_rounded),
-          label: const Text('Abrir Outfit'),
-        ),
-      ),
-      const SizedBox(height: 8),
       PremiumProfileFeatureDeck(
         items: [
           ProfileFeatureItem(
@@ -2529,6 +2500,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
         counts: _profileCategoryCounts,
         selected: selectedCategory,
         onSelected: (category) {
+          if (category == ProfileContentCategory.outfit) {
+            Navigator.of(context).push<void>(
+              MaterialPageRoute<void>(
+                builder: (_) => OutfitScreen(
+                  postService: widget.postService,
+                  user: widget.user,
+                  repostService: widget.repostService,
+                  safetyService: widget.safetyService,
+                  onCreateOutfit: () => _openPostEditor(
+                    context,
+                    initialDraft: const PostDraft(
+                      tags: ['#Outfit'],
+                      profileCategories: [ProfileContentCategory.outfit],
+                    ),
+                  ),
+                ),
+              ),
+            );
+            return;
+          }
           setState(() {
             _selectedContentCategory = category;
           });
