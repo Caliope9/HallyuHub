@@ -90,6 +90,7 @@ class _HallyuHubAppState extends State<HallyuHubApp> {
   final _navigatorKey = GlobalKey<NavigatorState>();
   final _messengerKey = GlobalKey<ScaffoldMessengerState>();
   AuthUser? _currentUser;
+  bool _authInitializing = true;
 
   @override
   void initState() {
@@ -99,13 +100,21 @@ class _HallyuHubAppState extends State<HallyuHubApp> {
 
   Future<void> _restoreSession() async {
     debugPrint('APP_SESSION_RESTORE_REQUEST');
-    final user = await widget.authService.restoreSession();
-    if (!mounted || user == null) {
-      debugPrint('APP_SESSION_RESTORE_RESULT user=none');
-      return;
+    try {
+      final user = await widget.authService.restoreSession();
+      if (!mounted || user == null) {
+        debugPrint('APP_SESSION_RESTORE_RESULT user=none');
+        return;
+      }
+      debugPrint('APP_SESSION_RESTORE_RESULT user=${user.email}');
+      await _activateAuthenticatedUser(user);
+    } catch (error) {
+      debugPrint('APP_SESSION_RESTORE_ERROR error=$error');
+    } finally {
+      if (mounted) {
+        setState(() => _authInitializing = false);
+      }
     }
-    debugPrint('APP_SESSION_RESTORE_RESULT user=${user.email}');
-    await _activateAuthenticatedUser(user);
   }
 
   void _handleAuthenticated(AuthUser user) {
@@ -166,6 +175,8 @@ class _HallyuHubAppState extends State<HallyuHubApp> {
               key: const ValueKey('public-access-signup-screen'),
               betaSignupService: widget.betaSignupService,
             )
+          : _authInitializing
+          ? const _AuthStartupSplash()
           : AnimatedSwitcher(
               duration: const Duration(milliseconds: 260),
               child: _currentUser == null
@@ -206,6 +217,37 @@ class _HallyuHubAppState extends State<HallyuHubApp> {
                       onSignOut: _handleSignOut,
                     ),
             ),
+    );
+  }
+}
+
+class _AuthStartupSplash extends StatelessWidget {
+  const _AuthStartupSplash();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: const ValueKey('auth-startup-loading'),
+      backgroundColor: AppTheme.night,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const HallyuBrandIcon(size: 74),
+            const SizedBox(height: 18),
+            const HallyuBrandWordmark(fontSize: 30),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: AppTheme.cyan.withValues(alpha: 0.9),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

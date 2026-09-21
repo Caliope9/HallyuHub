@@ -117,6 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _feedOffset = 0;
   bool _feedLoading = false;
   bool _feedHasMore = true;
+  bool _refreshingHome = false;
 
   @override
   void initState() {
@@ -190,6 +191,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _reloadSafety() {
     _restoreSafety();
+  }
+
+  Future<void> _refreshHome() async {
+    if (_refreshingHome) return;
+    _refreshingHome = true;
+    try {
+      await _restoreFollowing();
+      await _restoreSafety();
+    } catch (error) {
+      debugPrint('HOME_REFRESH_ERROR error=$error');
+      if (mounted) _showSnack('No pudimos actualizar Inicio.');
+    } finally {
+      _refreshingHome = false;
+    }
   }
 
   Future<void> _restoreSafety() async {
@@ -301,10 +316,13 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       likedPostIds = await widget.postService.restoreLikedPostIds();
       savedPostIds = await widget.postService.restoreSavedPostIds();
-    } catch (_) {
-      restoredPosts = const [];
-      likedPostIds = const {};
-      savedPostIds = const {};
+    } catch (error) {
+      _feedLoading = false;
+      debugPrint('HOME_POSTS_ERROR refresh preserved error=$error');
+      if (mounted && _refreshingHome) {
+        _showSnack('No pudimos actualizar Inicio.');
+      }
+      return;
     }
     _feedLoading = false;
     _logPerformance(
@@ -1383,7 +1401,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<HubPost> get _visibleFeedPosts {
-    if (!widget.followService.usesRealProfiles) {
+    if (!widget.postService.usesRealPosts) {
       return [..._localPosts, ...posts];
     }
     return _localPosts
@@ -1397,122 +1415,130 @@ class _HomeScreenState extends State<HomeScreen> {
     return Stack(
       children: [
         const _NeonAtmosphere(),
-        ListView(
-          key: const ValueKey('home-feed-scroll'),
-          controller: _scrollController,
-          padding: const EdgeInsets.fromLTRB(0, 2, 0, 92),
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 2, 14, 0),
-              child: _HomeQuickAccessRail(
-                onFancams: _openFancams,
-                onDrops: _openDrops,
-                onOutfits: _openOutfit,
-                onTopKpop: _openTopKpop,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: _StoriesRail(
-                ownStories: _ownStories,
-                ownAvatarAsset:
-                    (widget.user ?? _fallbackPostAuthor).avatarAsset,
-                followingStories: _orderedFollowingStories,
-                viewedStoryIds: _viewedStoryIds,
-                onCreate: _openCreateContentSheet,
-                onOpenOwn: _openOwnStories,
-                onOpen: _openStory,
-                onSeeAll: _orderedFollowingStories.isEmpty
-                    ? null
-                    : () => _openStory(_orderedFollowingStories.first),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: _HomeTrendsSection(
-                posts: feedPosts.take(8).toList(growable: false),
-                onOpenPost: _openProfile,
-              ),
-            ),
-            const SizedBox(height: 14),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 14),
-              child: _HomeAdvertisingCard(),
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: _SuggestedProfilesRail(
-                profiles: _suggestedProfiles,
-                followedProfiles: _followedSuggestions,
-                realMode: widget.followService.usesRealProfiles,
-                onOpen: _openSuggestion,
-                onFollow: _toggleSuggestionFollow,
-                onViewAll: _openDiscoverPeople,
-              ),
-            ),
-            if (widget.followService.usesRealProfiles &&
-                _followedSuggestions.isEmpty) ...[
-              const SizedBox(height: 10),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 14),
-                child: _EmptyInlinePanel(
-                  key: ValueKey('home-real-feed-empty'),
-                  text: 'Seguí fans para ver sus publicaciones en tu inicio.',
+        RefreshIndicator(
+          key: const ValueKey('home-refresh-indicator'),
+          color: AppTheme.rose,
+          backgroundColor: AppTheme.nightSoft,
+          onRefresh: _refreshHome,
+          child: ListView(
+            key: const ValueKey('home-feed-scroll'),
+            controller: _scrollController,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(0, 2, 0, 92),
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 2, 14, 0),
+                child: _HomeQuickAccessRail(
+                  onFancams: _openFancams,
+                  onDrops: _openDrops,
+                  onOutfits: _openOutfit,
+                  onTopKpop: _openTopKpop,
                 ),
               ),
-            ],
-            const SizedBox(height: 20),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 14),
-              child: _HomeSectionHeader(title: 'Para ti'),
-            ),
-            const SizedBox(height: 8),
-            ...feedPosts.map(
-              (post) => Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
-                  child: _PostCard(
-                    post: post,
-                    liked: _likedPosts.contains(post.id),
-                    saved: _savedPosts.contains(post.id),
-                    shared: _sharedPosts.contains(post.id),
-                    likesLabel: _countWithDelta(
-                      post.likes,
-                      (_likedPosts.contains(post.id) ? 1 : 0) -
-                          (post.likedByCurrentUser ? 1 : 0),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: _StoriesRail(
+                  ownStories: _ownStories,
+                  ownAvatarAsset:
+                      (widget.user ?? _fallbackPostAuthor).avatarAsset,
+                  followingStories: _orderedFollowingStories,
+                  viewedStoryIds: _viewedStoryIds,
+                  onCreate: _openCreateContentSheet,
+                  onOpenOwn: _openOwnStories,
+                  onOpen: _openStory,
+                  onSeeAll: _orderedFollowingStories.isEmpty
+                      ? null
+                      : () => _openStory(_orderedFollowingStories.first),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: _HomeTrendsSection(
+                  posts: feedPosts.take(8).toList(growable: false),
+                  onOpenPost: _openProfile,
+                ),
+              ),
+              const SizedBox(height: 14),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 14),
+                child: _HomeAdvertisingCard(),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: _SuggestedProfilesRail(
+                  profiles: _suggestedProfiles,
+                  followedProfiles: _followedSuggestions,
+                  realMode: widget.followService.usesRealProfiles,
+                  onOpen: _openSuggestion,
+                  onFollow: _toggleSuggestionFollow,
+                  onViewAll: _openDiscoverPeople,
+                ),
+              ),
+              if (widget.followService.usesRealProfiles &&
+                  _followedSuggestions.isEmpty) ...[
+                const SizedBox(height: 10),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 14),
+                  child: _EmptyInlinePanel(
+                    key: ValueKey('home-real-feed-empty'),
+                    text: 'Seguí fans para ver sus publicaciones en tu inicio.',
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 14),
+                child: _HomeSectionHeader(title: 'Para ti'),
+              ),
+              const SizedBox(height: 8),
+              ...feedPosts.map(
+                (post) => Align(
+                  key: ValueKey('home-post-${post.id}'),
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 720),
+                    child: _PostCard(
+                      post: post,
+                      liked: _likedPosts.contains(post.id),
+                      saved: _savedPosts.contains(post.id),
+                      shared: _sharedPosts.contains(post.id),
+                      likesLabel: _countWithDelta(
+                        post.likes,
+                        (_likedPosts.contains(post.id) ? 1 : 0) -
+                            (post.likedByCurrentUser ? 1 : 0),
+                      ),
+                      commentsLabel: _countWithDelta(
+                        post.comments,
+                        _commentAdditions[post.id] ?? 0,
+                      ),
+                      sharesLabel: _countWithDelta(
+                        post.shares,
+                        _sharedPosts.contains(post.id) ? 1 : 0,
+                      ),
+                      savesLabel: _countWithDelta(
+                        post.saves,
+                        (_savedPosts.contains(post.id) ? 1 : 0) -
+                            (post.savedByCurrentUser ? 1 : 0),
+                      ),
+                      onLike: () => _toggleLike(post),
+                      onComment: () => _openComments(post),
+                      onShare: () => _openShare(post),
+                      onSave: () => _toggleSave(post),
+                      onOpenProfile: () => _openProfile(post),
+                      onOpenTaggedPerson: _openTaggedUsername,
+                      onOpenTaggedEntity: _openKpopEntity,
+                      onMore: () => _openMoreActions(post),
+                      videosMuted: _videosMuted,
+                      onToggleVideoSound: _toggleVideoSound,
                     ),
-                    commentsLabel: _countWithDelta(
-                      post.comments,
-                      _commentAdditions[post.id] ?? 0,
-                    ),
-                    sharesLabel: _countWithDelta(
-                      post.shares,
-                      _sharedPosts.contains(post.id) ? 1 : 0,
-                    ),
-                    savesLabel: _countWithDelta(
-                      post.saves,
-                      (_savedPosts.contains(post.id) ? 1 : 0) -
-                          (post.savedByCurrentUser ? 1 : 0),
-                    ),
-                    onLike: () => _toggleLike(post),
-                    onComment: () => _openComments(post),
-                    onShare: () => _openShare(post),
-                    onSave: () => _toggleSave(post),
-                    onOpenProfile: () => _openProfile(post),
-                    onOpenTaggedPerson: _openTaggedUsername,
-                    onOpenTaggedEntity: _openKpopEntity,
-                    onMore: () => _openMoreActions(post),
-                    videosMuted: _videosMuted,
-                    onToggleVideoSound: _toggleVideoSound,
                   ),
                 ),
               ),
-            ),
-            if (_feedLoading || _feedHasMore) const _FeedLoader(),
-          ],
+              if (_feedLoading || _feedHasMore) const _FeedLoader(),
+            ],
+          ),
         ),
       ],
     );

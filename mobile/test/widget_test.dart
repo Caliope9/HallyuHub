@@ -155,6 +155,7 @@ void main() {
 
   testWidgets('starts with a professional auth gate', (tester) async {
     await tester.pumpWidget(const HallyuHubApp());
+    await tester.pumpAndSettle();
 
     expect(find.text('HallyuHub'), findsOneWidget);
     expect(find.text('Iniciar sesión'), findsOneWidget);
@@ -173,6 +174,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(430, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(const HallyuHubApp());
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Crear cuenta').first);
     await tester.pumpAndSettle();
     await tester.enterText(
@@ -214,6 +216,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(430, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(const HallyuHubApp());
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Crear cuenta').first);
     await tester.pumpAndSettle();
 
@@ -2193,6 +2196,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(430, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(const HallyuHubApp());
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Crear cuenta').first);
     await tester.pumpAndSettle();
