@@ -164,6 +164,26 @@ void main() {
     expect(followService.following, isTrue);
   });
 
+  testWidgets('other-user profile uses the premium profile surface', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PublicProfileScreen(
+          profile: _profile(),
+          followService: _RelationshipFixture(following: false),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('public-profile-full')), findsOneWidget);
+    expect(find.text('HallyuHub'), findsOneWidget);
+    expect(find.text('Seguir'), findsOneWidget);
+    expect(find.text('Editar perfil'), findsNothing);
+    expect(find.text('Crear'), findsNothing);
+  });
+
   testWidgets('own public profile does not show a self-follow action', (
     tester,
   ) async {

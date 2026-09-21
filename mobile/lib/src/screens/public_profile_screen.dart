@@ -1017,9 +1017,17 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       appBar: AppBar(
         backgroundColor: AppTheme.night,
         foregroundColor: Colors.white,
-        title: Text(
-          _profile.name,
-          style: const TextStyle(fontWeight: FontWeight.w900),
+        title: const Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(text: 'Hallyu'),
+              TextSpan(
+                text: 'Hub',
+                style: TextStyle(color: AppTheme.rose),
+              ),
+            ],
+          ),
+          style: TextStyle(fontWeight: FontWeight.w900),
         ),
         actions: [
           if (!_isOwnProfile)
@@ -1274,177 +1282,221 @@ class _PublicProfileHero extends StatelessWidget {
     return Container(
       key: const ValueKey('public-profile-full'),
       clipBehavior: Clip.antiAlias,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF101421),
-            colors.first.withValues(alpha: 0.12),
-            const Color(0xFF070A12),
-            colors.last.withValues(alpha: 0.08),
-          ],
-          stops: const [0, 0.34, 0.72, 1],
-        ),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.34),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(18),
+        color: AppTheme.night.withValues(alpha: .2),
       ),
-      child: Column(
+      child: Stack(
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [AppTheme.rose, AppTheme.violet, AppTheme.cyan],
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 116,
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(18),
+              ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.asset(
+                    'assets/brand/hally_discover_neon_backdrop_v1.jpg',
+                    fit: BoxFit.cover,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.violet.withValues(alpha: 0.2),
-                      blurRadius: 18,
-                    ),
-                  ],
-                ),
-                child: HubAvatar(
-                  asset: profile.avatarAsset,
-                  size: 112,
-                  isLive: true,
-                ),
-              ),
-              const SizedBox(width: 15),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      profile.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 27,
-                        height: 1.06,
-                        fontWeight: FontWeight.w900,
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: .16),
+                          AppTheme.night.withValues(alpha: .96),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '${profile.username} · ${_publicLocationLabel(profile)}',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: AppTheme.cyan.withValues(alpha: 0.82),
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      profile.bio,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.82),
-                        height: 1.32,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Fandoms',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.72),
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
+                  ),
+                ],
               ),
             ),
           ),
-          const SizedBox(height: 8),
-          Wrap(
-            alignment: WrapAlignment.start,
-            spacing: 7,
-            runSpacing: 7,
-            children: [
-              if (profile.fandom.trim().isNotEmpty)
-                _ProfilePill(profile.fandom),
-              if (profile.favoriteGroup.trim().isNotEmpty)
-                _ProfilePill(profile.favoriteGroup),
-              _ProfilePill('Nivel ${profile.level}'),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: _StatButton(
-                  key: ValueKey('public-profile-${profile.id}-stat-posts'),
-                  value: '$posts',
-                  label: 'posts',
-                  onTap: () {},
-                ),
-              ),
-              Expanded(
-                child: _StatButton(
-                  key: ValueKey('public-profile-${profile.id}-stat-seguidores'),
-                  value: '$followers',
-                  label: 'seguidores',
-                  onTap: onFollowers,
-                ),
-              ),
-              Expanded(
-                child: _StatButton(
-                  key: ValueKey('public-profile-${profile.id}-stat-siguiendo'),
-                  value: '$following',
-                  label: 'siguiendo',
-                  onTap: onFollowing,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          if (!isOwnProfile)
-            Row(
+          Padding(
+            padding: const EdgeInsets.only(top: 58),
+            child: Column(
               children: [
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: busyFollow ? null : onFollow,
-                    icon: Icon(
-                      followingUser
-                          ? Icons.check_rounded
-                          : Icons.person_add_alt_1_rounded,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(3.5),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [AppTheme.rose, AppTheme.violet, AppTheme.cyan],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.violet.withValues(alpha: .28),
+                            blurRadius: 18,
+                          ),
+                        ],
+                      ),
+                      child: HubAvatar(
+                        asset: profile.avatarAsset,
+                        size: 96,
+                        isLive: profile.online,
+                      ),
                     ),
-                    label: Text(followingUser ? 'Siguiendo' : 'Seguir'),
+                    const SizedBox(width: 13),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 3),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              profile.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 24,
+                                height: 1.08,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '${profile.username} · ${_publicLocationLabel(profile)}',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: AppTheme.cyan.withValues(alpha: .84),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            if (profile.bio.trim().isNotEmpty) ...[
+                              const SizedBox(height: 7),
+                              Text(
+                                profile.bio,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: .78),
+                                  fontSize: 13,
+                                  height: 1.22,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 13),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: 7,
+                    runSpacing: 7,
+                    children: [
+                      if (profile.fandom.trim().isNotEmpty)
+                        _ProfilePill(profile.fandom),
+                      if (profile.favoriteGroup.trim().isNotEmpty)
+                        _ProfilePill(profile.favoriteGroup),
+                      _ProfilePill('Nivel ${profile.level}'),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton.tonalIcon(
-                    onPressed: onMessage,
-                    icon: const Icon(Icons.chat_bubble_outline_rounded),
-                    label: const Text('Mensaje'),
-                  ),
+                const SizedBox(height: 11),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _StatButton(
+                        key: ValueKey('public-profile-${profile.id}-stat-posts'),
+                        value: '$posts',
+                        label: 'posts',
+                        onTap: () {},
+                      ),
+                    ),
+                    Expanded(
+                      child: _StatButton(
+                        key: ValueKey('public-profile-${profile.id}-stat-seguidores'),
+                        value: '$followers',
+                        label: 'seguidores',
+                        onTap: onFollowers,
+                      ),
+                    ),
+                    Expanded(
+                      child: _StatButton(
+                        key: ValueKey('public-profile-${profile.id}-stat-siguiendo'),
+                        value: '$following',
+                        label: 'siguiendo',
+                        onTap: onFollowing,
+                      ),
+                    ),
+                    Expanded(
+                      child: _StatButton(
+                        value: profile.starsReceived,
+                        label: 'estrellas',
+                        onTap: () {},
+                      ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 11),
+                if (!isOwnProfile)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: busyFollow ? null : onFollow,
+                          icon: Icon(
+                            followingUser
+                                ? Icons.check_rounded
+                                : Icons.person_add_alt_1_rounded,
+                            size: 18,
+                          ),
+                          label: Text(followingUser ? 'Siguiendo' : 'Seguir'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppTheme.rose,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size.fromHeight(42),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(13),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: onMessage,
+                          icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+                          label: const Text('Mensaje'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size.fromHeight(42),
+                            side: BorderSide(
+                              color: AppTheme.violet.withValues(alpha: .7),
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(13),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  const _OwnProfileNotice(),
               ],
-            )
-          else
-            const _OwnProfileNotice(),
+            ),
+          ),
         ],
       ),
     );
