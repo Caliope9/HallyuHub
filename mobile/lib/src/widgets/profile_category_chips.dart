@@ -527,6 +527,7 @@ class _PremiumHighlightCard extends StatelessWidget {
       button: true,
       label: label,
       child: InkWell(
+        key: ValueKey('profile-highlight-$label'),
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Ink(

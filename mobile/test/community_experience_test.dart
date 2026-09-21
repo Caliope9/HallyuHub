@@ -6,6 +6,7 @@ import 'package:hallyuhub/src/screens/public_profile_screen.dart';
 import 'package:hallyuhub/src/services/local_follow_service.dart';
 import 'package:hallyuhub/src/utils/community_membership_sections.dart';
 import 'package:hallyuhub/src/widgets/community_chat_message_tile.dart';
+import 'package:hallyuhub/src/widgets/profile_category_chips.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 CommunityProfile _profile({
@@ -182,6 +183,53 @@ void main() {
     expect(find.text('Seguir'), findsOneWidget);
     expect(find.text('Editar perfil'), findsNothing);
     expect(find.text('Crear'), findsNothing);
+  });
+
+  testWidgets('other-user profile uses the premium highlights deck', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PublicProfileScreen(
+          profile: _profile(),
+          currentUser: AuthUser(
+            name: 'Viewer',
+            username: '@viewer',
+            email: 'viewer@example.test',
+            avatarAsset: '',
+            fandom: 'Multi fandom',
+          ),
+          followService: _RelationshipFixture(following: false),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -900));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('profile-highlight-Top K-pop')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('profile-highlight-Conciertos')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('profile-highlight-Bias')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('profile-highlight-Photocards')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('profile-highlight-Outfit')),
+      findsOneWidget,
+    );
+    expect(find.byType(PremiumProfileHighlights), findsOneWidget);
+    expect(find.byType(ProfileCategoryRail), findsNothing);
   });
 
   testWidgets('own public profile does not show a self-follow action', (

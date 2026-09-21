@@ -30,6 +30,7 @@ import 'drops_screen.dart';
 import 'fancams_screen.dart';
 import 'kpop_entity_profile_screen.dart';
 import 'messages_inbox_screen.dart';
+import 'top_kpop_screen.dart';
 
 void _logPerformance(String message) {
   assert(() {
@@ -840,6 +841,29 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     );
   }
 
+  void _openTopKpop() {
+    final currentUser = widget.currentUser;
+    if (currentUser == null) return;
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => TopKpopScreen(
+          user: currentUser,
+          artistTagService: widget.artistTagService,
+          postService: widget.postService,
+          storyService: widget.storyService,
+          dropService: widget.dropService,
+          fancamService: widget.fancamService,
+          followService: widget.followService,
+          chatService: widget.chatService,
+          contentCategoryService: widget.contentCategoryService,
+          userTagService: widget.userTagService,
+          safetyService: widget.safetyService,
+          storeProfileService: widget.storeProfileService,
+        ),
+      ),
+    );
+  }
+
   void _openFancam(Fancam fancam) {
     if (!_canSeePrivateContent) {
       _showSnack(
@@ -1176,9 +1200,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 ],
               ),
               const SizedBox(height: 18),
-              ProfileCategoryRail(
+              PremiumProfileHighlights(
                 counts: _categoryCounts,
                 selected: selectedCategory,
+                onTopKpop: widget.currentUser == null ? null : _openTopKpop,
                 onSelected: (category) {
                   setState(() => _selectedContentCategory = category);
                 },
