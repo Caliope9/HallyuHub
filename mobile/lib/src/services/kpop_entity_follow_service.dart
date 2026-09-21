@@ -47,10 +47,7 @@ class KpopEntityFollowService {
     final safeUserId = userId.trim();
     if (safeEntityId.isEmpty || safeUserId.isEmpty) return;
     if (following) {
-      await _client.from('kpop_entity_follows').upsert({
-        'entity_id': safeEntityId,
-        'user_id': safeUserId,
-      }, onConflict: 'entity_id,user_id');
+      await _insertIfMissing(safeEntityId, safeUserId);
       return;
     }
     await _client
@@ -76,10 +73,9 @@ class KpopEntityFollowService {
     var additionsSaved = false;
     try {
       if (additions.isNotEmpty) {
-        await _client.from('kpop_entity_follows').upsert([
-          for (final entityId in additions)
-            {'entity_id': entityId, 'user_id': safeUserId},
-        ], onConflict: 'entity_id,user_id');
+        for (final entityId in additions) {
+          await _insertIfMissing(entityId, safeUserId);
+        }
         additionsSaved = true;
       }
       if (removals.isNotEmpty) {
@@ -102,6 +98,19 @@ class KpopEntityFollowService {
         }
       }
       rethrow;
+    }
+  }
+
+  Future<void> _insertIfMissing(String entityId, String userId) async {
+    try {
+      // Plain INSERT only needs the existing INSERT grant. A duplicate key
+      // means the desired follow already exists and is therefore success.
+      await _client.from('kpop_entity_follows').insert({
+        'entity_id': entityId,
+        'user_id': userId,
+      });
+    } on supabase.PostgrestException catch (error) {
+      if (error.code != '23505') rethrow;
     }
   }
 

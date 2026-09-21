@@ -13,6 +13,7 @@ import '../services/local_post_service.dart';
 import '../services/local_story_service.dart';
 import '../services/local_user_tag_service.dart';
 import '../services/kpop_entity_follow_service.dart';
+import '../services/kpop_entity_member_service.dart';
 import '../services/news_service.dart';
 import '../services/local_safety_service.dart';
 import '../services/store_profile_service.dart';
@@ -255,12 +256,21 @@ class _KpopEntityProfileScreenState extends State<KpopEntityProfileScreen> {
     try {
       final rows = await supabase.Supabase.instance.client
           .from('kpop_entities')
-          .select('bio,fandom_name,members,discography,debut_year')
+          .select('bio,fandom_name,agency,country,debut_year')
           .eq('id', widget.entity.id)
           .limit(1);
       final castRows = rows.cast<Map<String, dynamic>>();
       if (castRows.isEmpty) return fallback;
-      return _EntityEditorialData.fromRow(castRows.first, fallback: fallback);
+      final editorial = _EntityEditorialData.fromRow(
+        castRows.first,
+        fallback: fallback,
+      );
+      if (widget.entity.type != KpopEntityType.group) return editorial;
+      final remoteMembers = await KpopEntityMemberService().restoreMembers(
+        widget.entity.id,
+      );
+      if (remoteMembers == null) return editorial;
+      return editorial.withMemberProfiles(remoteMembers);
     } catch (error) {
       debugPrint('KPOP_ENTITY_EDITORIAL_ERROR ${widget.entity.id} $error');
       return fallback;
@@ -372,7 +382,10 @@ class _KpopEntityProfileScreenState extends State<KpopEntityProfileScreen> {
       return;
     }
     if (!mounted) return;
-    final selectedEntity = entity;
+    _openMemberEntity(entity);
+  }
+
+  void _openMemberEntity(KpopEntity selectedEntity) {
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (context) => KpopEntityProfileScreen(
@@ -609,7 +622,9 @@ class _KpopEntityProfileScreenState extends State<KpopEntityProfileScreen> {
     return _EntityMembersSection(
       entity: widget.entity,
       members: _editorial.members,
+      memberProfiles: _editorial.memberProfiles,
       onMember: _openMember,
+      onMemberEntity: _openMemberEntity,
     );
   }
 
@@ -1215,12 +1230,16 @@ class _EntityMembersSection extends StatelessWidget {
   const _EntityMembersSection({
     required this.entity,
     required this.members,
+    required this.memberProfiles,
     required this.onMember,
+    required this.onMemberEntity,
   });
 
   final KpopEntity entity;
   final List<String> members;
+  final List<KpopEntityMember> memberProfiles;
   final ValueChanged<String> onMember;
+  final ValueChanged<KpopEntity> onMemberEntity;
 
   @override
   Widget build(BuildContext context) {
@@ -1236,64 +1255,87 @@ class _EntityMembersSection extends StatelessWidget {
               spacing: 12,
               runSpacing: 12,
               children: [
-                for (final member in members)
-                  InkWell(
-                    key: ValueKey(
-                      'discover-idol-${_discoverWidgetKey(entity.name)}-${_discoverWidgetKey(member)}',
-                    ),
-                    onTap: () => onMember(member),
-                    borderRadius: BorderRadius.circular(8),
-                    child: SizedBox(
-                      width: 72,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 54,
-                            height: 54,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: const LinearGradient(
-                                colors: [AppTheme.violet, AppTheme.rose],
-                              ),
-                              border: Border.all(
-                                color: AppTheme.cyan.withValues(alpha: .55),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppTheme.violet.withValues(alpha: .24),
-                                  blurRadius: 12,
-                                ),
-                              ],
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              member.isEmpty ? 'H' : member[0].toUpperCase(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 7),
-                          Text(
-                            member,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                if (memberProfiles.isNotEmpty)
+                  for (final member in memberProfiles)
+                    _memberTile(
+                      member.displayName,
+                      member.entity,
+                      () => onMemberEntity(member.entity),
+                    )
+                else
+                  for (final member in members)
+                    _memberTile(member, null, () => onMember(member)),
               ],
             ),
+    );
+  }
+
+  Widget _memberTile(String member, KpopEntity? profile, VoidCallback onTap) {
+    return InkWell(
+      key: ValueKey(
+        'discover-idol-${_discoverWidgetKey(entity.name)}-${_discoverWidgetKey(member)}',
+      ),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: SizedBox(
+        width: 72,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 54,
+              height: 54,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [AppTheme.violet, AppTheme.rose],
+                ),
+                border: Border.all(color: AppTheme.cyan.withValues(alpha: .55)),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.violet.withValues(alpha: .24),
+                    blurRadius: 12,
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              alignment: Alignment.center,
+              child: profile?.imageUrl.trim().isNotEmpty == true
+                  ? Image.network(
+                      profile!.imageUrl,
+                      width: 54,
+                      height: 54,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => _memberInitial(member),
+                    )
+                  : _memberInitial(member),
+            ),
+            const SizedBox(height: 7),
+            Text(
+              member,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _memberInitial(String member) {
+    return Text(
+      member.isEmpty ? 'H' : member[0].toUpperCase(),
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 20,
+        fontWeight: FontWeight.w900,
+      ),
     );
   }
 }
@@ -1666,6 +1708,7 @@ class _EntityEditorialData {
     this.role = '',
     this.groupName = '',
     this.members = const [],
+    this.memberProfiles = const [],
     this.discography = const [],
     this.debutYear = '',
   });
@@ -1677,6 +1720,7 @@ class _EntityEditorialData {
   final String role;
   final String groupName;
   final List<String> members;
+  final List<KpopEntityMember> memberProfiles;
   final List<String> discography;
   final String debutYear;
 
@@ -1686,8 +1730,6 @@ class _EntityEditorialData {
     Map<String, dynamic> row, {
     required _EntityEditorialData fallback,
   }) {
-    final remoteMembers = _stringList(row['members']);
-    final remoteDiscography = _stringList(row['discography']);
     return _EntityEditorialData(
       bio: _firstMeaningfulText([
         row['bio'],
@@ -1702,11 +1744,25 @@ class _EntityEditorialData {
       country: _firstMeaningfulText([row['country'], fallback.country]),
       role: _firstMeaningfulText([row['role'], fallback.role]),
       groupName: _firstMeaningfulText([row['group_name'], fallback.groupName]),
-      members: remoteMembers.isEmpty ? fallback.members : remoteMembers,
-      discography: remoteDiscography.isEmpty
-          ? fallback.discography
-          : remoteDiscography,
+      members: fallback.members,
+      memberProfiles: fallback.memberProfiles,
+      discography: fallback.discography,
       debutYear: _firstMeaningfulText([row['debut_year'], fallback.debutYear]),
+    );
+  }
+
+  _EntityEditorialData withMemberProfiles(List<KpopEntityMember> profiles) {
+    return _EntityEditorialData(
+      bio: bio,
+      fandom: fandom,
+      agency: agency,
+      country: country,
+      role: role,
+      groupName: groupName,
+      members: profiles.map((item) => item.displayName).toList(growable: false),
+      memberProfiles: profiles,
+      discography: discography,
+      debutYear: debutYear,
     );
   }
 
@@ -1725,7 +1781,9 @@ class _EntityEditorialData {
       country: _firstMeaningfulText([local.country, seed.country]),
       role: _firstMeaningfulText([local.role, seed.role]),
       groupName: _firstMeaningfulText([local.groupName, seed.groupName]),
-      members: local.members.isNotEmpty ? local.members : seed.members,
+      // The seed is the more complete temporary compatibility source. The
+      // discover catalog can contain a shorter legacy member list.
+      members: seed.members.isNotEmpty ? seed.members : local.members,
       discography: seed.discography.isNotEmpty
           ? seed.discography
           : local.discography,
@@ -1849,16 +1907,6 @@ bool _isMeaningfulText(String value, {bool rejectShortBio = false}) {
   }
   if (rejectShortBio && normalized.length < 24) return false;
   return true;
-}
-
-List<String> _stringList(Object? value) {
-  if (value is List) {
-    return value
-        .map((item) => item.toString().trim())
-        .where(_isMeaningfulText)
-        .toList(growable: false);
-  }
-  return const [];
 }
 
 String _normalizeEntityKey(String value) {

@@ -1309,6 +1309,71 @@ class KpopEntity {
           .toLowerCase();
 }
 
+class KpopEntityMember {
+  const KpopEntityMember({
+    required this.groupId,
+    required this.memberId,
+    required this.position,
+    required this.entity,
+    this.stageName = '',
+    this.role = '',
+  });
+
+  final String groupId;
+  final String memberId;
+  final int position;
+  final KpopEntity entity;
+  final String stageName;
+  final String role;
+
+  String get displayName => stageName.trim().isEmpty ? entity.name : stageName;
+
+  factory KpopEntityMember.fromRow(
+    Map<String, dynamic> row, {
+    String groupId = '',
+  }) {
+    final rawEntity = row['member'];
+    final entityRow = rawEntity is Map
+        ? Map<String, dynamic>.from(rawEntity)
+        : <String, dynamic>{};
+    final rawPosition = row['position'];
+    final position = rawPosition is num
+        ? rawPosition.toInt()
+        : int.tryParse('$rawPosition') ?? 0;
+    return KpopEntityMember(
+      groupId: groupId.isEmpty ? row['group_id']?.toString() ?? '' : groupId,
+      memberId:
+          row['member_id']?.toString() ?? entityRow['id']?.toString() ?? '',
+      position: position,
+      stageName: row['stage_name']?.toString() ?? '',
+      role: row['role']?.toString() ?? '',
+      entity: KpopEntity(
+        id: entityRow['id']?.toString() ?? '',
+        type: KpopEntityType.fromKey(
+          entityRow['entity_type']?.toString() ?? 'idol',
+        ),
+        name: entityRow['name']?.toString() ?? '',
+        normalizedName: entityRow['normalized_name']?.toString() ?? '',
+        aliases: _stringListValue(entityRow['aliases']),
+        bio: entityRow['bio']?.toString() ?? '',
+        imageUrl: entityRow['image_url']?.toString() ?? '',
+        imageSource: entityRow['image_source']?.toString() ?? '',
+        imageLicense: entityRow['image_license']?.toString() ?? '',
+        attribution: entityRow['attribution']?.toString() ?? '',
+        fandomName: entityRow['fandom_name']?.toString() ?? '',
+        verified: entityRow['is_verified'] == true,
+      ),
+    );
+  }
+}
+
+List<String> _stringListValue(dynamic value) {
+  if (value is List) {
+    return value.map((item) => '$item').toList(growable: false);
+  }
+  return const [];
+}
+
 class ContentArtistTag {
   const ContentArtistTag({
     required this.contentType,
