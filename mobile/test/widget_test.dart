@@ -5,6 +5,7 @@ import 'package:hallyuhub/src/data/demo_data.dart';
 import 'package:hallyuhub/src/data/discover_data.dart';
 import 'package:hallyuhub/src/hallyu_hub_app.dart';
 import 'package:hallyuhub/src/models.dart';
+import 'package:hallyuhub/src/services/age_policy.dart';
 import 'package:hallyuhub/src/services/auth_service.dart';
 import 'package:hallyuhub/src/services/backend_config.dart';
 import 'package:hallyuhub/src/services/local_chat_service.dart';
@@ -213,6 +214,9 @@ void main() {
   testWidgets('registration keeps the selected birth date visible', (
     tester,
   ) async {
+    final expectedBirthDate = AgePolicy.format(
+      DateTime(DateTime.now().year - 16, DateTime.now().month, 1),
+    );
     await tester.binding.setSurfaceSize(const Size(430, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(const HallyuHubApp());
@@ -222,11 +226,11 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('auth-birth-date')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('10').last);
+    await tester.tap(find.text('1').last);
     await tester.tap(find.text('Usar fecha'));
     await tester.pumpAndSettle();
 
-    expect(find.text('10/09/2010'), findsOneWidget);
+    expect(find.text(expectedBirthDate), findsOneWidget);
   });
 
   test('local accounts persist their session until sign out', () async {
@@ -2193,6 +2197,9 @@ void main() {
   });
 
   testWidgets('settings can update profile data and sign out', (tester) async {
+    final expectedBirthDate = AgePolicy.format(
+      DateTime(DateTime.now().year - 16, DateTime.now().month, 1),
+    );
     await tester.binding.setSurfaceSize(const Size(430, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(const HallyuHubApp());
@@ -2234,10 +2241,10 @@ void main() {
     await tester.ensureVisible(find.byKey(const ValueKey('auth-birth-date')));
     await tester.tap(find.byKey(const ValueKey('auth-birth-date')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('10').last);
+    await tester.tap(find.text('1').last);
     await tester.tap(find.text('Usar fecha'));
     await tester.pumpAndSettle();
-    expect(find.text('10/09/2010'), findsOneWidget);
+    expect(find.text(expectedBirthDate), findsOneWidget);
     await tester.ensureVisible(find.byKey(const ValueKey('auth-submit')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('auth-submit')));
