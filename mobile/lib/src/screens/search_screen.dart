@@ -2314,10 +2314,7 @@ class _SearchScreenState extends State<SearchScreen> {
       message: 'Buscá grupos y artistas; etiquetalos en tus publicaciones.',
       mascotAsset: 'assets/brand/hally_mascot_groups_lightstick.png',
     ),
-    _SectionTitle(
-      title: 'Grupos y artistas',
-      trailing: '',
-    ),
+    _SectionTitle(title: 'Grupos y artistas', trailing: ''),
     const SizedBox(height: 10),
     if (_isBetaReal) ...[
       if (_filteredKpopGroups.isEmpty)
@@ -2407,10 +2404,7 @@ class _SearchScreenState extends State<SearchScreen> {
       message: 'Buscá grupos y artistas; etiquetalos en tus publicaciones.',
       mascotAsset: 'assets/brand/hally_mascot_groups_lightstick.png',
     ),
-    _SectionTitle(
-      title: 'Artistas y solistas',
-      trailing: '',
-    ),
+    _SectionTitle(title: 'Artistas y solistas', trailing: ''),
     const SizedBox(height: 10),
     if (_isBetaReal)
       if (_filteredKpopIdols.isEmpty)
@@ -7821,11 +7815,35 @@ class _StudioSuggestionFormSheet extends StatelessWidget {
           color: const Color(0xFF050710),
           child: Stack(
             children: [
-              const Positioned.fill(
+              Positioned.fill(
                 bottom: null,
                 child: SizedBox(
                   height: 190,
-                  child: CustomPaint(painter: _StudioSuggestionHeroPainter()),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Opacity(
+                        opacity: .58,
+                        child: Image.asset(
+                          'assets/brand/hally_discover_groups_stage_v2.jpg',
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(0xFF120D2C).withValues(alpha: .72),
+                              Color(0xFF080B14).withValues(alpha: .9),
+                            ],
+                          ),
+                        ),
+                      ),
+                      CustomPaint(painter: _StudioSuggestionHeroPainter()),
+                    ],
+                  ),
                 ),
               ),
               Positioned(

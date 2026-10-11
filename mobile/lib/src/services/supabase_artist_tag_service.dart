@@ -184,8 +184,7 @@ class SupabaseArtistTagService extends LocalArtistTagService {
         .select(
           'id,suggested_by,name,normalized_name,type,fandom,country,agency,'
           'official_url,note,status,reviewed_by,reviewed_at,created_at,'
-          'updated_at,admin_notes,approved_entity_id,'
-          'suggester:suggested_by(name,username,email)',
+          'updated_at,admin_notes,approved_entity_id',
         );
     if (status != 'all') request = request.eq('status', status);
     if (type != 'all') request = request.eq('type', type);
@@ -311,7 +310,6 @@ class SupabaseArtistTagService extends LocalArtistTagService {
   }
 
   ArtistSuggestionEntry _suggestionFromRow(Map<String, dynamic> row) {
-    final suggester = (row['suggester'] as Map?)?.cast<String, dynamic>();
     return ArtistSuggestionEntry(
       id: row['id'] as String? ?? '',
       suggestedBy: row['suggested_by'] as String? ?? '',
@@ -334,9 +332,6 @@ class SupabaseArtistTagService extends LocalArtistTagService {
           DateTime.fromMillisecondsSinceEpoch(0),
       adminNotes: row['admin_notes'] as String? ?? '',
       approvedEntityId: row['approved_entity_id'] as String? ?? '',
-      suggesterName: suggester?['name'] as String? ?? '',
-      suggesterUsername: suggester?['username'] as String? ?? '',
-      suggesterEmail: suggester?['email'] as String? ?? '',
     );
   }
 }

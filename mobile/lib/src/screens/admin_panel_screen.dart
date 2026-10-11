@@ -367,9 +367,7 @@ class _AdminContentReportsPanelScreenState
         content: TextField(
           controller: controller,
           maxLines: 3,
-          decoration: const InputDecoration(
-            labelText: 'Motivo obligatorio',
-          ),
+          decoration: const InputDecoration(labelText: 'Motivo obligatorio'),
         ),
         actions: [
           TextButton(
@@ -2046,6 +2044,17 @@ class _AdminArtistSuggestionsPanelScreenState
     }
   }
 
+  Future<void> _searchSuggestionOnline(ArtistSuggestionEntry entry) async {
+    final query = Uri.encodeQueryComponent(
+      '${entry.name} K-pop ${entry.type.label} sitio oficial',
+    );
+    final uri = Uri.parse('https://www.google.com/search?q=$query');
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      _snack('No pudimos abrir la búsqueda online.');
+    }
+  }
+
   Future<void> _approveWithReview(ArtistSuggestionEntry entry) async {
     final nameController = TextEditingController(text: entry.name);
     final noteController = TextEditingController(text: entry.adminNotes);
@@ -2256,6 +2265,7 @@ class _AdminArtistSuggestionsPanelScreenState
                 _ArtistSuggestionTile(
                   entry: entry,
                   busy: _updating,
+                  onSearchOnline: () => _searchSuggestionOnline(entry),
                   onApprove: () => _approveWithReview(entry),
                   onReject: () =>
                       _editNote(entry, ArtistSuggestionStatus.rejected),
@@ -2953,6 +2963,7 @@ class _ArtistSuggestionTile extends StatelessWidget {
   const _ArtistSuggestionTile({
     required this.entry,
     required this.busy,
+    required this.onSearchOnline,
     required this.onApprove,
     required this.onReject,
     required this.onDuplicate,
@@ -2960,6 +2971,7 @@ class _ArtistSuggestionTile extends StatelessWidget {
 
   final ArtistSuggestionEntry entry;
   final bool busy;
+  final VoidCallback onSearchOnline;
   final VoidCallback onApprove;
   final VoidCallback onReject;
   final VoidCallback onDuplicate;
@@ -3032,6 +3044,12 @@ class _ArtistSuggestionTile extends StatelessWidget {
                 _TinyMeta('Agencia: ${entry.agency}'),
               if (entry.officialUrl.isNotEmpty) _TinyMeta('Link oficial'),
             ],
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: onSearchOnline,
+            icon: const Icon(Icons.travel_explore_rounded),
+            label: const Text('Buscar grupo/artista online'),
           ),
           if (entry.note.isNotEmpty) ...[
             const SizedBox(height: 10),
