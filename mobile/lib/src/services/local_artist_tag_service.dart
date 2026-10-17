@@ -75,6 +75,32 @@ class ArtistSuggestionDraft {
   final String note;
 }
 
+/// Editorial information verified by a moderator before a group is published.
+class CuratedGroupDraft {
+  const CuratedGroupDraft({
+    required this.bio,
+    required this.sourceUrl,
+    required this.members,
+    required this.discography,
+  });
+
+  final String bio;
+  final String sourceUrl;
+  final List<String> members;
+  final List<String> discography;
+
+  bool get isComplete =>
+      bio.trim().length >= 40 &&
+      Uri.tryParse(sourceUrl.trim())?.scheme == 'https' &&
+      (Uri.tryParse(sourceUrl.trim())?.host.isNotEmpty ?? false) &&
+      members.isNotEmpty &&
+      members.every((name) => name.trim().isNotEmpty) &&
+      members.map((name) => name.trim().toLowerCase()).toSet().length ==
+          members.length &&
+      discography.isNotEmpty &&
+      discography.every((title) => title.trim().isNotEmpty);
+}
+
 class ArtistSuggestionEntry {
   const ArtistSuggestionEntry({
     required this.id,
@@ -278,6 +304,7 @@ class LocalArtistTagService {
     String? name,
     KpopEntitySuggestionType? type,
     String? adminNotes,
+    CuratedGroupDraft? curatedGroup,
   }) async {}
 
   List<KpopEntity> _uniqueEntities(Iterable<KpopEntity> entities) {

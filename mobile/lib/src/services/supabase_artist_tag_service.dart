@@ -220,10 +220,36 @@ class SupabaseArtistTagService extends LocalArtistTagService {
     String? name,
     KpopEntitySuggestionType? type,
     String? adminNotes,
+    CuratedGroupDraft? curatedGroup,
   }) async {
     final safeId = id.trim();
     if (safeId.isEmpty) return;
     if (status == ArtistSuggestionStatus.approved) {
+      if (type == KpopEntitySuggestionType.group ||
+          (type == null && curatedGroup != null)) {
+        if (curatedGroup == null || !curatedGroup.isComplete) {
+          throw StateError(
+            'El grupo requiere ficha, integrantes y discografía verificados.',
+          );
+        }
+        await _client.rpc(
+          'approve_complete_group_suggestion',
+          params: {
+            'p_suggestion_id': safeId,
+            'p_name': _nullable(name),
+            'p_bio': curatedGroup.bio.trim(),
+            'p_source_url': curatedGroup.sourceUrl.trim(),
+            'p_members': curatedGroup.members
+                .map((value) => value.trim())
+                .toList(),
+            'p_discography': curatedGroup.discography
+                .map((value) => value.trim())
+                .toList(),
+            'p_admin_notes': _nullable(adminNotes),
+          },
+        );
+        return;
+      }
       await _client.rpc(
         'approve_artist_suggestion',
         params: {

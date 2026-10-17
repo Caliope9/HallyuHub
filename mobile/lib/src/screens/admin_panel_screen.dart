@@ -2011,6 +2011,7 @@ class _AdminArtistSuggestionsPanelScreenState
     String? name,
     KpopEntitySuggestionType? type,
     String? adminNotes,
+    CuratedGroupDraft? curatedGroup,
   }) async {
     if (_updating) return;
     setState(() {
@@ -2024,6 +2025,7 @@ class _AdminArtistSuggestionsPanelScreenState
         name: name,
         type: type,
         adminNotes: adminNotes,
+        curatedGroup: curatedGroup,
       );
       await _restore();
       if (!mounted) return;
@@ -2058,7 +2060,12 @@ class _AdminArtistSuggestionsPanelScreenState
   Future<void> _approveWithReview(ArtistSuggestionEntry entry) async {
     final nameController = TextEditingController(text: entry.name);
     final noteController = TextEditingController(text: entry.adminNotes);
+    final bioController = TextEditingController();
+    final sourceController = TextEditingController(text: entry.officialUrl);
+    final membersController = TextEditingController();
+    final discographyController = TextEditingController();
     var type = entry.type;
+    var validationError = '';
     final result = await showDialog<_ArtistReviewDraft>(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -2092,6 +2099,47 @@ class _AdminArtistSuggestionsPanelScreenState
                   },
                 ),
                 const SizedBox(height: 10),
+                if (type == KpopEntitySuggestionType.group) ...[
+                  const Text(
+                    'Verificá el grupo en una fuente oficial antes de publicarlo. Cada línea de integrantes y discografía crea un registro real.',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                  TextField(
+                    controller: bioController,
+                    minLines: 3,
+                    maxLines: 5,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Biografía verificada',
+                    ),
+                  ),
+                  TextField(
+                    controller: sourceController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'URL de fuente oficial',
+                    ),
+                  ),
+                  TextField(
+                    controller: membersController,
+                    minLines: 3,
+                    maxLines: 8,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Integrantes activos (uno por línea)',
+                    ),
+                  ),
+                  TextField(
+                    controller: discographyController,
+                    minLines: 2,
+                    maxLines: 6,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Discografía básica (un título por línea)',
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 10),
                 TextField(
                   controller: noteController,
                   minLines: 2,
@@ -2101,6 +2149,13 @@ class _AdminArtistSuggestionsPanelScreenState
                     labelText: 'Nota admin opcional',
                   ),
                 ),
+                if (validationError.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    validationError,
+                    style: const TextStyle(color: AppTheme.rose),
+                  ),
+                ],
               ],
             ),
           ),
@@ -2112,12 +2167,41 @@ class _AdminArtistSuggestionsPanelScreenState
             FilledButton(
               onPressed: () {
                 final name = nameController.text.trim();
-                if (name.isEmpty) return;
+                if (name.isEmpty) {
+                  setDialogState(
+                    () => validationError = 'Ingresá el nombre final.',
+                  );
+                  return;
+                }
+                final curatedGroup = type == KpopEntitySuggestionType.group
+                    ? CuratedGroupDraft(
+                        bio: bioController.text,
+                        sourceUrl: sourceController.text,
+                        members: membersController.text
+                            .split('\n')
+                            .map((item) => item.trim())
+                            .where((item) => item.isNotEmpty)
+                            .toList(),
+                        discography: discographyController.text
+                            .split('\n')
+                            .map((item) => item.trim())
+                            .where((item) => item.isNotEmpty)
+                            .toList(),
+                      )
+                    : null;
+                if (curatedGroup != null && !curatedGroup.isComplete) {
+                  setDialogState(
+                    () => validationError =
+                        'Completá biografía, fuente HTTPS, integrantes y discografía sin duplicados.',
+                  );
+                  return;
+                }
                 Navigator.of(context).pop(
                   _ArtistReviewDraft(
                     name: name,
                     type: type,
                     adminNotes: noteController.text.trim(),
+                    curatedGroup: curatedGroup,
                   ),
                 );
               },
@@ -2129,6 +2213,10 @@ class _AdminArtistSuggestionsPanelScreenState
     );
     nameController.dispose();
     noteController.dispose();
+    bioController.dispose();
+    sourceController.dispose();
+    membersController.dispose();
+    discographyController.dispose();
     if (result == null) return;
     await _review(
       entry,
@@ -2136,6 +2224,7 @@ class _AdminArtistSuggestionsPanelScreenState
       name: result.name,
       type: result.type,
       adminNotes: result.adminNotes,
+      curatedGroup: result.curatedGroup,
     );
   }
 
@@ -2284,11 +2373,13 @@ class _ArtistReviewDraft {
     required this.name,
     required this.type,
     required this.adminNotes,
+    this.curatedGroup,
   });
 
   final String name;
   final KpopEntitySuggestionType type;
   final String adminNotes;
+  final CuratedGroupDraft? curatedGroup;
 }
 
 class _ArtistSuggestionStats extends StatelessWidget {

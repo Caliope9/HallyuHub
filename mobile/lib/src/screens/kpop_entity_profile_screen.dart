@@ -256,7 +256,7 @@ class _KpopEntityProfileScreenState extends State<KpopEntityProfileScreen> {
     try {
       final rows = await supabase.Supabase.instance.client
           .from('kpop_entities')
-          .select('bio,fandom_name,agency,country,debut_year')
+          .select('bio,fandom_name,agency,country,debut_year,discography')
           .eq('id', widget.entity.id)
           .limit(1);
       final castRows = rows.cast<Map<String, dynamic>>();
@@ -1746,7 +1746,13 @@ class _EntityEditorialData {
       groupName: _firstMeaningfulText([row['group_name'], fallback.groupName]),
       members: fallback.members,
       memberProfiles: fallback.memberProfiles,
-      discography: fallback.discography,
+      discography:
+          row['discography'] is List && (row['discography'] as List).isNotEmpty
+          ? (row['discography'] as List)
+                .whereType<String>()
+                .where((item) => item.trim().isNotEmpty)
+                .toList(growable: false)
+          : fallback.discography,
       debutYear: _firstMeaningfulText([row['debut_year'], fallback.debutYear]),
     );
   }
