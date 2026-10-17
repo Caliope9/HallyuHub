@@ -82,12 +82,20 @@ class CuratedGroupDraft {
     required this.sourceUrl,
     required this.members,
     required this.discography,
+    required this.imageUrl,
+    required this.imageSource,
+    required this.imageLicense,
+    required this.imageAttribution,
   });
 
   final String bio;
   final String sourceUrl;
   final List<String> members;
   final List<String> discography;
+  final String imageUrl;
+  final String imageSource;
+  final String imageLicense;
+  final String imageAttribution;
 
   bool get isComplete =>
       bio.trim().length >= 40 &&
@@ -98,7 +106,13 @@ class CuratedGroupDraft {
       members.map((name) => name.trim().toLowerCase()).toSet().length ==
           members.length &&
       discography.isNotEmpty &&
-      discography.every((title) => title.trim().isNotEmpty);
+      discography.every((title) => title.trim().isNotEmpty) &&
+      Uri.tryParse(imageUrl.trim())?.scheme == 'https' &&
+      (Uri.tryParse(imageUrl.trim())?.host.isNotEmpty ?? false) &&
+      Uri.tryParse(imageSource.trim())?.scheme == 'https' &&
+      (Uri.tryParse(imageSource.trim())?.host.isNotEmpty ?? false) &&
+      imageLicense.trim().isNotEmpty &&
+      imageAttribution.trim().isNotEmpty;
 }
 
 class ArtistSuggestionEntry {

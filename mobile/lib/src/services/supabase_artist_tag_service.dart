@@ -229,11 +229,11 @@ class SupabaseArtistTagService extends LocalArtistTagService {
           (type == null && curatedGroup != null)) {
         if (curatedGroup == null || !curatedGroup.isComplete) {
           throw StateError(
-            'El grupo requiere ficha, integrantes y discografía verificados.',
+            'El grupo requiere ficha, integrantes, discografía e imagen con licencia verificados.',
           );
         }
         await _client.rpc(
-          'approve_complete_group_suggestion',
+          'approve_licensed_group_suggestion',
           params: {
             'p_suggestion_id': safeId,
             'p_name': _nullable(name),
@@ -246,6 +246,10 @@ class SupabaseArtistTagService extends LocalArtistTagService {
                 .map((value) => value.trim())
                 .toList(),
             'p_admin_notes': _nullable(adminNotes),
+            'p_image_url': curatedGroup.imageUrl.trim(),
+            'p_image_source': curatedGroup.imageSource.trim(),
+            'p_image_license': curatedGroup.imageLicense.trim(),
+            'p_image_attribution': curatedGroup.imageAttribution.trim(),
           },
         );
         return;

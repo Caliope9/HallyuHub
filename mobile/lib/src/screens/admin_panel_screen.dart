@@ -2064,6 +2064,10 @@ class _AdminArtistSuggestionsPanelScreenState
     final sourceController = TextEditingController(text: entry.officialUrl);
     final membersController = TextEditingController();
     final discographyController = TextEditingController();
+    final imageUrlController = TextEditingController();
+    final imageSourceController = TextEditingController();
+    final imageLicenseController = TextEditingController();
+    final imageAttributionController = TextEditingController();
     var type = entry.type;
     var validationError = '';
     final result = await showDialog<_ArtistReviewDraft>(
@@ -2138,6 +2142,34 @@ class _AdminArtistSuggestionsPanelScreenState
                       labelText: 'Discografía básica (un título por línea)',
                     ),
                   ),
+                  TextField(
+                    controller: imageUrlController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'URL HTTPS de foto autorizada',
+                    ),
+                  ),
+                  TextField(
+                    controller: imageSourceController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Página de origen de la foto',
+                    ),
+                  ),
+                  TextField(
+                    controller: imageLicenseController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Licencia de la foto',
+                    ),
+                  ),
+                  TextField(
+                    controller: imageAttributionController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Autor y atribución',
+                    ),
+                  ),
                 ],
                 const SizedBox(height: 10),
                 TextField(
@@ -2187,12 +2219,16 @@ class _AdminArtistSuggestionsPanelScreenState
                             .map((item) => item.trim())
                             .where((item) => item.isNotEmpty)
                             .toList(),
+                        imageUrl: imageUrlController.text,
+                        imageSource: imageSourceController.text,
+                        imageLicense: imageLicenseController.text,
+                        imageAttribution: imageAttributionController.text,
                       )
                     : null;
                 if (curatedGroup != null && !curatedGroup.isComplete) {
                   setDialogState(
                     () => validationError =
-                        'Completá biografía, fuente HTTPS, integrantes y discografía sin duplicados.',
+                        'Completá biografía, fuente HTTPS, integrantes, discografía y foto con licencia y atribución.',
                   );
                   return;
                 }
@@ -2217,6 +2253,10 @@ class _AdminArtistSuggestionsPanelScreenState
     sourceController.dispose();
     membersController.dispose();
     discographyController.dispose();
+    imageUrlController.dispose();
+    imageSourceController.dispose();
+    imageLicenseController.dispose();
+    imageAttributionController.dispose();
     if (result == null) return;
     await _review(
       entry,

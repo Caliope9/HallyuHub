@@ -8,6 +8,10 @@ void main() {
     sourceUrl: 'https://www.universal-music.co.jp/forestella/biography/',
     members: ['Bae Doo-hoon', 'Kang Hyung-ho', 'Cho Min-kyu', 'Ko Woo-rim'],
     discography: ['Evolution', 'Mystique'],
+    imageUrl: 'https://upload.wikimedia.org/example.jpg',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Example.jpg',
+    imageLicense: 'CC BY 3.0',
+    imageAttribution: 'Autor / Wikimedia Commons',
   );
 
   test('grupo completo se puede enviar a revisión', () {
@@ -21,6 +25,10 @@ void main() {
         sourceUrl: 'http://example.com',
         members: complete.members,
         discography: complete.discography,
+        imageUrl: complete.imageUrl,
+        imageSource: complete.imageSource,
+        imageLicense: complete.imageLicense,
+        imageAttribution: complete.imageAttribution,
       ).isComplete,
       isFalse,
     );
@@ -30,6 +38,10 @@ void main() {
         sourceUrl: complete.sourceUrl,
         members: ['A', 'a'],
         discography: complete.discography,
+        imageUrl: complete.imageUrl,
+        imageSource: complete.imageSource,
+        imageLicense: complete.imageLicense,
+        imageAttribution: complete.imageAttribution,
       ).isComplete,
       isFalse,
     );
@@ -39,6 +51,23 @@ void main() {
         sourceUrl: complete.sourceUrl,
         members: complete.members,
         discography: [],
+        imageUrl: complete.imageUrl,
+        imageSource: complete.imageSource,
+        imageLicense: complete.imageLicense,
+        imageAttribution: complete.imageAttribution,
+      ).isComplete,
+      isFalse,
+    );
+    expect(
+      CuratedGroupDraft(
+        bio: complete.bio,
+        sourceUrl: complete.sourceUrl,
+        members: complete.members,
+        discography: complete.discography,
+        imageUrl: complete.imageUrl,
+        imageSource: complete.imageSource,
+        imageLicense: '',
+        imageAttribution: complete.imageAttribution,
       ).isComplete,
       isFalse,
     );
