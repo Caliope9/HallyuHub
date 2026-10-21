@@ -53,6 +53,23 @@ class _CountingPostService extends LocalPostService {
   Future<Set<String>> restoreSavedPostIds() async => <String>{};
 }
 
+class _DelayedPostService extends _CountingPostService {
+  _DelayedPostService(this.firstPage);
+
+  final Future<List<HubPost>> firstPage;
+
+  @override
+  Future<List<HubPost>> restorePosts({
+    int limit = 60,
+    int offset = 0,
+    String? authorId,
+    bool onlyCurrentUser = false,
+    bool homeFeed = false,
+    Set<String> followedAuthorIds = const <String>{},
+    Set<String> followedEntityIds = const <String>{},
+  }) => firstPage;
+}
+
 AuthUser _acceptedUser() {
   final acceptedAt = DateTime(2026, 9, 20);
   return AuthUser(
@@ -127,6 +144,41 @@ void main() {
       findsOneWidget,
     );
     expect(postService.restoreCalls, greaterThan(initialCalls));
+  });
+
+  testWidgets('Home shows loading content until its first feed arrives', (
+    tester,
+  ) async {
+    final firstPage = Completer<List<HubPost>>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: HomeScreen(postService: _DelayedPostService(firstPage.future)),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Para ti'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('home-initial-feed-loading')),
+      findsOneWidget,
+    );
+    expect(find.text('Publicidad'), findsNothing);
+
+    firstPage.complete([posts.first]);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('home-initial-feed-loading')),
+      findsNothing,
+    );
+    await tester.drag(
+      find.byKey(const ValueKey('home-feed-scroll')),
+      const Offset(0, -900),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(ValueKey('home-post-${posts.first.id}')), findsOneWidget);
   });
 
   testWidgets('Home keeps visible posts when refresh fails', (tester) async {

@@ -116,6 +116,8 @@ class _HomeScreenState extends State<HomeScreen> {
   static const _feedPageSize = 12;
   int _feedOffset = 0;
   bool _feedLoading = false;
+  bool _initialFeedResolved = false;
+  bool _initialFeedError = false;
   bool _feedHasMore = true;
   bool _refreshingHome = false;
 
@@ -129,7 +131,6 @@ class _HomeScreenState extends State<HomeScreen> {
     VideoAudioPreference.muted.addListener(_syncVideoAudioPreference);
     _scrollController.addListener(_handleFeedScroll);
     _videosMuted = VideoAudioPreference.muted.value;
-    _restoreStoryState();
     _restoreFollowing();
     _restoreSafety();
   }
@@ -195,15 +196,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _refreshHome() async {
     if (_refreshingHome) return;
-    _refreshingHome = true;
+    setState(() => _refreshingHome = true);
     try {
-      await _restoreFollowing();
       await _restoreSafety();
+      await _restoreFollowing();
     } catch (error) {
       debugPrint('HOME_REFRESH_ERROR error=$error');
       if (mounted) _showSnack('No pudimos actualizar Inicio.');
     } finally {
-      _refreshingHome = false;
+      if (mounted) setState(() => _refreshingHome = false);
     }
   }
 
@@ -222,22 +223,24 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _restoreFollowing() async {
-    var following = <String>{};
-    var followedEntities = <String>{};
-    var profiles = <CommunityProfile>[];
-    try {
-      following = await widget.followService.restoreFollowingIds();
-    } catch (error) {
-      debugPrint('FOLLOW_HOME_ERROR ids error=$error');
-    }
-    if (widget.followService.usesRealProfiles) {
-      followedEntities = await _restoreFollowedEntityIds();
-    }
-    try {
-      profiles = await widget.followService.restoreProfiles(limit: 80);
-    } catch (error) {
-      debugPrint('FOLLOW_HOME_ERROR profiles error=$error');
-    }
+    final followingFuture = widget.followService
+        .restoreFollowingIds()
+        .catchError((Object error) {
+          debugPrint('FOLLOW_HOME_ERROR ids error=$error');
+          return <String>{};
+        });
+    final entitiesFuture = widget.followService.usesRealProfiles
+        ? _restoreFollowedEntityIds()
+        : Future<Set<String>>.value(<String>{});
+    final profilesFuture = widget.followService
+        .restoreProfiles(limit: 80)
+        .catchError((Object error) {
+          debugPrint('FOLLOW_HOME_ERROR profiles error=$error');
+          return <CommunityProfile>[];
+        });
+    final following = await followingFuture;
+    final followedEntities = await entitiesFuture;
+    final profiles = await profilesFuture;
     final knownProfiles = profiles
         .where((profile) => !_blockedUserIds.contains(profile.id))
         .toList(growable: false);
@@ -271,8 +274,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ..clear()
         ..addAll(orderedProfiles.take(12));
     });
-    await _restoreStoryState();
-    await _restorePosts(reset: true);
+    await Future.wait<void>([_restoreStoryState(), _restorePosts(reset: true)]);
   }
 
   Future<Set<String>> _restoreFollowedEntityIds() async {
@@ -305,19 +307,30 @@ class _HomeScreenState extends State<HomeScreen> {
     _logPerformance('PERF_HOME_POSTS_START reset=$reset offset=$offset');
     _feedLoading = true;
     try {
-      restoredPosts = await widget.postService.restorePosts(
-        limit: widget.postService.usesRealPosts ? _feedPageSize : 60,
-        offset: offset,
-        homeFeed:
-            widget.postService.usesRealPosts &&
-            widget.followService.usesRealProfiles,
-        followedAuthorIds: _followedSuggestions,
-        followedEntityIds: _followedEntityIds,
-      );
-      likedPostIds = await widget.postService.restoreLikedPostIds();
-      savedPostIds = await widget.postService.restoreSavedPostIds();
+      final results = await Future.wait<Object>([
+        widget.postService.restorePosts(
+          limit: widget.postService.usesRealPosts ? _feedPageSize : 60,
+          offset: offset,
+          homeFeed:
+              widget.postService.usesRealPosts &&
+              widget.followService.usesRealProfiles,
+          followedAuthorIds: _followedSuggestions,
+          followedEntityIds: _followedEntityIds,
+        ),
+        widget.postService.restoreLikedPostIds(),
+        widget.postService.restoreSavedPostIds(),
+      ]);
+      restoredPosts = results[0] as List<HubPost>;
+      likedPostIds = results[1] as Set<String>;
+      savedPostIds = results[2] as Set<String>;
     } catch (error) {
       _feedLoading = false;
+      if (mounted && !_initialFeedResolved) {
+        setState(() {
+          _initialFeedResolved = true;
+          _initialFeedError = true;
+        });
+      }
       debugPrint('HOME_POSTS_ERROR refresh preserved error=$error');
       if (mounted && _refreshingHome) {
         _showSnack('No pudimos actualizar Inicio.');
@@ -338,6 +351,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ];
     setState(() {
+      _initialFeedResolved = true;
+      _initialFeedError = false;
       if (widget.postService.usesRealPosts) {
         _feedOffset = reset
             ? restoredPosts.length
@@ -375,12 +390,18 @@ class _HomeScreenState extends State<HomeScreen> {
     Set<String> viewedStoryIds;
     Set<String> starredStoryIds;
     try {
-      restoredStories = await widget.storyService.restoreOwnStories();
-      followingStories = await widget.storyService.restoreFollowingStories(
-        followingIds: _followedSuggestions,
-      );
-      viewedStoryIds = await widget.storyService.restoreViewedStoryIds();
-      starredStoryIds = await widget.storyService.restoreStarredStoryIds();
+      final results = await Future.wait<Object>([
+        widget.storyService.restoreOwnStories(),
+        widget.storyService.restoreFollowingStories(
+          followingIds: _followedSuggestions,
+        ),
+        widget.storyService.restoreViewedStoryIds(),
+        widget.storyService.restoreStarredStoryIds(),
+      ]);
+      restoredStories = results[0] as List<Story>;
+      followingStories = results[1] as List<Story>;
+      viewedStoryIds = results[2] as Set<String>;
+      starredStoryIds = results[3] as Set<String>;
     } catch (_) {
       restoredStories = const [];
       followingStories = const [];
@@ -1459,11 +1480,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   onOpenPost: _openProfile,
                 ),
               ),
-              const SizedBox(height: 14),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 14),
-                child: _HomeAdvertisingCard(),
-              ),
               const SizedBox(height: 16),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -1493,6 +1509,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: _HomeSectionHeader(title: 'Para ti'),
               ),
               const SizedBox(height: 8),
+              if (!_initialFeedResolved && feedPosts.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 14),
+                  child: _HomeFeedLoadingCard(),
+                ),
+              if (_initialFeedError && feedPosts.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 14),
+                  child: _EmptyInlinePanel(
+                    text:
+                        'No pudimos cargar publicaciones. Deslizá hacia abajo para reintentar.',
+                  ),
+                ),
               ...feedPosts.map(
                 (post) => Align(
                   key: ValueKey('home-post-${post.id}'),
@@ -1536,10 +1565,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-              if (_feedLoading || _feedHasMore) const _FeedLoader(),
+              if (_initialFeedResolved && (_feedLoading || _feedHasMore))
+                const _FeedLoader(),
             ],
           ),
         ),
+        if (_refreshingHome)
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: LinearProgressIndicator(
+              key: ValueKey('home-refresh-progress'),
+              color: AppTheme.cyan,
+              minHeight: 2,
+            ),
+          ),
       ],
     );
   }
@@ -2116,56 +2157,6 @@ class _HomePostBackdrop extends StatelessWidget {
       );
     }
     return const SizedBox.shrink();
-  }
-}
-
-class _HomeAdvertisingCard extends StatelessWidget {
-  const _HomeAdvertisingCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(
-          colors: [
-            AppTheme.cyan.withValues(alpha: 0.18),
-            AppTheme.violet.withValues(alpha: 0.2),
-          ],
-        ),
-        border: Border.all(color: AppTheme.cyan.withValues(alpha: 0.38)),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.cyan.withValues(alpha: 0.08),
-            blurRadius: 16,
-          ),
-        ],
-      ),
-      child: const Row(
-        children: [
-          Icon(Icons.campaign_rounded, color: AppTheme.cyan, size: 22),
-          SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Publicidad',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              Text(
-                'Muy pronto en HallyuHub',
-                style: TextStyle(color: Colors.white70, fontSize: 11),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -3453,6 +3444,43 @@ class _MiniStat extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.46),
               fontSize: 10,
               fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeFeedLoadingCard extends StatelessWidget {
+  const _HomeFeedLoadingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey('home-initial-feed-loading'),
+      constraints: const BoxConstraints(minHeight: 112),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppTheme.nightSoft,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: const Row(
+        children: [
+          SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppTheme.cyan,
+            ),
+          ),
+          SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              'Cargando publicaciones...',
+              style: TextStyle(color: Colors.white70, fontSize: 14),
             ),
           ),
         ],
