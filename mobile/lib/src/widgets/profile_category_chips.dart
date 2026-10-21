@@ -329,10 +329,10 @@ class PremiumProfileHighlights extends StatelessWidget {
       _PremiumHighlightCard(
         category: ProfileContentCategory.other,
         displayLabel: 'Stage',
-        displaySubtitle: 'Momentos inolvidables',
+        displaySubtitle: 'Presentaciones y más',
         displayAsset: 'assets/brand/hally_discover_groups_stage_v2.jpg',
         displayIcon: Icons.theater_comedy_rounded,
-        count: 0,
+        count: counts[ProfileContentCategory.other] ?? 0,
         selected: false,
         onTap: () => onSelected(ProfileContentCategory.other),
       ),

@@ -1197,7 +1197,7 @@ enum ProfileContentCategory {
   trades('trades', 'Trades/Ventas'),
   merch('merch', 'Merch'),
   fanart('fanart', 'Fanart'),
-  other('other', 'Otro');
+  other('other', 'Stage / Otro');
 
   const ProfileContentCategory(this.key, this.label);
 
