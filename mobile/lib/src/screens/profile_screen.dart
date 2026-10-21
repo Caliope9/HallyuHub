@@ -942,8 +942,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _openPostEditor(
     BuildContext sheetContext, {
     PostDraft initialDraft = const PostDraft(),
+    bool closeSheet = true,
   }) async {
-    Navigator.of(sheetContext).pop();
+    if (closeSheet) Navigator.of(sheetContext).pop();
     final draft = await Navigator.of(context).push<PostDraft>(
       MaterialPageRoute<PostDraft>(
         fullscreenDialog: true,
@@ -2524,6 +2525,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   safetyService: widget.safetyService,
                   onCreateOutfit: () => _openPostEditor(
                     context,
+                    closeSheet: false,
                     initialDraft: const PostDraft(
                       tags: ['#Outfit'],
                       profileCategories: [ProfileContentCategory.outfit],
