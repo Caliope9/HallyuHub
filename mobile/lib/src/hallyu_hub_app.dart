@@ -384,7 +384,6 @@ class _HallyuHubShellState extends State<HallyuHubShell>
     );
     setState(() {
       selectedIndex = nextIndex;
-      _tabResetSignals[nextIndex]++;
     });
   }
 

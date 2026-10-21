@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hallyuhub/src/data/discover_data.dart';
@@ -6,6 +8,7 @@ import 'package:hallyuhub/src/screens/public_profile_screen.dart';
 import 'package:hallyuhub/src/services/local_follow_service.dart';
 import 'package:hallyuhub/src/utils/community_membership_sections.dart';
 import 'package:hallyuhub/src/widgets/community_chat_message_tile.dart';
+import 'package:hallyuhub/src/widgets/brand_mark.dart';
 import 'package:hallyuhub/src/widgets/profile_category_chips.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -58,6 +61,45 @@ class _RelationshipFixture extends LocalFollowService {
     following = !following;
     return following;
   }
+}
+
+class _ExactProfileFixture extends _RelationshipFixture {
+  _ExactProfileFixture(this.profile) : super(following: false);
+
+  final CommunityProfile profile;
+  int exactLookups = 0;
+  int searchLookups = 0;
+
+  @override
+  bool get usesRealProfiles => true;
+
+  @override
+  Future<List<CommunityProfile>> restoreProfilesByIds(List<String> ids) async {
+    exactLookups++;
+    return ids.contains(profile.id) ? [profile] : [];
+  }
+
+  @override
+  Future<List<CommunityProfile>> restoreProfiles({
+    String query = '',
+    int limit = 30,
+    bool excludeFollowing = false,
+  }) async {
+    searchLookups++;
+    return [profile];
+  }
+}
+
+class _DelayedProfileFixture extends _RelationshipFixture {
+  _DelayedProfileFixture() : super(following: false);
+
+  final response = Completer<CommunityProfile?>();
+
+  @override
+  bool get usesRealProfiles => true;
+
+  @override
+  Future<CommunityProfile?> restoreProfileById(String id) => response.future;
 }
 
 void main() {
@@ -179,7 +221,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('public-profile-full')), findsOneWidget);
-    expect(find.text('HallyuHub'), findsOneWidget);
+    expect(find.byType(HallyuBrandWordmark), findsOneWidget);
     expect(find.text('Seguir'), findsOneWidget);
     expect(find.text('Editar perfil'), findsNothing);
     expect(find.text('Crear'), findsNothing);
@@ -255,5 +297,68 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Seguir'), findsNothing);
     expect(find.text('Mensaje'), findsNothing);
+  });
+
+  testWidgets('public profile uses current branding and direct id lookup', (
+    tester,
+  ) async {
+    final profile = _profile(
+      id: 'ad5e7fd5-3588-4c77-98ca-b6df347c743a',
+      name: 'Joel',
+    );
+    final followService = _ExactProfileFixture(profile);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PublicProfileScreen(
+          profile: profile,
+          followService: followService,
+        ),
+      ),
+    );
+    expect(find.byType(HallyuBrandIcon), findsOneWidget);
+    expect(find.byType(HallyuBrandWordmark), findsOneWidget);
+    expect(find.text('Perfil de Joel'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(followService.exactLookups, 1);
+    expect(followService.searchLookups, 0);
+  });
+
+  testWidgets('returning while profile loads restores the previous route', (
+    tester,
+  ) async {
+    final profile = _profile(
+      id: 'ad5e7fd5-3588-4c77-98ca-b6df347c743a',
+      name: 'Joel',
+    );
+    final followService = _DelayedProfileFixture();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (_) => PublicProfileScreen(
+                    profile: profile,
+                    followService: followService,
+                  ),
+                ),
+              ),
+              child: const Text('Pantalla de origen'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Pantalla de origen'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const ValueKey('public-profile-full')), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('Pantalla de origen'), findsOneWidget);
+    followService.response.complete(profile);
+    await tester.pump();
+    expect(tester.takeException(), isNull);
   });
 }

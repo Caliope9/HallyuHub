@@ -188,6 +188,18 @@ class SupabaseFollowService extends LocalFollowService {
       _profilesByIds(ids);
 
   @override
+  Future<CommunityProfile?> restoreProfileById(String id) async {
+    if (id.trim().isEmpty) return null;
+    final rows = await _restoreProfileRowsByIds([id]);
+    for (final row in rows) {
+      if (row['id'] == id) {
+        return _profileFromRow(row, followers: 0, following: 0, posts: 0);
+      }
+    }
+    return null;
+  }
+
+  @override
   Future<List<CommunityProfile>> restoreCurrentUserFollowingProfiles() async {
     final currentUserId = _currentUserId;
     if (currentUserId == null) return const [];
@@ -196,14 +208,18 @@ class SupabaseFollowService extends LocalFollowService {
 
   @override
   Future<FollowCounts> restoreCounts(String profileId) async {
-    final followers = await _singleFollowCount(
+    final followersFuture = _singleFollowCount(
       column: 'following_id',
       value: profileId,
     );
-    final following = await _singleFollowCount(
+    final followingFuture = _singleFollowCount(
       column: 'follower_id',
       value: profileId,
     );
+    final (followers, following) = await (
+      followersFuture,
+      followingFuture,
+    ).wait;
     return FollowCounts(followers: followers, following: following);
   }
 

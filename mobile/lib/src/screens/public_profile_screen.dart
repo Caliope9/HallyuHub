@@ -20,6 +20,7 @@ import '../theme/app_theme.dart';
 import '../widgets/comments_sheet.dart';
 import '../widgets/hallyu_post_card.dart';
 import '../widgets/hub_avatar.dart';
+import '../widgets/brand_mark.dart';
 import '../widgets/post_video_player.dart';
 import '../widgets/premium_profile_visuals.dart';
 import '../widgets/profile_category_chips.dart';
@@ -91,6 +92,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   List<Fancam> _fancams = const [];
   List<ContentCategoryAssignment> _contentCategoryAssignments = const [];
   StoreProfile? _storeProfile;
+  int _restoreGeneration = 0;
   final Set<String> _busyPostActions = {};
   _PublicProfileTab _selectedTab = _PublicProfileTab.posts;
   ProfileContentCategory? _selectedContentCategory;
@@ -146,6 +148,17 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         oldWidget.profile.username != widget.profile.username ||
         oldWidget.profile.avatarAsset != widget.profile.avatarAsset) {
       _profile = widget.profile;
+      _loading = true;
+      _counts = const FollowCounts();
+      _following = false;
+      _blockedByMe = false;
+      _interactionBlocked = false;
+      _posts = const [];
+      _stories = const [];
+      _drops = const [];
+      _fancams = const [];
+      _contentCategoryAssignments = const [];
+      _storeProfile = null;
       unawaited(_restore());
     }
   }
@@ -165,8 +178,20 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
 
   Future<CommunityProfile> _restoreFreshProfile() async {
     if (!widget.followService.usesRealProfiles) return _profile;
+    final profileId = _profile.id.trim();
+    if (_looksLikeSupabaseId(profileId)) {
+      try {
+        final candidate = await widget.followService.restoreProfileById(
+          profileId,
+        );
+        if (candidate != null) return _keepRealAvatar(candidate);
+      } catch (error) {
+        debugPrint(
+          'PUBLIC_PROFILE_ID_REFRESH_ERROR id=$profileId error=$error',
+        );
+      }
+    }
     final keys = <String>{
-      _profile.id.trim(),
       _profile.username.trim(),
       _profile.username.trim().replaceFirst(RegExp(r'^@+'), ''),
       _profile.name.trim(),
@@ -255,19 +280,22 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   }
 
   Future<void> _restore() async {
+    final generation = ++_restoreGeneration;
     final stopwatch = Stopwatch()..start();
     _logPerformance('PERF_PUBLIC_PROFILE_START profileId=${widget.profile.id}');
     try {
-      final freshProfile = await _restoreFreshProfile();
-      _profile = freshProfile;
-      final followingIds = await widget.followService.restoreFollowingIds();
-      final counts = await widget.followService.restoreCounts(freshProfile.id);
+      final profileFuture = _restoreFreshProfile();
+      final followingFuture = widget.followService.restoreFollowingIds();
+      final freshProfile = await profileFuture;
+      if (!mounted || generation != _restoreGeneration) return;
+      final (followingIds, counts, blockedByMe, interactionBlocked) = await (
+        followingFuture,
+        widget.followService.restoreCounts(freshProfile.id),
+        widget.safetyService.hasBlockedUser(freshProfile.id),
+        widget.safetyService.isInteractionBlocked(freshProfile.id),
+      ).wait;
+      if (!mounted || generation != _restoreGeneration) return;
       final following = followingIds.contains(freshProfile.id);
-      final blockedByMe = await widget.safetyService.hasBlockedUser(
-        freshProfile.id,
-      );
-      final interactionBlocked = await widget.safetyService
-          .isInteractionBlocked(freshProfile.id);
       final canSeePrivateContent = _canSeeContentForProfile(
         freshProfile,
         following: following,
@@ -275,30 +303,50 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       final realProfileId = _looksLikeSupabaseId(freshProfile.id)
           ? freshProfile.id
           : null;
-      final store = realProfileId == null
-          ? null
-          : await widget.storeProfileService.restoreStoreForOwner(
-              realProfileId,
-            );
-      final posts = await widget.postService.restorePosts(
-        authorId: widget.postService.usesRealPosts ? realProfileId : null,
-        limit: 24,
-      );
-      final stories = canSeePrivateContent
-          ? await _restoreVisibleStories(following)
-          : <Story>[];
-      final drops = await widget.dropService.restoreDrops(
-        authorId: widget.dropService.usesRealDrops ? realProfileId : null,
-        limit: 24,
-      );
-      final fancams = await widget.fancamService.restoreFancams(
-        authorId: widget.fancamService.usesRealFancams ? realProfileId : null,
-        limit: 24,
-      );
-      final categoryRows = canSeePrivateContent
-          ? await widget.contentCategoryService.restoreForUser(freshProfile.id)
-          : <ContentCategoryAssignment>[];
-      if (!mounted) return;
+      setState(() {
+        _profile = freshProfile;
+        _following = following;
+        _counts = counts;
+        _blockedByMe = blockedByMe;
+        _interactionBlocked = interactionBlocked;
+      });
+      final canLoadContent = canSeePrivateContent && !interactionBlocked;
+      final (store, posts, stories, drops, fancams, categoryRows) = await (
+        realProfileId == null
+            ? Future<StoreProfile?>.value(null)
+            : widget.storeProfileService.restoreStoreForOwner(realProfileId),
+        canLoadContent
+            ? widget.postService.restorePosts(
+                authorId: widget.postService.usesRealPosts
+                    ? realProfileId
+                    : null,
+                limit: 24,
+              )
+            : Future<List<HubPost>>.value(const []),
+        canLoadContent
+            ? _restoreVisibleStories(following)
+            : Future<List<Story>>.value(const []),
+        canLoadContent
+            ? widget.dropService.restoreDrops(
+                authorId: widget.dropService.usesRealDrops
+                    ? realProfileId
+                    : null,
+                limit: 24,
+              )
+            : Future<List<DropClip>>.value(const []),
+        canLoadContent
+            ? widget.fancamService.restoreFancams(
+                authorId: widget.fancamService.usesRealFancams
+                    ? realProfileId
+                    : null,
+                limit: 24,
+              )
+            : Future<List<Fancam>>.value(const []),
+        canLoadContent
+            ? widget.contentCategoryService.restoreForUser(freshProfile.id)
+            : Future<List<ContentCategoryAssignment>>.value(const []),
+      ).wait;
+      if (!mounted || generation != _restoreGeneration) return;
       final visiblePosts = interactionBlocked || !canSeePrivateContent
           ? <HubPost>[]
           : posts
@@ -344,7 +392,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       debugPrint(
         'PROFILE_OPEN_ERROR publicProfile profileId=${_profile.id} error=$error',
       );
-      if (!mounted) return;
+      if (!mounted || generation != _restoreGeneration) return;
       setState(() => _loading = false);
     }
   }
@@ -1041,17 +1089,31 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       appBar: AppBar(
         backgroundColor: AppTheme.night,
         foregroundColor: Colors.white,
-        title: const Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(text: 'Hallyu'),
-              TextSpan(
-                text: 'Hub',
-                style: TextStyle(color: AppTheme.rose),
+        titleSpacing: 0,
+        title: Row(
+          children: [
+            const HallyuBrandIcon(size: 38, radiusFactor: 0.25),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const HallyuBrandWordmark(fontSize: 18, compact: true),
+                  Text(
+                    'Perfil de ${_profile.name}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.62),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          style: TextStyle(fontWeight: FontWeight.w900),
+            ),
+          ],
         ),
         actions: [
           if (!_isOwnProfile)
@@ -1358,7 +1420,11 @@ class _PublicProfileHero extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: const LinearGradient(
-                          colors: [AppTheme.rose, AppTheme.violet, AppTheme.cyan],
+                          colors: [
+                            AppTheme.rose,
+                            AppTheme.violet,
+                            AppTheme.cyan,
+                          ],
                         ),
                         boxShadow: [
                           BoxShadow(
@@ -1442,7 +1508,9 @@ class _PublicProfileHero extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _StatButton(
-                        key: ValueKey('public-profile-${profile.id}-stat-posts'),
+                        key: ValueKey(
+                          'public-profile-${profile.id}-stat-posts',
+                        ),
                         value: '$posts',
                         label: 'posts',
                         onTap: () {},
@@ -1450,7 +1518,9 @@ class _PublicProfileHero extends StatelessWidget {
                     ),
                     Expanded(
                       child: _StatButton(
-                        key: ValueKey('public-profile-${profile.id}-stat-seguidores'),
+                        key: ValueKey(
+                          'public-profile-${profile.id}-stat-seguidores',
+                        ),
                         value: '$followers',
                         label: 'seguidores',
                         onTap: onFollowers,
@@ -1458,7 +1528,9 @@ class _PublicProfileHero extends StatelessWidget {
                     ),
                     Expanded(
                       child: _StatButton(
-                        key: ValueKey('public-profile-${profile.id}-stat-siguiendo'),
+                        key: ValueKey(
+                          'public-profile-${profile.id}-stat-siguiendo',
+                        ),
                         value: '$following',
                         label: 'siguiendo',
                         onTap: onFollowing,
@@ -1501,7 +1573,10 @@ class _PublicProfileHero extends StatelessWidget {
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: onMessage,
-                          icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+                          icon: const Icon(
+                            Icons.chat_bubble_outline_rounded,
+                            size: 18,
+                          ),
                           label: const Text('Mensaje'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.white,

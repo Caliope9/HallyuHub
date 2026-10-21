@@ -81,6 +81,15 @@ class LocalFollowService {
         .toList(growable: false);
   }
 
+  Future<CommunityProfile?> restoreProfileById(String id) async {
+    if (id.trim().isEmpty) return null;
+    final profiles = await restoreProfilesByIds([id]);
+    for (final profile in profiles) {
+      if (profile.id == id) return profile;
+    }
+    return null;
+  }
+
   Future<List<CommunityProfile>> restoreFollowers(String profileId) async {
     if (profileId == 'local-user') {
       return demoProfiles.take(12).toList(growable: false);
