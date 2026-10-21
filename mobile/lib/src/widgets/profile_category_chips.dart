@@ -505,10 +505,10 @@ class _PremiumHighlightCard extends StatelessWidget {
   };
 
   static const _subtitles = {
-    ProfileContentCategory.concerts: 'Fechas, giras y más',
-    ProfileContentCategory.bias: 'Tus favoritos siempre aquí',
-    ProfileContentCategory.photocards: 'Colecciona la magia',
-    ProfileContentCategory.outfit: 'Estilo K-pop sin límites',
+    ProfileContentCategory.concerts: 'Tus fotos y videos de conciertos',
+    ProfileContentCategory.bias: 'Tu integrante favorito y sus momentos',
+    ProfileContentCategory.photocards: 'Tus photocards favoritas',
+    ProfileContentCategory.outfit: 'Tus looks K-pop',
     ProfileContentCategory.collection: 'Tu colección',
     ProfileContentCategory.trades: 'Para intercambiar',
     ProfileContentCategory.merch: 'Objetos de fan',

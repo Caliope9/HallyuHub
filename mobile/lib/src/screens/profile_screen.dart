@@ -2563,6 +2563,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           category: selectedCategory,
           activities: activities,
           buildActivity: _buildActivityCard,
+          onCreate: () => _openPostEditor(
+            context,
+            closeSheet: false,
+            initialDraft: PostDraft(profileCategories: [selectedCategory]),
+          ),
         )
       else if (_selectedTab == _ProfileTab.archive)
         _ArchiveCard(
@@ -2818,11 +2823,38 @@ class _ProfileCategorySection extends StatelessWidget {
     required this.category,
     required this.activities,
     required this.buildActivity,
+    required this.onCreate,
   });
 
   final ProfileContentCategory category;
   final List<_ProfileActivity> activities;
   final Widget Function(_ProfileActivity activity) buildActivity;
+  final VoidCallback onCreate;
+
+  String get _emptyDetail => switch (category) {
+    ProfileContentCategory.concerts =>
+      'Compartí fotos, videos y recuerdos de conciertos o eventos.',
+    ProfileContentCategory.bias =>
+      'Subí edits, fotos y momentos de tu integrante favorito.',
+    ProfileContentCategory.photocards =>
+      'Mostrá tus photocards y recuerdos favoritos del K-pop.',
+    ProfileContentCategory.outfit =>
+      'Compartí tus looks y outfits inspirados en el K-pop.',
+    ProfileContentCategory.outfitStage => 'Guardá aquí tus looks de escenario.',
+    ProfileContentCategory.outfitAirport =>
+      'Guardá aquí tus looks de aeropuerto.',
+    ProfileContentCategory.outfitCasual => 'Guardá aquí tus looks casuales.',
+    ProfileContentCategory.collection =>
+      'Compartí publicaciones sobre tu colección de K-pop.',
+    ProfileContentCategory.trades =>
+      'Contá qué artículos querés intercambiar o vender.',
+    ProfileContentCategory.merch =>
+      'Compartí tus artículos y productos favoritos.',
+    ProfileContentCategory.fanart =>
+      'Publicá tus ilustraciones, edits y creaciones de fan.',
+    ProfileContentCategory.other =>
+      'Compartí presentaciones, momentos de escenario u otros recuerdos.',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -2848,15 +2880,33 @@ class _ProfileCategorySection extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Cuando publiques algo, elegí esta categoría para organizarlo en tu perfil.',
+              _emptyDetail,
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white.withValues(alpha: 0.68)),
+            ),
+            const SizedBox(height: 14),
+            FilledButton.icon(
+              onPressed: onCreate,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Crear publicación'),
             ),
           ],
         ),
       );
     }
-    return Column(children: activities.map(buildActivity).toList());
+    return Column(
+      children: [
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            onPressed: onCreate,
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Agregar contenido'),
+          ),
+        ),
+        ...activities.map(buildActivity),
+      ],
+    );
   }
 }
 
