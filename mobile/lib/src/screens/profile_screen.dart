@@ -988,6 +988,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         (activity) => activity.id == post.id,
       );
       _publishedPostActivities.insert(0, _activityFromPublishedPost(post));
+      if (categoriesSaved) {
+        _contentCategoryAssignments = [
+          ..._contentCategoryAssignments,
+          for (final category in draft.profileCategories)
+            ContentCategoryAssignment(
+              userId: post.authorId,
+              contentType: ProfileContentType.post,
+              contentId: post.id,
+              category: category,
+            ),
+        ];
+      }
       _selectedTab = _ProfileTab.posts;
     });
     await _saveUserTags(
